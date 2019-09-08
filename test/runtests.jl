@@ -1,0 +1,204 @@
+using Test
+
+using ForwardDiff, Distributions, FiniteDifferences, Tracker, Random, LinearAlgebra, PDMats
+using DistributionsAD
+using ForwardDiff: Dual
+using StatsFuns: binomlogpdf, logsumexp
+using Test, LinearAlgebra
+const FDM = FiniteDifferences
+using Combinatorics
+
+include("test_utils.jl")
+
+dim = 3
+mean = zeros(dim)
+cov_mat = Matrix{Float64}(I, dim, dim)
+cov_vec = ones(dim)
+cov_num = 1.0
+norm_val = ones(dim)
+alpha = ones(4)
+dir_val = fill(0.25, 4)
+
+@testset "Univariate discrete distributions" begin
+    uni_disc_dists = [
+        DistSpec(:Bernoulli, (0.45,), 1),
+        DistSpec(:Bernoulli, (0.45,), 0),
+        DistSpec(:((a, b) -> BetaBinomial(10, a, b)), (2, 1), 5),
+        DistSpec(:(p -> Binomial(10, p)), (0.5,), 5),
+        DistSpec(:Categorical, ([0.45, 0.55],), 1),
+        DistSpec(:Geometric, (0.45,), 3),
+        DistSpec(:NegativeBinomial, (3.5, 0.5), 1),
+        DistSpec(:Poisson, (0.5,), 1),
+        DistSpec(:Skellam, (1.0, 2.0), -2),
+    ]
+    broken_uni_disc_dists = [
+        # Dispatch error
+        DistSpec(:PoissonBinomial, ([0.5, 0.5],), 3),
+    ]
+    for d in uni_disc_dists
+        for testf in get_all_functions(d, false)
+            test_ad(testf.f, testf.x)
+        end
+    end
+end
+
+@testset "Univariate continuous distributions" begin
+    uni_cont_dists = [
+        DistSpec(:Arcsine, (), 0.5),
+        DistSpec(:Arcsine, (1,), 0.5),
+        DistSpec(:Arcsine, (0, 2), 0.5),
+        DistSpec(:Beta, (), 0.5),
+        DistSpec(:Beta, (1,), 0.5),
+        DistSpec(:Beta, (1, 2), 0.5),
+        DistSpec(:BetaPrime, (), 0.5),
+        DistSpec(:BetaPrime, (1,), 0.5),
+        DistSpec(:BetaPrime, (1, 2), 0.5),
+        DistSpec(:Biweight, (), 0.5),
+        DistSpec(:Biweight, (1,), 0.5),
+        DistSpec(:Biweight, (1, 2), 0.5),
+        DistSpec(:Cauchy, (), 0.5),
+        DistSpec(:Cauchy, (1,), 0.5),
+        DistSpec(:Cauchy, (1, 2), 0.5),
+        DistSpec(:Chernoff, (), 0.5),
+        DistSpec(:Chi, (1,), 0.5),
+        DistSpec(:Chisq, (1,), 0.5),
+        DistSpec(:Cosine, (1, 1), 0.5),
+        DistSpec(:Epanechnikov, (1, 1), 0.5),
+        DistSpec(:((s)->Erlang(1, s)), (1,), 0.5), # First arg is integer
+        DistSpec(:Exponential, (1,), 0.5),
+        DistSpec(:FDist, (1, 1), 0.5),
+        DistSpec(:Frechet, (), 0.5),
+        DistSpec(:Frechet, (1,), 0.5),
+        DistSpec(:Frechet, (1, 2), 0.5),
+        DistSpec(:Gamma, (), 0.5),
+        DistSpec(:Gamma, (1,), 0.5),
+        DistSpec(:Gamma, (1, 2), 0.5),
+        DistSpec(:GeneralizedExtremeValue, (1.0, 1.0, 1.0), 0.5),
+        DistSpec(:GeneralizedPareto, (), 0.5),
+        DistSpec(:GeneralizedPareto, (1.0, 2.0), 0.5),
+        DistSpec(:GeneralizedPareto, (0.0, 2.0, 3.0), 0.5),
+        DistSpec(:Gumbel, (), 0.5),
+        DistSpec(:Gumbel, (1,), 0.5),
+        DistSpec(:Gumbel, (1, 2), 0.5),
+        DistSpec(:InverseGamma, (), 0.5),
+        DistSpec(:InverseGamma, (1.0,), 0.5),
+        DistSpec(:InverseGamma, (1.0, 2.0), 0.5),
+        DistSpec(:InverseGaussian, (), 0.5),
+        DistSpec(:InverseGaussian, (1,), 0.5),
+        DistSpec(:InverseGaussian, (1, 2), 0.5),
+        DistSpec(:Kolmogorov, (), 0.5),
+        DistSpec(:Laplace, (), 0.5),
+        DistSpec(:Laplace, (1,), 0.5),
+        DistSpec(:Laplace, (1, 2), 0.5),
+        DistSpec(:Levy, (), 0.5),
+        DistSpec(:Levy, (0.0,), 0.5),
+        DistSpec(:Levy, (0.0, 2.0), 0.5),
+        DistSpec(:((a, b) -> LocationScale(a, b, Normal())), (1.0, 2.0), 0.5),
+        DistSpec(:Logistic, (), 0.5),
+        DistSpec(:Logistic, (1,), 0.5),
+        DistSpec(:Logistic, (1, 2), 0.5),
+        DistSpec(:LogitNormal, (), 0.5),
+        DistSpec(:LogitNormal, (1,), 0.5),
+        DistSpec(:LogitNormal, (1, 2), 0.5),
+        DistSpec(:LogNormal, (), 0.5),
+        DistSpec(:LogNormal, (1,), 0.5),
+        DistSpec(:LogNormal, (1, 2), 0.5),
+        DistSpec(:Normal, (), 0.5),
+        DistSpec(:Normal, (1.0,), 0.5),
+        DistSpec(:Normal, (1.0, 2.0), 0.5),
+        DistSpec(:NormalCanon, (1.0, 2.0), 0.5),
+        DistSpec(:NormalInverseGaussian, (1.0, 2.0, 1.0, 1.0), 0.5),
+        DistSpec(:Pareto, (), 1.5),
+        DistSpec(:Pareto, (1,), 1.5),
+        DistSpec(:Pareto, (1, 1), 1.5),
+        DistSpec(:PGeneralizedGaussian, (), 0.5),
+        DistSpec(:PGeneralizedGaussian, (1, 1, 1), 0.5),
+        DistSpec(:Rayleigh, (), 0.5),
+        DistSpec(:Rayleigh, (1,), 0.5),
+        DistSpec(:SymTriangularDist, (), 0.5),
+        DistSpec(:SymTriangularDist, (1,), 0.5),
+        DistSpec(:SymTriangularDist, (1, 2), 0.5),
+        DistSpec(:TDist, (1,), 0.5),
+        DistSpec(:TriangularDist, (1, 2), 1.5),
+        DistSpec(:TriangularDist, (1, 3, 2), 1.5),
+        DistSpec(:Triweight, (1, 1), 1),
+        DistSpec(:Uniform, (0, 1), 0.5),
+        DistSpec(:VonMises, (), 1),
+        DistSpec(:Weibull, (), 1),
+        DistSpec(:Weibull, (1,), 1),
+        DistSpec(:Weibull, (1, 1), 1),
+    ]
+    broken_uni_cont_dists = [
+        # Broken in Distributions even without autodiff
+        DistSpec(:(()->KSDist(1)), (), 0.5), 
+        DistSpec(:(()->KSOneSided(1)), (), 0.5), 
+        DistSpec(:StudentizedRange, (1.0, 2.0), 0.5),
+        # Dispatch error
+        DistSpec(:NoncentralBeta, (1.0, 2.0, 1.0), 0.5), 
+        DistSpec(:NoncentralChisq, (1.0, 2.0), 0.5),
+        DistSpec(:NoncentralF, (1, 2, 1), 0.5),
+        DistSpec(:NoncentralT, (1, 2), 0.5),
+        DistSpec(:((mu, sigma, l, u) -> Truncated(Normal(mu, sigma), l, u)), (0.0, 1.0, 1.0, 2.0), 1.5),
+        # Possibly Tracker error
+        DistSpec(:Uniform, (), 0.5),
+        DistSpec(:Semicircle, (1.0,), 0.5),
+        # Stackoverflow
+        DistSpec(:VonMises, (1.0,), 1.0),
+        DistSpec(:VonMises, (1, 1), 1),
+    ]
+    for d in uni_cont_dists
+        for testf in get_all_functions(d, true)
+            test_ad(testf.f, testf.x)
+        end
+    end
+end
+
+@testset "Multivariate discrete distributions" begin
+    mult_disc_dists = [
+    ]
+    broken_mult_disc_dists = [
+        # Dispatch error
+        DistSpec(:((p) -> Multinomial(4, p)), (fill(0.25, 4),), 1),
+    ]
+    for d in mult_disc_dists
+        for testf in get_all_functions(d, false)
+            test_ad(testf.f, testf.x)
+        end
+    end
+end
+
+@testset "Multivariate continuous distributions" begin
+    mult_cont_dists = [
+        DistSpec(:MvNormal, (mean, cov_mat), norm_val),
+        DistSpec(:MvNormal, (mean, cov_vec), norm_val),
+        DistSpec(:MvNormal, (mean, cov_num), norm_val),
+        DistSpec(:MvNormal, (cov_mat,), norm_val),
+        DistSpec(:MvNormal, (cov_vec,), norm_val),
+        DistSpec(:(cov_num -> MvNormal(dim, cov_num)), (cov_num,), norm_val),
+        DistSpec(:MvLogNormal, (mean, cov_mat), norm_val),
+        DistSpec(:MvLogNormal, (mean, cov_vec), norm_val),
+        DistSpec(:MvLogNormal, (mean, cov_num), norm_val),
+        DistSpec(:MvLogNormal, (cov_mat,), norm_val),
+        DistSpec(:MvLogNormal, (cov_vec,), norm_val),
+        DistSpec(:(cov_num -> MvLogNormal(dim, cov_num)), (cov_num,), norm_val),
+    ]
+
+    broken_mult_cont_dists = [
+        # Dispatch error
+        DistSpec(:MvNormalCanon, (mean, cov_mat), norm_val),
+        DistSpec(:MvNormalCanon, (mean, cov_vec), norm_val),
+        DistSpec(:MvNormalCanon, (mean, cov_num), norm_val),
+        DistSpec(:MvNormalCanon, (cov_mat,), norm_val),
+        DistSpec(:MvNormalCanon, (cov_vec,), norm_val),
+        DistSpec(:(cov_num -> MvNormalCanon(dim, cov_num)), (cov_num,), norm_val),
+        DistSpec(:Dirichlet, (alpha,), dir_val),
+        # Test failure
+        DistSpec(:(() -> Product(Normal.(randn(dim), 1))), (), norm_val),
+    ]
+
+    for d in mult_cont_dists
+        for testf in get_all_functions(d, true)
+            test_ad(testf.f, testf.x)
+        end
+    end
+end
