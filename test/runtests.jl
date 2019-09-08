@@ -30,10 +30,7 @@ dir_val = fill(0.25, 4)
         DistSpec(:NegativeBinomial, (3.5, 0.5), 1),
         DistSpec(:Poisson, (0.5,), 1),
         DistSpec(:Skellam, (1.0, 2.0), -2),
-    ]
-    broken_uni_disc_dists = [
-        # Dispatch error
-        DistSpec(:PoissonBinomial, ([0.5, 0.5],), 3),
+        DistSpec(:PoissonBinomial, ([0.5, 0.5],), 0),
     ]
     for d in uni_disc_dists
         for testf in get_all_functions(d, false)

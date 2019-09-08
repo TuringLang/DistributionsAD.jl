@@ -5,12 +5,13 @@ import StatsFuns: logsumexp, binomlogpdf, nbinomlogpdf, poislogpdf
 using Tracker: TrackedReal, TrackedVector, TrackedMatrix
 using LinearAlgebra: copytri!
 
-import Distributions: MvNormal, MvLogNormal
+import Distributions: MvNormal, MvLogNormal, poissonbinomial_pdf_fft, logpdf, quantile, PoissonBinomial
 using Distributions: AbstractMvLogNormal, ContinuousMultivariateDistribution
 
 export  TuringDiagNormal,
         TuringMvNormal,
-        TuringMvLogNormal
+        TuringMvLogNormal,
+        TuringPoissonBinomial
 
 logsumexp(x::Tracker.TrackedArray) = Tracker.track(logsumexp, x)
 Tracker.@grad function logsumexp(x::Tracker.TrackedArray)
@@ -374,6 +375,33 @@ MvLogNormal(d::Int, σ::TrackedReal{<:Real}) = MvLogNormal(zeros(d), σ)
 # For InverseWishart
 function Base.:\(a::Cholesky{<:Tracker.TrackedReal, <:Tracker.TrackedArray}, b::AbstractVecOrMat)
     return (a.U \ (a.U' \ b))
+end
+
+struct TuringPoissonBinomial{T<:Real, TV<:AbstractVector{T}} <: DiscreteUnivariateDistribution
+    p::TV
+    pmf::TV
+end
+function TuringPoissonBinomial(p::AbstractArray{<:Real})
+    pb = Distributions.poissonbinomial_pdf_fft(p)
+    @assert Distributions.isprobvec(pb)
+    TuringPoissonBinomial(p, pb)
+end
+function logpdf(d::TuringPoissonBinomial{T}, k::Int) where T<:Real
+    insupport(d, k) ? log(d.pmf[k + 1]) : -T(Inf)
+end
+quantile(d::TuringPoissonBinomial, x::Float64) = quantile(Categorical(d.pmf), x) - 1
+PoissonBinomial(p::Tracker.TrackedArray) = TuringPoissonBinomial(p)
+Base.minimum(d::TuringPoissonBinomial) = 0
+Base.maximum(d::TuringPoissonBinomial) = length(d.p)
+
+poissonbinomial_pdf_fft(x::Tracker.TrackedArray) = Tracker.track(poissonbinomial_pdf_fft, x)
+Tracker.@grad function poissonbinomial_pdf_fft(x::Tracker.TrackedArray)
+    x_data = Tracker.data(x)
+    T = eltype(x_data)
+    fft = poissonbinomial_pdf_fft(x_data)
+    return  fft, Δ -> begin
+        ((ForwardDiff.jacobian(x -> poissonbinomial_pdf_fft(x), x_data)::Matrix{T})' * Δ,)
+    end
 end
 
 end
