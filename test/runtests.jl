@@ -18,6 +18,7 @@ cov_num = 1.0
 norm_val = ones(dim)
 alpha = ones(4)
 dir_val = fill(0.25, 4)
+beta_mat = rand(MatrixBeta(dim, dim, dim))
 
 @testset "Univariate discrete distributions" begin
     uni_disc_dists = [
@@ -194,6 +195,26 @@ end
     ]
 
     for d in mult_cont_dists
+        for testf in get_all_functions(d, true)
+            test_ad(testf.f, testf.x)
+        end
+    end
+end
+
+@testset "Matrix-variate continuous distributions" begin
+    matrix_cont_dists = [
+        DistSpec(:((n1, n2)->MatrixBeta(dim, n1, n2)), (dim, dim), beta_mat),
+    ]
+    broken_matrix_cont_dists = [
+        DistSpec(:Wishart, (1.0, cov_mat), cov_mat),
+        DistSpec(:InverseWishart, (1.0, cov_mat), cov_mat),
+        DistSpec(:MatrixNormal, (cov_mat, cov_mat, cov_mat), cov_mat),
+        DistSpec(:(()->MatrixNormal(dim, dim)), (), cov_mat),
+        DistSpec(:MatrixTDist, (1.0, cov_mat, cov_mat, cov_mat), cov_mat),
+        DistSpec(:MatrixFDist, (dim, dim, cov_mat), cov_mat),
+    ]
+
+    for d in matrix_cont_dists
         for testf in get_all_functions(d, true)
             test_ad(testf.f, testf.x)
         end
