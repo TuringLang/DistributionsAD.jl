@@ -206,8 +206,8 @@ end
         DistSpec(:((n1, n2)->MatrixBeta(dim, n1, n2)), (dim, dim), beta_mat),
     ]
     broken_matrix_cont_dists = [
-        DistSpec(:Wishart, (1.0, cov_mat), cov_mat),
-        DistSpec(:InverseWishart, (1.0, cov_mat), cov_mat),
+        DistSpec(:Wishart, (dim, cov_mat), cov_mat),
+        DistSpec(:InverseWishart, (dim, cov_mat), cov_mat),
         DistSpec(:MatrixNormal, (cov_mat, cov_mat, cov_mat), cov_mat),
         DistSpec(:(()->MatrixNormal(dim, dim)), (), cov_mat),
         DistSpec(:MatrixTDist, (1.0, cov_mat, cov_mat, cov_mat), cov_mat),
