@@ -1,0 +1,22 @@
+language: julia
+
+os:
+  - linux
+  - osx
+
+julia:
+  - 1.0
+  - 1.1
+  - 1.2
+  - nightly
+
+matrix:
+  allow_failures:
+    - julia: nightly
+  fast_finish: true
+
+notifications:
+  email: false
+
+after_success:
+  - julia -e 'using Pkg; cd(Pkg.dir("DistributionsAD")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(process_folder())'
