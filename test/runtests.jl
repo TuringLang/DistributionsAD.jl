@@ -134,6 +134,7 @@ separator()
         DistSpec(:TriangularDist, (1, 2), 1.5),
         DistSpec(:TriangularDist, (1, 3, 2), 1.5),
         DistSpec(:Triweight, (1, 1), 1),
+        DistSpec(:((mu, sigma, l, u) -> Truncated(Normal(mu, sigma), l, u)), (0.0, 1.0, 1.0, 2.0), 1.5),
         DistSpec(:Uniform, (), 0.5),
         DistSpec(:Uniform, (0, 1), 0.5),
         DistSpec(:VonMises, (), 1),
@@ -152,8 +153,6 @@ separator()
         DistSpec(:NoncentralChisq, (1.0, 2.0), 0.5),
         DistSpec(:NoncentralF, (1, 2, 1), 0.5),
         DistSpec(:NoncentralT, (1, 2), 0.5),
-        # Dispatch error caused by lack of type parameters in Distributions.Truncated
-        DistSpec(:((mu, sigma, l, u) -> Truncated(Normal(mu, sigma), l, u)), (0.0, 1.0, 1.0, 2.0), 1.5),
         # Stackoverflow caused by SpecialFunctions.besselix
         DistSpec(:VonMises, (1.0,), 1.0),
         DistSpec(:VonMises, (1, 1), 1),
