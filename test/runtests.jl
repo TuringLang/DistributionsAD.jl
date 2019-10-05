@@ -169,10 +169,7 @@ separator()
 @testset "Multivariate discrete distributions" begin
     test_head("Testing: Multivariate discrete distributions")
     mult_disc_dists = [
-    ]
-    broken_mult_disc_dists = [
-        # Dispatch error caused by lack of type parameters in Distributions.Multinomial
-        DistSpec(:((p) -> Multinomial(4, p)), (fill(0.25, 4),), 1),
+        DistSpec(:((p) -> Multinomial(2, p / sum(p))), (fill(0.5, 2),), [2, 0]),
     ]
     for d in mult_disc_dists
         test_info(d.name)
