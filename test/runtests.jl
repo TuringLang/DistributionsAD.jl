@@ -19,8 +19,19 @@ norm_val = ones(dim)
 alpha = ones(4)
 dir_val = fill(0.25, 4)
 beta_mat = rand(MatrixBeta(dim, dim, dim))
+tested = []
+function test_info(name)
+    if !(name in tested)
+        push!(tested, name)
+        @info("Testing: $(name)")
+    end
+end
+test_head(s) = println("\n"*s*"\n")
+separator() = println("\n"*"="^50)
 
+separator()
 @testset "Univariate discrete distributions" begin
+    test_head("Testing: Univariate discrete distributions")
     uni_disc_dists = [
         DistSpec(:Bernoulli, (0.45,), 1),
         DistSpec(:Bernoulli, (0.45,), 0),
@@ -34,13 +45,16 @@ beta_mat = rand(MatrixBeta(dim, dim, dim))
         DistSpec(:PoissonBinomial, ([0.5, 0.5],), 0),
     ]
     for d in uni_disc_dists
+        test_info(d.name)
         for testf in get_all_functions(d, false)
             test_ad(testf.f, testf.x)
         end
     end
 end
+separator()
 
 @testset "Univariate continuous distributions" begin
+    test_head("Testing: Univariate continuous distributions")
     uni_cont_dists = [
         DistSpec(:Arcsine, (), 0.5),
         DistSpec(:Arcsine, (1,), 0.5),
@@ -145,13 +159,16 @@ end
         DistSpec(:VonMises, (1, 1), 1),
     ]
     for d in uni_cont_dists
+        test_info(d.name)
         for testf in get_all_functions(d, true)
             test_ad(testf.f, testf.x)
         end
     end
 end
+separator()
 
 @testset "Multivariate discrete distributions" begin
+    test_head("Testing: Multivariate discrete distributions")
     mult_disc_dists = [
     ]
     broken_mult_disc_dists = [
@@ -159,13 +176,16 @@ end
         DistSpec(:((p) -> Multinomial(4, p)), (fill(0.25, 4),), 1),
     ]
     for d in mult_disc_dists
+        test_info(d.name)
         for testf in get_all_functions(d, false)
             test_ad(testf.f, testf.x)
         end
     end
 end
+separator()
 
 @testset "Multivariate continuous distributions" begin
+    test_head("Testing: Multivariate continuous distributions")
     mult_cont_dists = [
         DistSpec(:MvNormal, (mean, cov_mat), norm_val),
         DistSpec(:MvNormal, (mean, cov_vec), norm_val),
@@ -195,13 +215,16 @@ end
     ]
 
     for d in mult_cont_dists
+        test_info(d.name)
         for testf in get_all_functions(d, true)
             test_ad(testf.f, testf.x)
         end
     end
 end
+separator()
 
 @testset "Matrix-variate continuous distributions" begin
+    test_head("Testing: Matrix-variate continuous distributions")
     matrix_cont_dists = [
         DistSpec(:((n1, n2)->MatrixBeta(dim, n1, n2)), (dim, dim), beta_mat),
     ]
@@ -215,8 +238,10 @@ end
     ]
 
     for d in matrix_cont_dists
+        test_info(d.name)
         for testf in get_all_functions(d, true)
             test_ad(testf.f, testf.x)
         end
     end
 end
+separator()
