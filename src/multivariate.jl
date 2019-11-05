@@ -27,6 +27,8 @@ struct TuringDiagNormal{Tm<:AbstractVector, Tσ<:AbstractVector} <: ContinuousMu
     σ::Tσ
 end
 
+Distributions.params(d::TuringDiagNormal) = (d.m, d.σ)
+Distributions.length(d::TuringDiagNormal) = length(d.m)
 Distributions.dim(d::TuringDiagNormal) = length(d.m)
 function Distributions.rand(rng::Random.AbstractRNG, d::TuringDiagNormal)
     return d.m .+ d.σ .* randn(rng, dim(d))
@@ -53,6 +55,12 @@ function _logpdf(d::TuringMvNormal, x::AbstractMatrix)
 end
 function _logpdf(d::MvNormal, x::Union{Tracker.TrackedVector, Tracker.TrackedMatrix})
     _logpdf(TuringMvNormal(d.μ, getchol(d.Σ)), x)
+end
+
+import StatsBase: entropy
+function entropy(d::TuringDiagNormal)
+    T = eltype(d.σ)
+    return (length(d) * (T(log2π) + one(T)) / 2 + sum(log.(d.σ)))
 end
 
 # zero mean, dense covariance
