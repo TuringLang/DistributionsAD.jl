@@ -1,6 +1,6 @@
 name = "DistributionsAD"
 uuid = "ced4e74d-a319-5a8a-b0ac-84af2272839c"
-version = "0.1.1"
+version = "0.1.2"
 
 [deps]
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
@@ -17,6 +17,9 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
 julia = "1"
+Zygote = "0.4.1"
+Tracker = "0.2.5"
+ForwardDiff = "0.10.6"
 
 [extras]
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
