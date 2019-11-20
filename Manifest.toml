@@ -110,12 +110,6 @@ git-tree-sha1 = "b2cf74f09216cfe3c241e8484178ec0ea941870f"
 uuid = "1a297f60-69ca-5386-bcde-b61e274b549b"
 version = "0.8.1"
 
-[[FiniteDifferences]]
-deps = ["LinearAlgebra", "Printf"]
-git-tree-sha1 = "712a747a0106ad1cca0947e3d1e765cf17dee8b8"
-uuid = "26cc04aa-876d-5657-8c51-4c34ba976000"
-version = "0.9.0"
-
 [[ForwardDiff]]
 deps = ["CommonSubexpressions", "DiffResults", "DiffRules", "NaNMath", "Random", "SpecialFunctions", "StaticArrays"]
 git-tree-sha1 = "4407e7b76999eca2646abdb68203bd4302476168"
@@ -196,9 +190,9 @@ version = "0.9.10"
 
 [[Parsers]]
 deps = ["Dates", "Test"]
-git-tree-sha1 = "c56ecb484f286639f161e712b8311f5ab77e8d32"
+git-tree-sha1 = "a23968e107c0544aca91bfab6f7dd34de1206a54"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-version = "0.3.8"
+version = "0.3.9"
 
 [[Pkg]]
 deps = ["Dates", "LibGit2", "Markdown", "Printf", "REPL", "Random", "SHA", "UUIDs"]
