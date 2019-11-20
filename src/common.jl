@@ -41,7 +41,7 @@ function turing_chol(A::AbstractMatrix, check)
 end
 turing_chol(A::Tracker.TrackedMatrix, check) = Tracker.track(turing_chol, A, check)
 Tracker.@grad function turing_chol(A::AbstractMatrix, check)
-    C, back = Zygote.forward(unsafe_cholesky, Tracker.data(A), Tracker.data(check))
+    C, back = Zygote.pullback(unsafe_cholesky, Tracker.data(A), Tracker.data(check))
     return (C.factors, C.info), Δ->back((factors=Tracker.data(Δ[1]),))
 end
 
@@ -104,7 +104,7 @@ function zygote_ldiv(A::Tracker.TrackedMatrix, B::AbstractVecOrMat)
 end
 zygote_ldiv(A::AbstractMatrix, B::TrackedVecOrMat) =  Tracker.track(zygote_ldiv, A, B)
 Tracker.@grad function zygote_ldiv(A, B)
-    Y, back = Zygote.forward(\, Tracker.data(A), Tracker.data(B))
+    Y, back = Zygote.pullback(\, Tracker.data(A), Tracker.data(B))
     return Y, Δ->back(Tracker.data(Δ))
 end
 
