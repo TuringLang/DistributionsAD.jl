@@ -96,7 +96,7 @@ end
 
 Check that the reverse-mode sensitivities produced by an AD library are correct for `f`
 at `x...`, given sensitivity `ȳ` w.r.t. `y = f(x...)` up to `rtol` and `atol`.
-`forward` should be either `Tracker.forward` or `Zygote.forward`.
+`forward` should be either `Tracker.forward` or `Zygote.pullback`.
 """
 function test_reverse_mode_ad(forward, f, ȳ, x...; rtol=1e-8, atol=1e-8)
 
