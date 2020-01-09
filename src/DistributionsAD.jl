@@ -35,11 +35,15 @@ export TuringScalMvNormal,
        TuringMvLogNormal,
        TuringPoissonBinomial,
        TuringWishart,
-       TuringInverseWishart
+       TuringInverseWishart,
+       Multi,
+       ArrayDist
 
 include("common.jl")
 include("univariate.jl")
 include("multivariate.jl")
 include("matrixvariate.jl")
+include("multi.jl")
+include("array_dist.jl")
 
 end
