@@ -51,9 +51,6 @@ end
 function _logpdf(d::TuringMvNormal, x::AbstractMatrix)
     return -(dim(d) * log(2π) .+ logdet(d.C) .+ sum(abs2, zygote_ldiv(d.C.U', x .- d.m), dims=1)') ./ 2
 end
-function _logpdf(d::MvNormal, x::Union{Tracker.TrackedVector, Tracker.TrackedMatrix})
-    _logpdf(TuringMvNormal(d.μ, getchol(d.Σ)), x)
-end
 
 # zero mean, dense covariance
 MvNormal(A::TrackedMatrix) = MvNormal(zeros(size(A, 1)), A)
@@ -119,9 +116,6 @@ for T in (:(Tracker.TrackedVector), :(Tracker.TrackedMatrix))
 end
 function _logpdf(d::TuringMvLogNormal, x::AbstractVecOrMat{T}) where {T<:Real}
     return insupport(d, x) ? (_logpdf(d.normal, log.(x)) - sum(log.(x))) : -Inf
-end
-function _logpdf(d::MvLogNormal, x::Union{Tracker.TrackedVector, Tracker.TrackedMatrix})
-    _logpdf(TuringMvLogNormal(TuringMvNormal(d.normal.μ, getchol(d.normal.Σ))), x)
 end
 
 # zero mean, dense covariance
