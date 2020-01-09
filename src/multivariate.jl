@@ -35,9 +35,6 @@ for T in (:AbstractVector, :AbstractMatrix)
     @eval Distributions.logpdf(d::TuringDiagNormal, x::$T) = _logpdf(d, x)
     @eval Distributions.logpdf(d::TuringMvNormal, x::$T) = _logpdf(d, x)
 end
-for T in (:(Tracker.TrackedVector), :(Tracker.TrackedMatrix))
-    @eval Distributions.logpdf(d::MvNormal, x::$T) = _logpdf(d, x)
-end
 
 function _logpdf(d::TuringDiagNormal, x::AbstractVector)
     return -(dim(d) * log(2π) + 2 * sum(log.(d.σ)) + sum(abs2, (x .- d.m) ./ d.σ)) / 2
