@@ -115,6 +115,4 @@ end
 ## PDMats ##
 
 PDMats.invquad(Σ::PDiagMat, x::Tracker.TrackedVector) = sum(abs2.(x) ./ Σ.diag)
-getchol(m::PDMats.AbstractPDMat) = m.chol
-getchol(m::PDMats.PDiagMat) = cholesky(Diagonal(m.diag))
-getchol(m::PDMats.ScalMat) = cholesky(Diagonal(fill(m.value, m.dim)))
+PDMats.invquad(Σ::PDMat, x::Tracker.TrackedVector) = sum(abs2, zygote_ldiv(Σ.chol.L, x))
