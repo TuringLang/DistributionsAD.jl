@@ -59,9 +59,10 @@ function Multi(dist::ContinuousUnivariateDistribution, N::Int)
 end
 function Distributions.logpdf(
     dist::MultipleContinuousUnivariate,
-    x::AbstractVector{<:Real}
+    x::AbstractVector{<:Real},
 )
-    return sum(logpdf.(dist.dist, x))
+    f, args = flatten(dist.dist)
+    return sum(f.(args..., x))
 end
 function Distributions.rand(rng::Random.AbstractRNG, dist::MultipleContinuousUnivariate)
     return rand(rng, dist.dist, dist.N)

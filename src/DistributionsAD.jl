@@ -16,6 +16,8 @@ using ZygoteRules: ZygoteRules, pullback
 using LinearAlgebra: copytri!
 using Distributions: AbstractMvLogNormal, 
                      ContinuousMultivariateDistribution
+using DiffRules, SpecialFunctions
+using ForwardDiff: @define_binary_dual_op # Needed for `eval`ing diffrules here
 
 import StatsFuns: logsumexp, 
                   binomlogpdf, 
@@ -44,6 +46,7 @@ include("univariate.jl")
 include("multivariate.jl")
 include("matrixvariate.jl")
 include("multi.jl")
+include("flatten.jl")
 include("array_dist.jl")
 
 end

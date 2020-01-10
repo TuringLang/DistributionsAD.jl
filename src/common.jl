@@ -88,6 +88,7 @@ function LinearAlgebra.logdet(C::Cholesky{<:TrackedReal, <:TrackedMatrix})
 end
 
 # Tracker's implementation of ldiv isn't good. We'll use Zygote's instead.
+
 zygote_ldiv(A::AbstractMatrix, B::AbstractVecOrMat) = A \ B
 function zygote_ldiv(A::TrackedMatrix, B::TrackedVecOrMat)
     return track(zygote_ldiv, A, B)
@@ -103,4 +104,11 @@ end
 
 function Base.:\(a::Cholesky{<:TrackedReal, <:TrackedArray}, b::AbstractVecOrMat)
     return (a.U \ (a.U' \ b))
+end
+
+# SpecialFunctions
+
+function SpecialFunctions.logabsgamma(x::TrackedReal)
+    v = loggamma(x)
+    return v, sign(data(v))
 end

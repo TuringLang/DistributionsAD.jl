@@ -46,7 +46,27 @@ ZygoteRules.@adjoint function uniformlogpdf(a, b, x)
     f = isfinite(l)
     da = 1/diff
     n = T(NaN)
-    return l, Δ->(f ? da : n, f ? -da : n, f ? zero(T) : n)
+    z = zero(T)
+    return l, Δ -> (f ? (z, z, z) : (n, n, n))
+end
+for T in (:TrackedReal, :Real)
+    @eval @grad function uniformlogpdf(
+        a::TrackedReal,
+        b::TrackedReal,
+        x::$T,
+    )
+        ad = data(a)
+        bd = data(b)
+        T = typeof(a)
+        l = logpdf(Uniform(ad, bd), x)
+        f = isfinite(l)
+        temp = 1/(bd - ad)^2
+        dlda = temp
+        dldb = -temp
+        n = T(NaN)
+        z = zero(T)
+        return l, Δ -> (f ? (dlda * Δ, dldb * Δ, z) : (n, n, n))
+    end
 end
 ZygoteRules.@adjoint function Distributions.Uniform(args...)
     return pullback(TuringUniform, args...)
@@ -120,25 +140,31 @@ end
 
 ## Semicircle ##
 
+function semicircle_dldr(r, x)
+    diffsq = r^2 - x^2
+    return -2 / r + r / diffsq
+end
+function semicircle_dldx(r, x)
+    diffsq = r^2 - x^2
+    return -x / diffsq
+end
+
 logpdf(d::Semicircle{<:Real}, x::TrackedReal) = semicirclelogpdf(d.r, x)
 logpdf(d::Semicircle{<:TrackedReal}, x::Real) = semicirclelogpdf(d.r, x)
 logpdf(d::Semicircle{<:TrackedReal}, x::TrackedReal) = semicirclelogpdf(d.r, x)
-semicirclelogpdf(r::TrackedReal, x::Real) = track(semicirclelogpdf, r, x)
-semicirclelogpdf(r::Real, x::TrackedReal) = track(semicirclelogpdf, r, x)
-semicirclelogpdf(r::TrackedReal, x::TrackedReal) = track(semicirclelogpdf, r, x)
-Tracker.@grad function semicirclelogpdf(r, x)
-    rd = data(r)
-    xd = data(x)
-    xx, rr = promote(xd, float(rd))
-    d = Semicircle(rr)
-    T = typeof(xx)
-    l = logpdf(d, xx)
-    f = isfinite(l)
-    n = T(NaN)
-    return l, function (Δ) 
-        diffsq = rr^2 - xx^2
-        (f ? Δ*(-2/rr + rr/diffsq) : n, f ? Δ*(-xx/diffsq) : n)
-    end
+
+semicirclelogpdf(r, x) = logpdf(Semicircle(r), x)
+M, f, arity = DiffRules.@define_diffrule DistributionsAD.semicirclelogpdf(r, x) =
+    :(semicircle_dldr($r, $x)), :(semicircle_dldx($r, $x))
+da, db = DiffRules.diffrule(M, f, :a, :b)
+f = :($M.$f)
+@eval begin
+    @grad $f(a::TrackedReal, b::TrackedReal) = $f(data(a), data(b)), Δ -> (Δ * $da, Δ * $db)
+    @grad $f(a::TrackedReal, b::Real) = $f(data(a), b), Δ -> (Δ * $da, Tracker._zero(b))
+    @grad $f(a::Real, b::TrackedReal) = $f(a, data(b)), Δ -> (Tracker._zero(a), Δ * $db)
+    $f(a::TrackedReal, b::TrackedReal)  = track($f, a, b)
+    $f(a::TrackedReal, b::Real) = track($f, a, b)
+    $f(a::Real, b::TrackedReal) = track($f, a, b)
 end
 if VERSION < v"1.2"
     Base.inv(::Irrational{:π}) = 1/π
@@ -191,10 +217,11 @@ function nbinomlogpdf(r::ForwardDiff.Dual{T}, p::ForwardDiff.Dual{T}, k::Int) wh
     FD = ForwardDiff.Dual{T}
     val_p = ForwardDiff.value(p)
     val_r = ForwardDiff.value(r)
-
-    Δ_r = ForwardDiff.partials(r) * _nbinomlogpdf_grad_1(val_r, val_p, k)
-    Δ_p = ForwardDiff.partials(p) * _nbinomlogpdf_grad_2(val_r, val_p, k)
-    Δ = Δ_p + Δ_r
+    Δ_r = ForwardDiff.partials(r)
+    dr = _nbinomlogpdf_grad_1(val_r, val_p, k)
+    Δ_p = ForwardDiff.partials(p)
+    dp = _nbinomlogpdf_grad_2(val_r, val_p, k)
+    Δ = ForwardDiff._mul_partials(Δ_r, Δ_p, dr, dp)
     return FD(nbinomlogpdf(val_r, val_p, k),  Δ)
 end
 function nbinomlogpdf(r::Real, p::ForwardDiff.Dual{T}, k::Int) where {T}
