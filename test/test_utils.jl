@@ -68,8 +68,7 @@ function get_function(dist::DistSpec, inds, val)
         @assert length(inds) > 0
         expr = quote
             ($(syms...),) -> begin
-                d = $(dist.name)($(args...))
-                temp = logpdf(d, $(dist.x))
+                temp = logpdf($(dist.name)($(args...)), $(dist.x))
                 if temp isa AbstractVector
                     return sum(temp)
                 else
