@@ -15,7 +15,7 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
 Combinatorics = "0.7"
-Distributions = "0.21.6"
+Distributions = "0.22"
 ForwardDiff = "0.10.6"
 PDMats = "0.9"
 StatsFuns = "0.8, 0.9"

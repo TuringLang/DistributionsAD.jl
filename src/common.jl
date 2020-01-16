@@ -90,12 +90,7 @@ end
 
 # Tracker's implementation of ldiv isn't good. We'll use Zygote's instead.
 const TrackedVecOrMat = Union{Tracker.TrackedVector, Tracker.TrackedMatrix}
-function zygote_ldiv(A::AbstractMatrix, B::AbstractVecOrMat)
-    T = typeof((zero(eltype(A))*zero(eltype(B)) + zero(eltype(A))*zero(eltype(B)))/one(eltype(A)))
-    BB = similar(B, T)
-    copyto!(BB, B)
-    ldiv!(A, BB)
-end
+zygote_ldiv(A::AbstractMatrix, B::AbstractVecOrMat) = A \ B
 function zygote_ldiv(A::Tracker.TrackedMatrix, B::TrackedVecOrMat)
     return Tracker.track(zygote_ldiv, A, B)
 end
