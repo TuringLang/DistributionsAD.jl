@@ -26,8 +26,9 @@ import Distributions: MvNormal,
                       quantile, 
                       PoissonBinomial
 
-export TuringDiagNormal,
-       TuringMvNormal,
+export TuringScalMvNormal,
+       TuringDiagMvNormal,
+       TuringDenseMvNormal,
        TuringMvLogNormal,
        TuringPoissonBinomial
 
