@@ -47,7 +47,16 @@ function get_function(dist::DistSpec, inds, val)
     if val
         sym = gensym()
         push!(syms, sym)
-        expr = :(($(syms...),) -> logpdf($(dist.name)($(args...)), $(sym)))
+        expr = quote
+            ($(syms...),) -> begin
+                temp = logpdf($(dist.name)($(args...)), $(sym))
+                if temp isa AbstractVector
+                    return sum(temp)
+                else
+                    return temp
+                end
+            end
+        end
         if length(inds) == 0
             f = x -> Base.invokelatest(eval(expr), unpack(x, dist.x)...)
             return ADTestFunction(string(expr), f, pack(dist.x))
@@ -57,7 +66,17 @@ function get_function(dist::DistSpec, inds, val)
         end
     else
         @assert length(inds) > 0
-        expr = :(($(syms...),) -> logpdf($(dist.name)($(args...)), $(dist.x)))
+        expr = quote
+            ($(syms...),) -> begin
+                d = $(dist.name)($(args...))
+                temp = logpdf(d, $(dist.x))
+                if temp isa AbstractVector
+                    return sum(temp)
+                else
+                    return temp
+                end
+            end
+        end
         f = x -> Base.invokelatest(eval(expr), unpack(x, dist.θ[inds]...)...)
         return ADTestFunction(string(expr), f, pack(dist.θ[inds]...))
     end

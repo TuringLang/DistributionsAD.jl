@@ -14,10 +14,10 @@ function TuringDenseMvNormal(m::AbstractVector, A::AbstractMatrix)
 end
 Base.length(d::TuringDenseMvNormal) = length(d.m)
 function Distributions.rand(rng::Random.AbstractRNG, d::TuringDenseMvNormal)
-    return d.m .+ d.C.U' * randn(rng, dim(d))
+    return d.m .+ d.C.U' * randn(rng, length(d))
 end
 function Distributions.rand(rng::Random.AbstractRNG, d::TuringDenseMvNormal, n::Int)
-    return d.m .+ d.C.U' * randn(rng, dim(d), n)
+    return d.m .+ d.C.U' * randn(rng, length(d), n)
 end
 
 """
@@ -60,23 +60,23 @@ for T in (:AbstractVector, :AbstractMatrix)
 end
 
 function _logpdf(d::TuringScalMvNormal, x::AbstractVector)
-    return -(length(x) * log(2π * abs2(d.σ)) + sum(abs2, (x .- d.m) ./ d.σ)) / 2
+    return -(length(x) * log(2π * abs2(d.σ)) + sum(abs2.((x .- d.m) ./ d.σ))) / 2
 end
 function _logpdf(d::TuringScalMvNormal, x::AbstractMatrix)
-    return -(size(x, 2) * log(2π) .+ 2 * sum(log(d.σ)) .+ sum(abs2, (x .- d.m) ./ d.σ, dims=1)') ./ 2
+    return -(size(x, 1) * log(2π * abs2(d.σ)) .+ vec(sum(abs2.((x .- d.m) ./ d.σ), dims=1))) ./ 2
 end
 
 function _logpdf(d::TuringDiagMvNormal, x::AbstractVector)
-    return -(length(x) * log(2π) + 2 * sum(log.(d.σ)) + sum(abs2, (x .- d.m) ./ d.σ)) / 2
+    return -(length(x) * log(2π) + 2 * sum(log.(d.σ)) + sum(abs2.((x .- d.m) ./ d.σ))) / 2
 end
 function _logpdf(d::TuringDiagMvNormal, x::AbstractMatrix)
-    return -(size(x, 2) * log(2π) .+ 2 * sum(log.(d.σ)) .+ sum(abs2, (x .- d.m) ./ d.σ, dims=1)') ./ 2
+    return -((size(x, 1) * log(2π) + 2 * sum(log.(d.σ))) .+ vec(sum(abs2.((x .- d.m) ./ d.σ), dims=1))) ./ 2
 end
 function _logpdf(d::TuringDenseMvNormal, x::AbstractVector)
-    return -(length(x) * log(2π) + logdet(d.C) + sum(abs2, zygote_ldiv(d.C.U', x .- d.m))) / 2
+    return -(length(x) * log(2π) + logdet(d.C) + sum(abs2.(zygote_ldiv(d.C.U', x .- d.m)))) / 2
 end
 function _logpdf(d::TuringDenseMvNormal, x::AbstractMatrix)
-    return -(size(x, 2) * log(2π) .+ logdet(d.C) .+ sum(abs2, zygote_ldiv(d.C.U', x .- d.m), dims=1)') ./ 2
+    return -((size(x, 1) * log(2π) + logdet(d.C)) .+ vec(sum(abs2.(zygote_ldiv(d.C.U', x .- d.m)), dims=1))) ./ 2
 end
 
 # zero mean, dense covariance
@@ -137,7 +137,7 @@ struct TuringMvLogNormal{TD} <: AbstractMvLogNormal
 end
 MvLogNormal(d::TuringDenseMvNormal) = TuringMvLogNormal(d)
 MvLogNormal(d::TuringDiagMvNormal) = TuringMvLogNormal(d)
-Distributions.dim(d::TuringMvLogNormal) = length(d.normal)
+Distributions.length(d::TuringMvLogNormal) = length(d.normal)
 function Distributions.rand(rng::Random.AbstractRNG, d::TuringMvLogNormal)
     return exp!(rand(rng, d.normal))
 end
@@ -147,8 +147,15 @@ end
 for T in (:(Tracker.TrackedVector), :(Tracker.TrackedMatrix))
     @eval Distributions.logpdf(d::TuringMvLogNormal, x::$T) = _logpdf(d, x)
 end
-function _logpdf(d::TuringMvLogNormal, x::AbstractVecOrMat{T}) where {T<:Real}
-    return insupport(d, x) ? (_logpdf(d.normal, log.(x)) - sum(log.(x))) : -Inf
+function _logpdf(d::TuringMvLogNormal, x::AbstractVector{T}) where {T<:Real}
+    return insupport(d, x) ? (_logpdf(d.normal, log.(x)) - sum(log.(x))) : -T(Inf)
+end
+function _logpdf(d::TuringMvLogNormal, x::AbstractMatrix{T}) where {T<:Real}
+    if all(insupport(d, x))
+        return _logpdf(d.normal, log.(x)) - vec(sum(log.(x), dims=1))
+    else
+        return fill(-T(Inf), size(x, 2))
+    end
 end
 
 # zero mean, dense covariance

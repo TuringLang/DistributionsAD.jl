@@ -15,7 +15,8 @@ mean = zeros(dim)
 cov_mat = Matrix{Float64}(I, dim, dim)
 cov_vec = ones(dim)
 cov_num = 1.0
-norm_val = ones(dim)
+norm_val_vec = ones(dim)
+norm_val_mat = ones(dim, 2)
 alpha = ones(4)
 dir_val = fill(0.25, 4)
 beta_mat = rand(MatrixBeta(dim, dim, dim))
@@ -183,32 +184,55 @@ separator()
 @testset "Multivariate continuous distributions" begin
     test_head("Testing: Multivariate continuous distributions")
     mult_cont_dists = [
-        DistSpec(:MvNormal, (mean, cov_mat), norm_val),
-        DistSpec(:MvNormal, (mean, cov_vec), norm_val),
-        DistSpec(:MvNormal, (mean, cov_num), norm_val),
-        DistSpec(:((m, v) -> MvNormal(m, v*I)), (mean, cov_num), norm_val),
-        DistSpec(:MvNormal, (cov_mat,), norm_val),
-        DistSpec(:MvNormal, (cov_vec,), norm_val),
-        DistSpec(:(cov_num -> MvNormal(dim, cov_num)), (cov_num,), norm_val),
-        DistSpec(:MvLogNormal, (mean, cov_mat), norm_val),
-        DistSpec(:MvLogNormal, (mean, cov_vec), norm_val),
-        DistSpec(:MvLogNormal, (mean, cov_num), norm_val),
-        DistSpec(:MvLogNormal, (cov_mat,), norm_val),
-        DistSpec(:MvLogNormal, (cov_vec,), norm_val),
-        DistSpec(:(cov_num -> MvLogNormal(dim, cov_num)), (cov_num,), norm_val),
+        # Vector case
+        DistSpec(:MvNormal, (mean, cov_mat), norm_val_vec),
+        DistSpec(:MvNormal, (mean, cov_vec), norm_val_vec),
+        DistSpec(:MvNormal, (mean, cov_num), norm_val_vec),
+        DistSpec(:((m, v) -> MvNormal(m, v*I)), (mean, cov_num), norm_val_vec),
+        DistSpec(:MvNormal, (cov_mat,), norm_val_vec),
+        DistSpec(:MvNormal, (cov_vec,), norm_val_vec),
+        DistSpec(:(cov_num -> MvNormal(dim, cov_num)), (cov_num,), norm_val_vec),
+        DistSpec(:MvLogNormal, (mean, cov_mat), norm_val_vec),
+        DistSpec(:MvLogNormal, (mean, cov_vec), norm_val_vec),
+        DistSpec(:MvLogNormal, (mean, cov_num), norm_val_vec),
+        DistSpec(:MvLogNormal, (cov_mat,), norm_val_vec),
+        DistSpec(:MvLogNormal, (cov_vec,), norm_val_vec),
+        DistSpec(:(cov_num -> MvLogNormal(dim, cov_num)), (cov_num,), norm_val_vec),
+        # Matrix case
+        DistSpec(:MvNormal, (mean, cov_vec), norm_val_mat),
+        DistSpec(:MvNormal, (mean, cov_num), norm_val_mat),
+        DistSpec(:((m, v) -> MvNormal(m, v*I)), (mean, cov_num), norm_val_mat),
+        DistSpec(:MvNormal, (cov_vec,), norm_val_mat),
+        DistSpec(:(cov_num -> MvNormal(dim, cov_num)), (cov_num,), norm_val_mat),
+        DistSpec(:MvLogNormal, (mean, cov_vec), norm_val_mat),
+        DistSpec(:MvLogNormal, (mean, cov_num), norm_val_mat),
+        DistSpec(:MvLogNormal, (cov_vec,), norm_val_mat),
+        DistSpec(:(cov_num -> MvLogNormal(dim, cov_num)), (cov_num,), norm_val_mat),
     ]
 
     broken_mult_cont_dists = [
         # Dispatch error
-        DistSpec(:MvNormalCanon, (mean, cov_mat), norm_val),
-        DistSpec(:MvNormalCanon, (mean, cov_vec), norm_val),
-        DistSpec(:MvNormalCanon, (mean, cov_num), norm_val),
-        DistSpec(:MvNormalCanon, (cov_mat,), norm_val),
-        DistSpec(:MvNormalCanon, (cov_vec,), norm_val),
-        DistSpec(:(cov_num -> MvNormalCanon(dim, cov_num)), (cov_num,), norm_val),
+        DistSpec(:MvNormalCanon, (mean, cov_mat), norm_val_vec),
+        DistSpec(:MvNormalCanon, (mean, cov_vec), norm_val_vec),
+        DistSpec(:MvNormalCanon, (mean, cov_num), norm_val_vec),
+        DistSpec(:MvNormalCanon, (cov_mat,), norm_val_vec),
+        DistSpec(:MvNormalCanon, (cov_vec,), norm_val_vec),
+        DistSpec(:(cov_num -> MvNormalCanon(dim, cov_num)), (cov_num,), norm_val_vec),
+        DistSpec(:Dirichlet, (alpha,), dir_val),
+        DistSpec(:MvNormalCanon, (mean, cov_mat), norm_val_mat),
+        DistSpec(:MvNormalCanon, (mean, cov_vec), norm_val_mat),
+        DistSpec(:MvNormalCanon, (mean, cov_num), norm_val_mat),
+        DistSpec(:MvNormalCanon, (cov_mat,), norm_val_mat),
+        DistSpec(:MvNormalCanon, (cov_vec,), norm_val_mat),
+        DistSpec(:(cov_num -> MvNormalCanon(dim, cov_num)), (cov_num,), norm_val_mat),
         DistSpec(:Dirichlet, (alpha,), dir_val),
         # Test failure
-        DistSpec(:(() -> Product(Normal.(randn(dim), 1))), (), norm_val),
+        DistSpec(:MvNormal, (mean, cov_mat), norm_val_mat),
+        DistSpec(:MvNormal, (cov_mat,), norm_val_mat),
+        DistSpec(:MvLogNormal, (mean, cov_mat), norm_val_mat),
+        DistSpec(:MvLogNormal, (cov_mat,), norm_val_mat),
+        DistSpec(:(() -> Product(Normal.(randn(dim), 1))), (), norm_val_vec),
+        DistSpec(:(() -> Product(Normal.(randn(dim), 1))), (), norm_val_mat),
     ]
 
     for d in mult_cont_dists
