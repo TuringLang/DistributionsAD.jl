@@ -89,15 +89,14 @@ function LinearAlgebra.logdet(C::Cholesky{<:Tracker.TrackedReal, <:Tracker.Track
 end
 
 # Tracker's implementation of ldiv isn't good. We'll use Zygote's instead.
-const TrackedVecOrMat = Union{Tracker.TrackedVector, Tracker.TrackedMatrix}
 zygote_ldiv(A::AbstractMatrix, B::AbstractVecOrMat) = A \ B
-function zygote_ldiv(A::Tracker.TrackedMatrix, B::TrackedVecOrMat)
+function zygote_ldiv(A::Tracker.TrackedMatrix, B::Tracker.TrackedVecOrMat)
     return Tracker.track(zygote_ldiv, A, B)
 end
 function zygote_ldiv(A::Tracker.TrackedMatrix, B::AbstractVecOrMat)
     return Tracker.track(zygote_ldiv, A, B)
 end
-zygote_ldiv(A::AbstractMatrix, B::TrackedVecOrMat) =  Tracker.track(zygote_ldiv, A, B)
+zygote_ldiv(A::AbstractMatrix, B::Tracker.TrackedVecOrMat) =  Tracker.track(zygote_ldiv, A, B)
 Tracker.@grad function zygote_ldiv(A, B)
     Y, back = Zygote.pullback(\, Tracker.data(A), Tracker.data(B))
     return Y, Δ->back(Tracker.data(Δ))
