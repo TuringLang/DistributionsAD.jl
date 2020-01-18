@@ -26,15 +26,13 @@ end
 
 function TuringWishart(df::Real, S::AbstractMatrix)
     T = Base.promote_eltype(df, S)
-    TuringWishart(T(df), S)
-    #TuringWishart(T(df), convert(AbstractArray{T}, S))
+    TuringWishart(T(df), convert(AbstractArray{T}, S))
 end
 
 function _wishart_c0(df::Real, C::Cholesky)
-    return 1.0
-    #h_df = df / 2
-    #p = size(C, 1)
-    #h_df * (logdet(C) + p * typeof(df)(logtwo)) + logmvgamma(p, h_df)
+    h_df = df / 2
+    p = size(C, 1)
+    h_df * (logdet(C) + p * typeof(df)(logtwo)) + logmvgamma(p, h_df)
 end
 
 #### Properties
