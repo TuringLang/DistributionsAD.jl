@@ -30,10 +30,13 @@ export TuringScalMvNormal,
        TuringDiagMvNormal,
        TuringDenseMvNormal,
        TuringMvLogNormal,
-       TuringPoissonBinomial
+       TuringPoissonBinomial,
+       TuringWishart,
+       TuringInverseWishart
 
 include("common.jl")
 include("univariate.jl")
 include("multivariate.jl")
+include("matrixvariate.jl")
 
 end
