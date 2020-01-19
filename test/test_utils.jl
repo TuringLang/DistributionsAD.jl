@@ -12,25 +12,27 @@ end
 vectorize(v::Number) = [v]
 vectorize(v) = vec(v)
 pack(vals...) = reduce(vcat, vectorize.(vals))
-function unpack(x, vals...)
+@generated function unpack(x, vals...)
     unpacked = []
-    i = 1
-    for v in vals
-        if v isa Number
-            push!(unpacked, x[i])
-            i += 1
-        elseif v isa Vector
-            push!(unpacked, x[i:i+length(v)-1])
-            i += length(v)
-        elseif v isa Matrix
-            push!(unpacked, reshape(x[i:(i+length(v)-1)], size(v)))
-            i += length(v)
+    ind = :(1)
+    for (i, T) in enumerate(vals)
+        if T <: Number
+            push!(unpacked, :(x[$ind]))
+            ind = :($ind + 1)
+        elseif T <: Vector
+            push!(unpacked, :(x[$ind:$ind+length(vals[$i])-1]))
+            ind = :($ind + length(vals[$i]))
+        elseif T <: Matrix
+            push!(unpacked, :(reshape(x[$ind:($ind+length(vals[$i])-1)], size(vals[$i]))))
+            ind = :($ind + length(vals[$i]))
         else
             throw("Unsupported argument")
         end
     end
-    @assert i == length(x) + 1
-    return (unpacked...,)
+    return quote
+        @assert $ind == length(x) + 1
+        return ($(unpacked...),)
+    end
 end
 function get_function(dist::DistSpec, inds, val)
     syms = []
@@ -58,10 +60,10 @@ function get_function(dist::DistSpec, inds, val)
             end
         end
         if length(inds) == 0
-            f = x -> Base.invokelatest(eval(expr), unpack(x, dist.x)...)
+            f = eval(:(x -> $expr(unpack(x, $(dist.x))...)))
             return ADTestFunction(string(expr), f, pack(dist.x))
         else
-            f = x -> Base.invokelatest(eval(expr), unpack(x, dist.θ[inds]..., dist.x)...)
+            f = eval(:(x -> $expr(unpack(x, $(dist.θ[inds]...), $(dist.x))...)))
             return ADTestFunction(string(expr), f, pack(dist.θ[inds]..., dist.x))
         end
     else
@@ -76,7 +78,8 @@ function get_function(dist::DistSpec, inds, val)
                 end
             end
         end
-        f = x -> Base.invokelatest(eval(expr), unpack(x, dist.θ[inds]...)...)
+        expr = :(x -> $expr(unpack(x, $(dist.θ[inds]...))...))
+        f = eval(expr)
         return ADTestFunction(string(expr), f, pack(dist.θ[inds]...))
     end
 end
@@ -97,15 +100,18 @@ end
 
 function test_ad(f, at = 0.5; rtol = 1e-8, atol = 1e-8)
     isarr = isa(at, AbstractArray)
-    reverse = Tracker.data(Tracker.gradient(f, at)[1])
+    reverse_tracker = Tracker.data(Tracker.gradient(f, at)[1])
+    reverse_zygote = Zygote.gradient(f, at)[1]
     if isarr
         forward = ForwardDiff.gradient(f, at)
-        @test isapprox(reverse, forward, rtol=rtol, atol=atol)
+        @test isapprox(reverse_tracker, forward, rtol=rtol, atol=atol)
+        @test isapprox(reverse_zygote, forward, rtol=rtol, atol=atol)
     else
         forward = ForwardDiff.derivative(f, at)
         finite_diff = central_fdm(5,1)(f, at)
-        @test isapprox(reverse, forward, rtol=rtol, atol=atol)
-        @test isapprox(reverse, finite_diff, rtol=rtol, atol=atol)
+        @test isapprox(reverse_tracker, forward, rtol=rtol, atol=atol)
+        @test isapprox(reverse_tracker, finite_diff, rtol=rtol, atol=atol)
+        @test isapprox(reverse_zygote, finite_diff, rtol=rtol, atol=atol)
     end
 end
 
