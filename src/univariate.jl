@@ -32,7 +32,7 @@ Tracker.@grad function uniformlogpdf(a, b, x)
     n = T(NaN)
     return l, Δ->(f ? da : n, f ? -da : n, f ? zero(T) : n)
 end
-Zygote.@adjoint function uniformlogpdf(a, b, x)
+ZygoteRules.@adjoint function uniformlogpdf(a, b, x)
     diff = b - a
     T = typeof(diff)
     l = -log(diff)
@@ -41,8 +41,8 @@ Zygote.@adjoint function uniformlogpdf(a, b, x)
     n = T(NaN)
     return l, Δ->(f ? da : n, f ? -da : n, f ? zero(T) : n)
 end
-Zygote.@adjoint function Distributions.Uniform(args...)
-    value, back = Zygote.pullback(TuringUniform, args...)
+ZygoteRules.@adjoint function Distributions.Uniform(args...)
+    value, back = ZygoteRules.pullback(TuringUniform, args...)
     return value, x -> back(x)
 end
 
@@ -76,7 +76,7 @@ Tracker.@grad function binomlogpdf(n::Int, p::Tracker.TrackedReal, x::Int)
     return binomlogpdf(n, Tracker.data(p), x),
         Δ->(nothing, Δ * (x / p - (n - x) / (1 - p)), nothing)
 end
-Zygote.@adjoint function binomlogpdf(n::Int, p::Real, x::Int)
+ZygoteRules.@adjoint function binomlogpdf(n::Int, p::Real, x::Int)
     return binomlogpdf(n, p, x),
         Δ->(nothing, Δ * (x / p - (n - x) / (1 - p)), nothing)
 end
@@ -142,7 +142,7 @@ Tracker.@grad function poislogpdf(v::Tracker.TrackedReal, x::Int)
       return poislogpdf(Tracker.data(v), x),
           Δ->(Δ * (x/v - 1), nothing)
 end
-Zygote.@adjoint function poislogpdf(v::Real, x::Int)
+ZygoteRules.@adjoint function poislogpdf(v::Real, x::Int)
     return poislogpdf(v, x),
         Δ->(Δ * (x/v - 1), nothing)
 end
@@ -183,7 +183,7 @@ Tracker.@grad function poissonbinomial_pdf_fft(x::Tracker.TrackedArray)
     end
 end
 # FIXME: This is inefficient, replace with the commented code below once Zygote supports it.
-Zygote.@adjoint function poissonbinomial_pdf_fft(x::AbstractArray)
+ZygoteRules.@adjoint function poissonbinomial_pdf_fft(x::AbstractArray)
     T = eltype(x)
     fft = poissonbinomial_pdf_fft(x)
     return  fft, Δ -> begin
@@ -192,8 +192,8 @@ Zygote.@adjoint function poissonbinomial_pdf_fft(x::AbstractArray)
 end
 # The code below doesn't work because of bugs in Zygote. The above is inefficient.
 #=
-Zygote.@adjoint function poissonbinomial_pdf_fft(x::AbstractArray{<:Real})
-    value, back = Zygote.pullback(poissonbinomial_pdf_fft_zygote, x)
+ZygoteRules.@adjoint function poissonbinomial_pdf_fft(x::AbstractArray{<:Real})
+    value, back = ZygoteRules.pullback(poissonbinomial_pdf_fft_zygote, x)
     return value, Δ -> back(Δ)
 end
 function poissonbinomial_pdf_fft_zygote(p::AbstractArray{T}) where {T <: Real}

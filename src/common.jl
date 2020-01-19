@@ -41,26 +41,26 @@ function turing_chol(A::AbstractMatrix, check)
 end
 turing_chol(A::Tracker.TrackedMatrix, check) = Tracker.track(turing_chol, A, check)
 Tracker.@grad function turing_chol(A::AbstractMatrix, check)
-    C, back = Zygote.pullback(unsafe_cholesky, Tracker.data(A), Tracker.data(check))
+    C, back = ZygoteRules.pullback(unsafe_cholesky, Tracker.data(A), Tracker.data(check))
     return (C.factors, C.info), Δ->back((factors=Tracker.data(Δ[1]),))
 end
 
 unsafe_cholesky(x, check) = cholesky(x, check=check)
-Zygote.@adjoint function unsafe_cholesky(Σ::Real, check)
+ZygoteRules.@adjoint function unsafe_cholesky(Σ::Real, check)
     C = cholesky(Σ; check=check)
     return C, function(Δ::NamedTuple)
         issuccess(C) || return (zero(Σ), nothing)
         (Δ.factors[1, 1] / (2 * C.U[1, 1]), nothing)
     end
 end
-Zygote.@adjoint function unsafe_cholesky(Σ::Diagonal, check)
+ZygoteRules.@adjoint function unsafe_cholesky(Σ::Diagonal, check)
     C = cholesky(Σ; check=check)
     return C, function(Δ::NamedTuple)
         issuccess(C) || (Diagonal(zero(diag(Δ.factors))), nothing)
         (Diagonal(diag(Δ.factors) .* inv.(2 .* C.factors.diag)), nothing)
     end
 end
-Zygote.@adjoint function unsafe_cholesky(Σ::Union{StridedMatrix, Symmetric{<:Real, <:StridedMatrix}}, check)
+ZygoteRules.@adjoint function unsafe_cholesky(Σ::Union{StridedMatrix, Symmetric{<:Real, <:StridedMatrix}}, check)
     C = cholesky(Σ; check=check)
     return C, function(Δ::NamedTuple)
         issuccess(C) || return (zero(Δ.factors), nothing)
@@ -98,7 +98,7 @@ function zygote_ldiv(A::Tracker.TrackedMatrix, B::AbstractVecOrMat)
 end
 zygote_ldiv(A::AbstractMatrix, B::Tracker.TrackedVecOrMat) =  Tracker.track(zygote_ldiv, A, B)
 Tracker.@grad function zygote_ldiv(A, B)
-    Y, back = Zygote.pullback(\, Tracker.data(A), Tracker.data(B))
+    Y, back = ZygoteRules.pullback(\, Tracker.data(A), Tracker.data(B))
     return Y, Δ->back(Tracker.data(Δ))
 end
 

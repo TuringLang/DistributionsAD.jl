@@ -236,23 +236,23 @@ MvLogNormal(d::Int, σ::TrackedReal{<:Real}) = TuringMvLogNormal(TuringMvNormal(
 
 ## Zygote adjoint
 
-Zygote.@adjoint function Distributions.MvNormal(
+ZygoteRules.@adjoint function Distributions.MvNormal(
     A::Union{AbstractVector{<:Real}, AbstractMatrix{<:Real}},
 )
-    value, back = Zygote.pullback(TuringMvNormal, A)
+    value, back = ZygoteRules.pullback(TuringMvNormal, A)
     return value, x -> back(x)
 end
-Zygote.@adjoint function Distributions.MvNormal(
+ZygoteRules.@adjoint function Distributions.MvNormal(
     m::AbstractVector{<:Real},
     A::Union{Real, UniformScaling, AbstractVecOrMat{<:Real}},
 )
-    value, back = Zygote.pullback(TuringMvNormal, m, A)
+    value, back = ZygoteRules.pullback(TuringMvNormal, m, A)
     return value, x -> back(x)
 end
-Zygote.@adjoint function Distributions.MvNormal(
+ZygoteRules.@adjoint function Distributions.MvNormal(
     d::Int,
     A::Real,
 )
-    value, back = Zygote.pullback(A -> TuringMvNormal(d, A), A)
+    value, back = ZygoteRules.pullback(A -> TuringMvNormal(d, A), A)
     return value, x -> (nothing, back(x)[1])
 end

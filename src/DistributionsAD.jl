@@ -3,6 +3,7 @@ module DistributionsAD
 using PDMats, 
       ForwardDiff, 
       Zygote, 
+      ZygoteRules,
       Tracker, 
       LinearAlgebra, 
       Distributions, 
