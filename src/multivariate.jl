@@ -156,6 +156,7 @@ struct TuringMvLogNormal{TD} <: AbstractMvLogNormal
 end
 MvLogNormal(d::TuringDenseMvNormal) = TuringMvLogNormal(d)
 MvLogNormal(d::TuringDiagMvNormal) = TuringMvLogNormal(d)
+MvLogNormal(d::TuringScalMvNormal) = TuringMvLogNormal(d)
 Distributions.length(d::TuringMvLogNormal) = length(d.normal)
 function Distributions.rand(rng::Random.AbstractRNG, d::TuringMvLogNormal)
     return exp!(rand(rng, d.normal))
@@ -170,7 +171,7 @@ function _logpdf(d::TuringMvLogNormal, x::AbstractVector{T}) where {T<:Real}
     return insupport(d, x) ? (_logpdf(d.normal, log.(x)) - sum(log.(x))) : -T(Inf)
 end
 function _logpdf(d::TuringMvLogNormal, x::AbstractMatrix{T}) where {T<:Real}
-    if all(insupport(d, x))
+    if all(i -> insupport(d, x[:, i]), 1:size(x, 2))
         return _logpdf(d.normal, log.(x)) - vec(sum(log.(x), dims=1))
     else
         return fill(-T(Inf), size(x, 2))
