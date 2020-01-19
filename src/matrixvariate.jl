@@ -40,7 +40,7 @@ end
 Distributions.insupport(::Type{TuringWishart}, X::Matrix) = isposdef(X)
 Distributions.insupport(d::TuringWishart, X::Matrix) = size(X) == size(d) && isposdef(X)
 
-PDMats.dim(d::TuringWishart) = size(d.chol, 1)
+dim(d::TuringWishart) = size(d.chol, 1)
 Base.size(d::TuringWishart) = (p = dim(d); (p, p))
 Base.size(d::TuringWishart, i) = size(d)[i]
 LinearAlgebra.rank(d::TuringWishart) = dim(d)
@@ -156,7 +156,7 @@ end
 Distributions.insupport(::Type{TuringInverseWishart}, X::Matrix) = isposdef(X)
 Distributions.insupport(d::TuringInverseWishart, X::Matrix) = size(X) == size(d) && isposdef(X)
 
-PDMats.dim(d::TuringInverseWishart) = size(d.S, 1)
+dim(d::TuringInverseWishart) = size(d.S, 1)
 Base.size(d::TuringInverseWishart) = (p = dim(d); (p, p))
 Base.size(d::TuringInverseWishart, i) = size(d)[i]
 LinearAlgebra.rank(d::TuringInverseWishart) = dim(d)
