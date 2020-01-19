@@ -119,7 +119,6 @@ separator()
         DistSpec(:Weibull, (), 1),
         DistSpec(:Weibull, (1,), 1),
         DistSpec(:Weibull, (1, 1), 1),
-        DistSpec(:Semicircle, (1.0,), 0.5),
     ]
     broken_uni_cont_dists = [
         # Zygote
@@ -134,6 +133,7 @@ separator()
         DistSpec(:Gamma, (1,), 0.5),
         DistSpec(:Gamma, (1, 2), 0.5),
         DistSpec(:TDist, (1,), 0.5),
+        DistSpec(:Semicircle, (1.0,), 0.5),
         # Broken in Distributions even without autodiff
         DistSpec(:(()->KSDist(1)), (), 0.5), 
         DistSpec(:(()->KSOneSided(1)), (), 0.5), 

@@ -68,18 +68,6 @@ Tracker.@grad function semicirclelogpdf(r, x)
         (f ? Δ*(-2/rr + rr/diffsq) : n, f ? Δ*(-xx/diffsq) : n)
     end
 end
-Zygote.@adjoint function semicirclelogpdf(r, x)
-    xx, rr = promote(x, float(r))
-    d = Semicircle(rr)
-    T = typeof(xx)
-    l = logpdf(d, xx)
-    f = isfinite(l)
-    n = T(NaN)
-    return l, function (Δ) 
-        diffsq = rr^2 - xx^2
-        (f ? Δ*(-2/rr + rr/diffsq) : n, f ? Δ*(-xx/diffsq) : n)
-    end
-end
 
 ## Binomial ##
 
