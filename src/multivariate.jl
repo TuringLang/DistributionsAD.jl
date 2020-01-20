@@ -177,6 +177,7 @@ function _logpdf(d::TuringMvLogNormal, x::AbstractMatrix{T}) where {T<:Real}
     if all(insupp)
         return _logpdf(d.normal, log.(x)) - vec(sum(log.(x), dims=1))
     else
+        T = typeof(log(abs(x[1])))
         return map(1:size(x, 2)) do i
             insupp[i] && return -T(Inf)
             return _logpdf(d.normal, log.(x[:,i])) - sum(log.(x[:,i]))
