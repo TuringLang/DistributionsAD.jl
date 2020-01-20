@@ -209,10 +209,8 @@ Distributions._rand!(rng::AbstractRNG, d::TuringInverseWishart, A::AbstractMatri
 ## Adjoints
 
 ZygoteRules.@adjoint function Distributions.Wishart(df::Real, S::AbstractMatrix{<:Real})
-    value, back = ZygoteRules.pullback((df, S) -> TuringWishart(df, S), df, S)
-    return value, x -> back(x)
+    return ZygoteRules.pullback((df, S) -> TuringWishart(df, S), df, S)
 end
 ZygoteRules.@adjoint function Distributions.InverseWishart(df::Real, S::AbstractMatrix{<:Real})
-    value, back = ZygoteRules.pullback((df, S) -> TuringInverseWishart(df, S), df, S)
-    return value, x -> back(x)
+    return ZygoteRules.pullback((df, S) -> TuringInverseWishart(df, S), df, S)
 end

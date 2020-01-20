@@ -42,8 +42,7 @@ ZygoteRules.@adjoint function uniformlogpdf(a, b, x)
     return l, Δ->(f ? da : n, f ? -da : n, f ? zero(T) : n)
 end
 ZygoteRules.@adjoint function Distributions.Uniform(args...)
-    value, back = ZygoteRules.pullback(TuringUniform, args...)
-    return value, x -> back(x)
+    return ZygoteRules.pullback(TuringUniform, args...)
 end
 
 ## Semicircle ##
