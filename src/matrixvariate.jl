@@ -212,5 +212,5 @@ ZygoteRules.@adjoint function Distributions.Wishart(df::Real, S::AbstractMatrix{
     return ZygoteRules.pullback(TuringWishart, df, S)
 end
 ZygoteRules.@adjoint function Distributions.InverseWishart(df::Real, S::AbstractMatrix{<:Real})
-    return ZygoteRules.pullback((df, S) -> TuringInverseWishart(df, S), df, S)
+    return ZygoteRules.pullback(TuringInverseWishart, df, S)
 end
