@@ -159,7 +159,10 @@ MvLogNormal(d::TuringDiagMvNormal) = TuringMvLogNormal(d)
 MvLogNormal(d::TuringScalMvNormal) = TuringMvLogNormal(d)
 Distributions.length(d::TuringMvLogNormal) = length(d.normal)
 function Distributions.rand(rng::Random.AbstractRNG, d::TuringMvLogNormal)
-    return exp!(rand(rng, d.normal))
+    return Distributions.exp!(rand(rng, d.normal))
+end
+function Distributions.rand(rng::Random.AbstractRNG, d::TuringMvLogNormal, n::Int)
+    return Distributions.exp!(rand(rng, d.normal, n))
 end
 for T in (:AbstractVector, :AbstractMatrix)
     @eval Distributions.logpdf(d::TuringMvLogNormal, x::$T) = _logpdf(d, x)
