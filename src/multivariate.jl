@@ -170,7 +170,7 @@ end
 function _logpdf(d::TuringMvLogNormal, x::AbstractVector{T}) where {T<:Real}
     return insupport(d, x) ? (_logpdf(d.normal, log.(x)) - sum(log.(x))) : -T(Inf)
 end
-function _logpdf(d::TuringMvLogNormal, x::AbstractMatrix{T}) where {T<:Real}
+function _logpdf(d::TuringMvLogNormal, x::AbstractMatrix{<:Real})
     insupp = map(1:size(x, 2)) do i 
         insupport(d, x[:, i])
     end
