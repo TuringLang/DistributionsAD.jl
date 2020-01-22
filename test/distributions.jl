@@ -61,10 +61,12 @@ separator()
         DistSpec(:Cauchy, (1,), 0.5),
         DistSpec(:Cauchy, (1, 2), 0.5),
         DistSpec(:Chi, (1,), 0.5),
+        DistSpec(:Chisq, (1,), 0.5),
         DistSpec(:Cosine, (1, 1), 0.5),
         DistSpec(:Epanechnikov, (1, 1), 0.5),
         DistSpec(:((s)->Erlang(1, s)), (1,), 0.5), # First arg is integer
         DistSpec(:Exponential, (1,), 0.5),
+        DistSpec(:FDist, (1, 1), 0.5),
         DistSpec(:Frechet, (), 0.5),
         DistSpec(:Frechet, (1,), 0.5),
         DistSpec(:Frechet, (1, 2), 0.5),
@@ -117,6 +119,7 @@ separator()
         DistSpec(:SymTriangularDist, (), 0.5),
         DistSpec(:SymTriangularDist, (1,), 0.5),
         DistSpec(:SymTriangularDist, (1, 2), 0.5),
+        DistSpec(:TDist, (1,), 0.5),
         DistSpec(:TriangularDist, (1, 2), 1.5),
         DistSpec(:TriangularDist, (1, 3, 2), 1.5),
         DistSpec(:Triweight, (1, 1), 1),
@@ -131,9 +134,6 @@ separator()
     broken_uni_cont_dists = [
         # Zygote
         DistSpec(:Chernoff, (), 0.5),
-        DistSpec(:Chisq, (1,), 0.5),
-        DistSpec(:FDist, (1, 1), 0.5),
-        DistSpec(:TDist, (1,), 0.5),
         # Broken in Distributions even without autodiff
         DistSpec(:(()->KSDist(1)), (), 0.5), 
         DistSpec(:(()->KSOneSided(1)), (), 0.5), 

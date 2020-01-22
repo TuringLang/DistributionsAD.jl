@@ -24,7 +24,6 @@ AD of `logpdf` is fully supported and tested for the following distributions wrt
     - `BetaPrime`
     - `Biweight`
     - `Cauchy`
-    - `Chernoff`
     - `Chi`
     - `Chisq`
     - `Cosine`

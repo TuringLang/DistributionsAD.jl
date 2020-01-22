@@ -58,7 +58,7 @@ ZygoteRules.@adjoint function betalogpdf(α::Real, β::Real, x::Number)
 end    
 
 ## Gamma ##
-# gammalogpdf(k::Real, θ::Real, x::Number) = -loggamma(k) - k * log(θ) + (k - 1) * log(x) - x / θ
+
 function _gammalogpdfgrad(k, θ, x)
     dk = -digamma(k) - log(θ) + log(x)
     dθ = -k/θ + x/θ^2
@@ -68,6 +68,47 @@ end
 ZygoteRules.@adjoint function gammalogpdf(k::Real, θ::Real, x::Number)
     return gammalogpdf(k, θ, x), Δ -> (Δ .* _gammalogpdfgrad(k, θ, x))
 end    
+
+## Chisq ##
+
+function _chisqlogpdfgrad(k, x)
+    hk = k/2
+    d = digamma(hk)
+    dk = (-log(oftype(hk, 2)) - d + log(x))/2
+    dx = (hk - 1)/x - one(hk)/2
+    return (dk, dx)
+end
+ZygoteRules.@adjoint function chisqlogpdf(k::Real, x::Number)
+    return chisqlogpdf(k, x), Δ -> (Δ .* _chisqlogpdfgrad(k, x))
+end    
+
+## FDist ##
+
+function _fdistlogpdfgrad(v1, v2, x)
+    temp1 = v1 * x + v2
+    temp2 = log(temp1)
+    vsum = v1 + v2
+    temp3 = vsum / temp1
+    temp4 = digamma(vsum / 2)
+    dv1 = (log(v1 * x) + 1 - temp2 - x * temp3 - digamma(v1 / 2) + temp4) / 2
+    dv2 = (log(v2) + 1 - temp2 - temp3 - digamma(v2 / 2) + temp4) / 2
+    dx = v1 / 2 * (1 / x - temp3) - 1 / x
+    return (dv1, dv2, dx)
+end
+ZygoteRules.@adjoint function fdistlogpdf(v1::Real, v2::Real, x::Number)
+    return fdistlogpdf(v1, v2, x), Δ -> (Δ .* _fdistlogpdfgrad(v1, v2, x))
+end
+
+## TDist ##
+
+function _tdistlogpdfgrad(v, x)
+    dv = (digamma((v + 1) / 2) - 1 / v - digamma(v / 2) - log(1 + x^2 / v) + x^2 * (v + 1) / v^2 / (1 + x^2 / v)) / 2
+    dx = -x * (v + 1) / (v + x^2)
+    return (dv, dx)
+end
+ZygoteRules.@adjoint function tdistlogpdf(v::Real, x::Number)
+    return tdistlogpdf(v, x), Δ -> (Δ .* _tdistlogpdfgrad(v, x))
+end
 
 ## Semicircle ##
 
