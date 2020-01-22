@@ -46,30 +46,6 @@ ZygoteRules.@adjoint function Distributions.Uniform(args...)
 end
 
 ## Beta ##
-struct TuringBeta{T} <: ContinuousUnivariateDistribution
-    α::T
-    β::T
-    TuringBeta{T}(α::T, β::T) where {T} = new{T}(α, β)
-end
-function TuringBeta(α::T, β::T; check_args=true) where {T<:Real}
-    check_args && Distributions.@check_args(TuringBeta, α > zero(α) && β > zero(β))
-    return TuringBeta{T}(α, β)
-end
-TuringBeta(α::Real, β::Real) = TuringBeta(promote(α, β)...)
-TuringBeta(α::Integer, β::Integer) = TuringBeta(float(α), float(β))
-TuringBeta(α::Real) = TuringBeta(α, α)
-TuringBeta() = TuringBeta(1.0, 1.0, check_args=false)
-Distributions.@distr_support TuringBeta 0.0 1.0
-for F in (:mean, :modes, :var, :meanlogx, :varlogx, :stdlogx, :skewness, :kurtosis, :entropy)
-    @eval Distributions.$F(d::TuringBeta{T}) where {T} = $F(Beta{T}(d.α, d.β))
-end
-function Distributions.mode(d::TuringBeta{T}; check_args=true) where {T}
-    return mode(Beta(d.α, d.β, check_args=check_args))
-end
-function Distributions.rand(rng::AbstractRNG, d::TuringBeta{T}, n::Integer...) where T
-    return rand(rng, Beta{T}(d.α, d.β), n...)
-end
-_betalogpdf(α, β, x) = (α - 1) * log(x) + (β - 1) * log(1 - x) - logbeta(α, β)
 function _betalogpdfgrad(α, β, x)
     di = digamma(α + β)
     dα = log(x) - digamma(α) + di
@@ -77,17 +53,21 @@ function _betalogpdfgrad(α, β, x)
     dx = (α - 1)/x + (1 - β)/(1 - x)
     return (dα, dβ, dx)
 end
-ZygoteRules.@adjoint function _betalogpdf(α, β, x)
-    return _betalogpdf(α, β, x), Δ -> (Δ .* _betalogpdfgrad(α, β, x))
+ZygoteRules.@adjoint function betalogpdf(α::Real, β::Real, x::Number)
+    return betalogpdf(α, β, x), Δ -> (Δ .* _betalogpdfgrad(α, β, x))
+end    
+
+## Gamma ##
+# gammalogpdf(k::Real, θ::Real, x::Number) = -loggamma(k) - k * log(θ) + (k - 1) * log(x) - x / θ
+function _gammalogpdfgrad(k, θ, x)
+    dk = -digamma(k) - log(θ) + log(x)
+    dθ = -k/θ + x/θ^2
+    dx = (k - 1)/x - 1/θ
+    return (dk, dθ, dx)
 end
-Distributions.logpdf(d::TuringBeta, x::Real) = _betalogpdf(d.α, d.β, x)
-Distributions.logpdf(d::TuringBeta, x::AbstractArray{<:Real}) = _betalogpdf(d.α, d.β, x)
-ZygoteRules.@adjoint function Beta()
-    return pullback(TuringBeta)
-end
-ZygoteRules.@adjoint function Beta{T}(α, β) where {T}
-    return pullback(TuringBeta{T}, α, β)
-end
+ZygoteRules.@adjoint function gammalogpdf(k::Real, θ::Real, x::Number)
+    return gammalogpdf(k, θ, x), Δ -> (Δ .* _gammalogpdfgrad(k, θ, x))
+end    
 
 ## Semicircle ##
 

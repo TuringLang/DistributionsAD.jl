@@ -63,10 +63,14 @@ separator()
         DistSpec(:Chi, (1,), 0.5),
         DistSpec(:Cosine, (1, 1), 0.5),
         DistSpec(:Epanechnikov, (1, 1), 0.5),
+        DistSpec(:((s)->Erlang(1, s)), (1,), 0.5), # First arg is integer
         DistSpec(:Exponential, (1,), 0.5),
         DistSpec(:Frechet, (), 0.5),
         DistSpec(:Frechet, (1,), 0.5),
         DistSpec(:Frechet, (1, 2), 0.5),
+        DistSpec(:Gamma, (), 0.5),
+        DistSpec(:Gamma, (1,), 0.5),
+        DistSpec(:Gamma, (1, 2), 0.5),
         DistSpec(:GeneralizedExtremeValue, (1.0, 1.0, 1.0), 0.5),
         DistSpec(:GeneralizedPareto, (), 0.5),
         DistSpec(:GeneralizedPareto, (1.0, 2.0), 0.5),
@@ -109,6 +113,7 @@ separator()
         DistSpec(:PGeneralizedGaussian, (1, 1, 1), 0.5),
         DistSpec(:Rayleigh, (), 0.5),
         DistSpec(:Rayleigh, (1,), 0.5),
+        DistSpec(:Semicircle, (1.0,), 0.5),
         DistSpec(:SymTriangularDist, (), 0.5),
         DistSpec(:SymTriangularDist, (1,), 0.5),
         DistSpec(:SymTriangularDist, (1, 2), 0.5),
@@ -127,13 +132,8 @@ separator()
         # Zygote
         DistSpec(:Chernoff, (), 0.5),
         DistSpec(:Chisq, (1,), 0.5),
-        DistSpec(:((s)->Erlang(1, s)), (1,), 0.5), # First arg is integer
         DistSpec(:FDist, (1, 1), 0.5),
-        DistSpec(:Gamma, (), 0.5),
-        DistSpec(:Gamma, (1,), 0.5),
-        DistSpec(:Gamma, (1, 2), 0.5),
         DistSpec(:TDist, (1,), 0.5),
-        DistSpec(:Semicircle, (1.0,), 0.5),
         # Broken in Distributions even without autodiff
         DistSpec(:(()->KSDist(1)), (), 0.5), 
         DistSpec(:(()->KSOneSided(1)), (), 0.5), 
