@@ -33,39 +33,25 @@ uniformlogpdf(a::TrackedReal, b::TrackedReal, x::TrackedReal) = track(uniformlog
 Tracker.@grad function uniformlogpdf(a, b, x)
     diff = data(b) - data(a)
     T = typeof(diff)
-    l = -log(diff)
-    f = isfinite(l)
-    da = 1/diff
-    n = T(NaN)
-    return l, Δ->(f ? da : n, f ? -da : n, f ? zero(T) : n)
+    if a <= data(x) <= b && a < b
+        l = -log(diff)
+        da = 1/diff^2
+        return l, Δ -> (da * Δ, -da * Δ, zero(T) * Δ)
+    else
+        n = T(NaN)
+        return l, Δ -> (n, n, n)
+    end
 end
 ZygoteRules.@adjoint function uniformlogpdf(a, b, x)
     diff = b - a
     T = typeof(diff)
-    l = -log(diff)
-    f = isfinite(l)
-    da = 1/diff
-    n = T(NaN)
-    z = zero(T)
-    return l, Δ -> (f ? (z, z, z) : (n, n, n))
-end
-for T in (:TrackedReal, :Real)
-    @eval @grad function uniformlogpdf(
-        a::TrackedReal,
-        b::TrackedReal,
-        x::$T,
-    )
-        ad = data(a)
-        bd = data(b)
-        T = typeof(a)
-        l = logpdf(Uniform(ad, bd), x)
-        f = isfinite(l)
-        temp = 1/(bd - ad)^2
-        dlda = temp
-        dldb = -temp
+    if a <= x <= b && a < b
+        l = -log(diff)
+        da = 1/diff^2
+        return l, Δ -> (da * Δ, -da * Δ, zero(T) * Δ)
+    else
         n = T(NaN)
-        z = zero(T)
-        return l, Δ -> (f ? (dlda * Δ, dldb * Δ, z) : (n, n, n))
+        return l, Δ -> (n, n, n)
     end
 end
 ZygoteRules.@adjoint function Distributions.Uniform(args...)
@@ -159,9 +145,9 @@ M, f, arity = DiffRules.@define_diffrule DistributionsAD.semicirclelogpdf(r, x) 
 da, db = DiffRules.diffrule(M, f, :a, :b)
 f = :($M.$f)
 @eval begin
-    @grad $f(a::TrackedReal, b::TrackedReal) = $f(data(a), data(b)), Δ -> (Δ * $da, Δ * $db)
-    @grad $f(a::TrackedReal, b::Real) = $f(data(a), b), Δ -> (Δ * $da, Tracker._zero(b))
-    @grad $f(a::Real, b::TrackedReal) = $f(a, data(b)), Δ -> (Tracker._zero(a), Δ * $db)
+    Tracker.@grad $f(a::TrackedReal, b::TrackedReal) = $f(data(a), data(b)), Δ -> (Δ * $da, Δ * $db)
+    Tracker.@grad $f(a::TrackedReal, b::Real) = $f(data(a), b), Δ -> (Δ * $da, Tracker._zero(b))
+    Tracker.@grad $f(a::Real, b::TrackedReal) = $f(a, data(b)), Δ -> (Tracker._zero(a), Δ * $db)
     $f(a::TrackedReal, b::TrackedReal)  = track($f, a, b)
     $f(a::TrackedReal, b::Real) = track($f, a, b)
     $f(a::Real, b::TrackedReal) = track($f, a, b)
@@ -292,6 +278,7 @@ ZygoteRules.@adjoint function poissonbinomial_pdf_fft(x::AbstractArray)
         ((ForwardDiff.jacobian(x -> poissonbinomial_pdf_fft(x), x)::Matrix{T})' * Δ,)
     end
 end
+
 # The code below doesn't work because of bugs in Zygote. The above is inefficient.
 #=
 ZygoteRules.@adjoint function poissonbinomial_pdf_fft(x::AbstractArray{<:Real})

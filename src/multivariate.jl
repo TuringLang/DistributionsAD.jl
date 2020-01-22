@@ -13,11 +13,9 @@ function TuringDenseMvNormal(m::AbstractVector, A::AbstractMatrix)
     return TuringDenseMvNormal(m, cholesky(A))
 end
 Base.length(d::TuringDenseMvNormal) = length(d.m)
-function Distributions.rand(rng::Random.AbstractRNG, d::TuringDenseMvNormal)
-    return d.m .+ d.C.U' * randn(rng, length(d))
-end
-function Distributions.rand(rng::Random.AbstractRNG, d::TuringDenseMvNormal, n::Int)
-    return d.m .+ d.C.U' * randn(rng, length(d), n)
+Distributions.rand(d::TuringDenseMvNormal, n::Int...) = rand(Random.GLOBAL_RNG, d, n...)
+function Distributions.rand(rng::Random.AbstractRNG, d::TuringDenseMvNormal, n::Int...)
+    return d.m .+ d.C.U' * randn(rng, length(d), n...)
 end
 
 """
@@ -33,30 +31,11 @@ end
 Distributions.params(d::TuringDiagMvNormal) = (d.m, d.σ)
 Distributions.dim(d::TuringDiagMvNormal) = length(d.m)
 Base.length(d::TuringDiagMvNormal) = length(d.m)
-Base.size(d::TuringDiagMvNormal) = (length(d), )
-function Distributions.rand(rng::Random.AbstractRNG, d::TuringDiagMvNormal, n::Int)
-    return d.m .+ d.σ .* randn(rng, length(d), n)
-end
-
-struct TuringScalMvNormal{Tm<:AbstractVector, Tσ<:Real} <: ContinuousMultivariateDistribution
-    m::Tm
-    σ::Tσ
-end
-
-Base.length(d::TuringScalMvNormal) = length(d.m)
-Base.size(d::TuringScalMvNormal) = (length(d), )
-function Distributions.rand(rng::Random.AbstractRNG, d::TuringScalMvNormal)
-    return d.m .+ d.σ .* randn(rng, length(d))
-end
-function Distributions.rand(rng::Random.AbstractRNG, d::TuringScalMvNormal, n::Int)
-    return d.m .+ d.σ .* randn(rng, length(d), n)
-
-Base.length(d::TuringDiagMvNormal) = length(d.m)
 Base.size(d::TuringDiagMvNormal) = (length(d), length(d))
-function Distributions.rand(rng::Random.AbstractRNG, d::TuringDiagMvNormal)
-    return d.m .+ d.σ .* randn(rng, length(d))
+Distributions.rand(d::TuringDiagMvNormal, n::Int...) = rand(Random.GLOBAL_RNG, d, n...)
+function Distributions.rand(rng::Random.AbstractRNG, d::TuringDiagMvNormal, n::Int...)
+    return d.m .+ d.σ .* randn(rng, length(d), n...)
 end
-
 
 struct TuringScalMvNormal{Tm<:AbstractVector, Tσ<:Real} <: ContinuousMultivariateDistribution
     m::Tm
@@ -65,9 +44,9 @@ end
 
 Base.length(d::TuringScalMvNormal) = length(d.m)
 Base.size(d::TuringScalMvNormal) = (length(d), length(d))
-function Distributions.rand(rng::Random.AbstractRNG, d::TuringScalMvNormal)
-    return d.m .+ d.σ .* randn(rng, length(d))
->>>>>>> multiple distributions as one
+Distributions.rand(d::TuringScalMvNormal, n::Int...) = rand(Random.GLOBAL_RNG, d, n...)
+function Distributions.rand(rng::Random.AbstractRNG, d::TuringScalMvNormal, n::Int...)
+    return d.m .+ d.σ .* randn(rng, length(d), n...)
 end
 
 for T in (:AbstractVector, :AbstractMatrix)
@@ -94,31 +73,6 @@ function _logpdf(d::TuringDenseMvNormal, x::AbstractVector)
 end
 function _logpdf(d::TuringDenseMvNormal, x::AbstractMatrix)
     return -((size(x, 1) * log(2π) + logdet(d.C)) .+ vec(sum(abs2.(zygote_ldiv(d.C.U', x .- d.m)), dims=1))) ./ 2
-=======
-for T in (:TrackedVector, :TrackedMatrix)
-    @eval function Distributions.logpdf(d::MvNormal{<:Any, <:PDMats.ScalMat}, x::$T)
-        logpdf(TuringScalMvNormal(d.μ, d.Σ.value), x)
-    end
-end
-
-function _logpdf(d::TuringScalMvNormal, x::AbstractVector)
-    return -(length(x) * log(2π) + 2 * sum(log(d.σ)) + sum(abs2, (x .- d.m) ./ d.σ)) / 2
-end
-function _logpdf(d::TuringScalMvNormal, x::AbstractMatrix)
-    return -(size(x, 2) * log(2π) .+ 2 * sum(log(d.σ)) .+ sum(abs2, (x .- d.m) ./ d.σ, dims=1)') ./ 2
-end
-
-function _logpdf(d::TuringDiagMvNormal, x::AbstractVector)
-    return -(length(x) * log(2π) + 2 * sum(log.(d.σ)) + sum(abs2, (x .- d.m) ./ d.σ)) / 2
-end
-function _logpdf(d::TuringDiagMvNormal, x::AbstractMatrix)
-    return -(size(x, 2) * log(2π) .+ 2 * sum(log.(d.σ)) .+ sum(abs2, (x .- d.m) ./ d.σ, dims=1)') ./ 2
-end
-function _logpdf(d::TuringDenseMvNormal, x::AbstractVector)
-    return -(length(x) * log(2π) + logdet(d.C) + sum(abs2, zygote_ldiv(d.C.U', x .- d.m))) / 2
-end
-function _logpdf(d::TuringDenseMvNormal, x::AbstractMatrix)
-    return -(size(x, 2) * log(2π) .+ logdet(d.C) .+ sum(abs2, zygote_ldiv(d.C.U', x .- d.m), dims=1)') ./ 2
 end
 
 import StatsBase: entropy
@@ -134,9 +88,9 @@ MvNormal(A::TrackedMatrix) = TuringMvNormal(A)
 MvNormal(σ::TrackedVector) = TuringMvNormal(σ)
 
 # dense mean, dense covariance
-MvNormal(m::TrackedVector{<:Real}, A::TrackedMatrix{<:Real}) = TuringDenseMvNormal(m, A)
-MvNormal(m::TrackedVector{<:Real}, A::Matrix{<:Real}) = TuringDenseMvNormal(m, A)
-MvNormal(m::AbstractVector{<:Real}, A::TrackedMatrix{<:Real}) = TuringDenseMvNormal(m, A)
+MvNormal(m::TrackedVector{<:Real}, A::TrackedMatrix{<:Real}) = TuringMvNormal(m, A)
+MvNormal(m::TrackedVector{<:Real}, A::Matrix{<:Real}) = TuringMvNormal(m, A)
+MvNormal(m::AbstractVector{<:Real}, A::TrackedMatrix{<:Real}) = TuringMvNormal(m, A)
 
 # dense mean, diagonal covariance
 function MvNormal(
@@ -248,9 +202,9 @@ MvLogNormal(A::TrackedMatrix) = TuringMvLogNormal(TuringMvNormal(A))
 MvLogNormal(σ::TrackedVector) = TuringMvLogNormal(TuringMvNormal(σ))
 
 # dense mean, dense covariance
-MvLogNormal(m::TrackedVector{<:Real}, A::TrackedMatrix{<:Real}) = TuringMvLogNormal(TuringDenseMvNormal(m, A))
-MvLogNormal(m::TrackedVector{<:Real}, A::Matrix{<:Real}) = TuringMvLogNormal(TuringDenseMvNormal(m, A))
-MvLogNormal(m::AbstractVector{<:Real}, A::TrackedMatrix{<:Real}) = TuringMvLogNormal(TuringDenseMvNormal(m, A))
+MvLogNormal(m::TrackedVector{<:Real}, A::TrackedMatrix{<:Real}) = TuringMvLogNormal(TuringMvNormal(m, A))
+MvLogNormal(m::TrackedVector{<:Real}, A::Matrix{<:Real}) = TuringMvLogNormal(TuringMvNormal(m, A))
+MvLogNormal(m::AbstractVector{<:Real}, A::TrackedMatrix{<:Real}) = TuringMvLogNormal(TuringMvNormal(m, A))
 
 # dense mean, diagonal covariance
 function MvLogNormal(
