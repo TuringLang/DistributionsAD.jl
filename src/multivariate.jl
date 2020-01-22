@@ -171,23 +171,19 @@ for T in (:(Tracker.TrackedVector), :(Tracker.TrackedMatrix))
     @eval Distributions.logpdf(d::TuringMvLogNormal, x::$T) = _logpdf(d, x)
 end
 function _logpdf(d::TuringMvLogNormal, x::AbstractVector{T}) where {T<:Real}
-    logx = log.(x)
-    return insupport(d, x) ? (_logpdf(d.normal, logx) - sum(logx)) : -T(Inf)
+    if insupport(d, x)
+        logx = log.(x)        
+        return _logpdf(d.normal, logx) - sum(logx)
+    else
+        return -T(Inf)
+    end
 end
 function _logpdf(d::TuringMvLogNormal, x::AbstractMatrix{<:Real})
-    insupp = map(1:size(x, 2)) do i 
-        @views insupport(d, x[:, i])
-    end
-    if all(insupp)
+    if all(i -> DistributionsAD.insupport(dist, view(x, :, i)), axes(x, 2))
         logx = log.(x)
-        return _logpdf(d.normal, logx) - vec(sum(logx, dims=1))
+        return DistributionsAD._logpdf(dist.normal, logx) - vec(sum(logx; dims = 1))
     else
-        T = typeof(log(abs(x[1])))
-        return map(1:size(x, 2)) do i
-            insupp[i] || return -T(Inf)
-            logx = @views log.(x[:,i])
-            return _logpdf(d.normal, logx) - sum(logx)
-        end
+        return [DistributionsAD._logpdf(dist, view(x, :, i)) for i in axes(x, 2)]
     end
 end
 
