@@ -4,7 +4,7 @@
 
 using StatsFuns: logtwo, logmvgamma
 
-struct TuringWishart{T<:Real, ST} <: ContinuousMatrixDistribution
+struct TuringWishart{T<:Real, ST <: Cholesky} <: ContinuousMatrixDistribution
     df::T     # degree of freedom
     chol::ST  # the Cholesky of scale matrix
     c0::T     # the logarithm of normalizing constant in pdf
@@ -12,27 +12,22 @@ end
 
 #### Constructors
 
-function TuringWishart(df::T, S::AbstractMatrix{T}) where {T <: Real}
+function TuringWishart(df::T, S::AbstractMatrix) where {T <: Real}
     p = size(S, 1)
     df > p - 1 || error("dpf should be greater than dim - 1.")
     C = cholesky(S)
     return TuringWishart(df, C)
 end
-function TuringWishart(df::T, C::Cholesky{T}) where {T <: Real}
+function TuringWishart(df::T, C::Cholesky) where {T <: Real}
     c0 = _wishart_c0(df, C)
     R = Base.promote_eltype(T, c0)
     return TuringWishart(R(df), C, R(c0))
 end
 
-function TuringWishart(df::Real, S::AbstractMatrix)
-    T = Base.promote_eltype(df, S)
-    TuringWishart(T(df), convert(AbstractArray{T}, S))
-end
-
 function _wishart_c0(df::Real, C::Cholesky)
     h_df = df / 2
     p = size(C, 1)
-    h_df * (logdet(C) + p * typeof(df)(logtwo)) + logmvgamma(p, h_df)
+    h_df * (logdet(C) + p * float(typeof(df))(logtwo)) + logmvgamma(p, h_df)
 end
 
 #### Properties
@@ -125,7 +120,7 @@ end
 
 ## InverseWishart
 
-struct TuringInverseWishart{T<:Real, ST<:AbstractMatrix{T}} <: ContinuousMatrixDistribution
+struct TuringInverseWishart{T<:Real, ST<:AbstractMatrix} <: ContinuousMatrixDistribution
     df::T     # degree of freedom
     S::ST     # Scale matrix
     c0::T     # log of normalizing constant
@@ -133,7 +128,7 @@ end
 
 #### Constructors
 
-function TuringInverseWishart(df::T, Ψ::AbstractMatrix{T}) where T<:Real
+function TuringInverseWishart(df::T, Ψ::AbstractMatrix) where T<:Real
     p = size(Ψ, 1)
     df > p - 1 || error("df should be greater than dim - 1.")
     C = cholesky(Ψ)
@@ -141,14 +136,10 @@ function TuringInverseWishart(df::T, Ψ::AbstractMatrix{T}) where T<:Real
     R = Base.promote_eltype(T, c0)
     return TuringInverseWishart(R(df), Ψ, R(c0))
 end
-function TuringInverseWishart(df::Real, Ψ::AbstractMatrix{<:Real})
-    T = Base.promote_eltype(df, Ψ)
-    return TuringInverseWishart(T(df), convert(AbstractArray{T}, Ψ))
-end
 function _invwishart_c0(df::Real, C::Cholesky)
     h_df = df / 2
     p = size(C, 1)
-    h_df * (p * typeof(df)(logtwo) - logdet(C)) + logmvgamma(p, h_df)
+    h_df * (p * float(typeof(df))(logtwo) - logdet(C)) + logmvgamma(p, h_df)
 end
 
 #### Properties
@@ -214,3 +205,13 @@ end
 ZygoteRules.@adjoint function Distributions.InverseWishart(df::Real, S::AbstractMatrix{<:Real})
     return ZygoteRules.pullback(TuringInverseWishart, df, S)
 end
+
+Distributions.Wishart(df::TrackedReal, S::Matrix{<:Real}) = TuringWishart(df, S)
+Distributions.Wishart(df::TrackedReal, S::AbstractMatrix{<:Real}) = TuringWishart(df, S)
+Distributions.Wishart(df::Real, S::TrackedMatrix) = TuringWishart(df, S)
+Distributions.Wishart(df::TrackedReal, S::TrackedMatrix) = TuringWishart(df, S)
+
+Distributions.InverseWishart(df::TrackedReal, S::Matrix{<:Real}) = TuringInverseWishart(df, S)
+Distributions.InverseWishart(df::TrackedReal, S::AbstractMatrix{<:Real}) = TuringInverseWishart(df, S)
+Distributions.InverseWishart(df::Real, S::TrackedMatrix) = TuringInverseWishart(df, S)
+Distributions.InverseWishart(df::TrackedReal, S::TrackedMatrix) = TuringInverseWishart(df, S)

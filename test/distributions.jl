@@ -236,13 +236,12 @@ separator()
 @testset "Matrix-variate continuous distributions" begin
     test_head("Testing: Matrix-variate continuous distributions")
     matrix_cont_dists = [
-    ]
-    broken_matrix_cont_dists = [
-        # Zygote
         DistSpec(:((n1, n2)->MatrixBeta(dim, n1, n2)), (dim, dim), beta_mat),
-        # Other
         DistSpec(:Wishart, (dim, cov_mat), cov_mat),
         DistSpec(:InverseWishart, (dim, cov_mat), cov_mat),
+    ]
+    broken_matrix_cont_dists = [
+        # Other
         DistSpec(:MatrixNormal, (cov_mat, cov_mat, cov_mat), cov_mat),
         DistSpec(:(()->MatrixNormal(dim, dim)), (), cov_mat),
         DistSpec(:MatrixTDist, (1.0, cov_mat, cov_mat, cov_mat), cov_mat),
