@@ -264,8 +264,7 @@ end
 # The code below doesn't work because of bugs in Zygote. The above is inefficient.
 #=
 ZygoteRules.@adjoint function poissonbinomial_pdf_fft(x::AbstractArray{<:Real})
-    value, back = ZygoteRules.pullback(poissonbinomial_pdf_fft_zygote, x)
-    return value, Δ -> back(Δ)
+    return ZygoteRules.pullback(poissonbinomial_pdf_fft_zygote, x)
 end
 function poissonbinomial_pdf_fft_zygote(p::AbstractArray{T}) where {T <: Real}
     n = length(p)
