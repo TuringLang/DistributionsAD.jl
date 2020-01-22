@@ -48,6 +48,9 @@ separator()
         DistSpec(:Arcsine, (), 0.5),
         DistSpec(:Arcsine, (1,), 0.5),
         DistSpec(:Arcsine, (0, 2), 0.5),
+        DistSpec(:Beta, (), 0.5),
+        DistSpec(:Beta, (1,), 0.5),
+        DistSpec(:Beta, (1, 2), 0.5),
         DistSpec(:BetaPrime, (), 0.5),
         DistSpec(:BetaPrime, (1,), 0.5),
         DistSpec(:BetaPrime, (1, 2), 0.5),
@@ -122,9 +125,6 @@ separator()
     ]
     broken_uni_cont_dists = [
         # Zygote
-        DistSpec(:Beta, (), 0.5),
-        DistSpec(:Beta, (1,), 0.5),
-        DistSpec(:Beta, (1, 2), 0.5),
         DistSpec(:Chernoff, (), 0.5),
         DistSpec(:Chisq, (1,), 0.5),
         DistSpec(:((s)->Erlang(1, s)), (1,), 0.5), # First arg is integer

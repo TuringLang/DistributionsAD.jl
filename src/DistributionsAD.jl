@@ -8,7 +8,8 @@ using PDMats,
       LinearAlgebra, 
       Distributions, 
       Random, 
-      Combinatorics
+      Combinatorics,
+      SpecialFunctions
 
 using Tracker: TrackedReal
 using LinearAlgebra: copytri!
