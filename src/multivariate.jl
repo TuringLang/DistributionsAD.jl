@@ -179,11 +179,11 @@ function _logpdf(d::TuringMvLogNormal, x::AbstractVector{T}) where {T<:Real}
     end
 end
 function _logpdf(d::TuringMvLogNormal, x::AbstractMatrix{<:Real})
-    if all(i -> DistributionsAD.insupport(dist, view(x, :, i)), axes(x, 2))
+    if all(i -> DistributionsAD.insupport(d, view(x, :, i)), axes(x, 2))
         logx = log.(x)
-        return DistributionsAD._logpdf(dist.normal, logx) - vec(sum(logx; dims = 1))
+        return DistributionsAD._logpdf(d.normal, logx) - vec(sum(logx; dims = 1))
     else
-        return [DistributionsAD._logpdf(dist, view(x, :, i)) for i in axes(x, 2)]
+        return [DistributionsAD._logpdf(d, view(x, :, i)) for i in axes(x, 2)]
     end
 end
 
