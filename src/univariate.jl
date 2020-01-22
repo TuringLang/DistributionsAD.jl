@@ -53,6 +53,7 @@ ZygoteRules.@adjoint function Distributions.Uniform(args...)
 end
 
 ## Beta ##
+
 function _betalogpdfgrad(α, β, x)
     di = digamma(α + β)
     dα = log(x) - digamma(α) + di
@@ -138,6 +139,9 @@ Tracker.@grad function semicirclelogpdf(r, x)
         diffsq = rr^2 - xx^2
         (f ? Δ*(-2/rr + rr/diffsq) : n, f ? Δ*(-xx/diffsq) : n)
     end
+end
+if VERSION < v"1.2"
+    Base.inv(::Irrational{:π}) = 1/π
 end
 
 ## Binomial ##
