@@ -61,11 +61,18 @@ function Distributions.logpdf(
     dist::MultipleContinuousUnivariate,
     x::AbstractVector{<:Real},
 )
-    f, args = flatten(dist.dist)
-    return sum(f.(args..., x))
+    return _flat_logpdf(dist.dist, x)
 end
 function Distributions.rand(rng::Random.AbstractRNG, dist::MultipleContinuousUnivariate)
     return rand(rng, dist.dist, dist.N)
+end
+function _flat_logpdf(dist, x)
+    if toflatten(dist)
+        f, args = flatten(dist)
+        return sum(f.(args..., x))
+    else
+        return sum(logpdf.(dist, x))
+    end
 end
 
 struct MatrixContinuousUnivariate{
@@ -83,7 +90,7 @@ function Distributions.logpdf(
     dist::MatrixContinuousUnivariate,
     x::AbstractMatrix{<:Real}
 )
-    return sum(logpdf.(dist.dist, x))
+    return _flat_logpdf(dist.dist, x)
 end
 function Distributions.rand(rng::Random.AbstractRNG, dist::MatrixContinuousUnivariate)
     return rand(rng, dist.dist, dist.S)
@@ -106,7 +113,7 @@ function Distributions.logpdf(
     dist::MultipleDiscreteUnivariate,
     x::AbstractVector{<:Integer}
 )
-    return sum(logpdf.(dist.dist, x))
+    return _flat_logpdf(dist.dist, x)
 end
 function Distributions.rand(rng::Random.AbstractRNG, dist::MultipleDiscreteUnivariate)
     return rand(rng, dist.dist, dist.N)
@@ -127,7 +134,7 @@ function Distributions.logpdf(
     dist::MatrixDiscreteUnivariate,
     x::AbstractMatrix{<:Real}
 )
-    return sum(logpdf.(dist.dist, x))
+    return _flat_logpdf(dist.dist, x)
 end
 function Distributions.rand(rng::Random.AbstractRNG, dist::MatrixDiscreteUnivariate)
     return rand(rng, dist.dist, dist.S)
