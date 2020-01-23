@@ -27,11 +27,11 @@ function uniformlogpdf(a, b, x)
         return oftype(c, -Inf)
     end
 end
-uniformlogpdf(a::Real, b::Real, x::TrackedReal) = Tracker.track(uniformlogpdf, a, b, x)
-uniformlogpdf(a::TrackedReal, b::TrackedReal, x::Real) = Tracker.track(uniformlogpdf, a, b, x)
-uniformlogpdf(a::TrackedReal, b::TrackedReal, x::TrackedReal) = Tracker.track(uniformlogpdf, a, b, x)
+uniformlogpdf(a::Real, b::Real, x::TrackedReal) = track(uniformlogpdf, a, b, x)
+uniformlogpdf(a::TrackedReal, b::TrackedReal, x::Real) = track(uniformlogpdf, a, b, x)
+uniformlogpdf(a::TrackedReal, b::TrackedReal, x::TrackedReal) = track(uniformlogpdf, a, b, x)
 Tracker.@grad function uniformlogpdf(a, b, x)
-    diff = Tracker.data(b) - Tracker.data(a)
+    diff = data(b) - data(a)
     T = typeof(diff)
     l = -log(diff)
     f = isfinite(l)
@@ -49,7 +49,7 @@ ZygoteRules.@adjoint function uniformlogpdf(a, b, x)
     return l, Δ->(f ? da : n, f ? -da : n, f ? zero(T) : n)
 end
 ZygoteRules.@adjoint function Distributions.Uniform(args...)
-    return ZygoteRules.pullback(TuringUniform, args...)
+    return pullback(TuringUniform, args...)
 end
 
 ## Beta ##
@@ -123,12 +123,12 @@ end
 logpdf(d::Semicircle{<:Real}, x::TrackedReal) = semicirclelogpdf(d.r, x)
 logpdf(d::Semicircle{<:TrackedReal}, x::Real) = semicirclelogpdf(d.r, x)
 logpdf(d::Semicircle{<:TrackedReal}, x::TrackedReal) = semicirclelogpdf(d.r, x)
-semicirclelogpdf(r::TrackedReal, x::Real) = Tracker.track(semicirclelogpdf, r, x)
-semicirclelogpdf(r::Real, x::TrackedReal) = Tracker.track(semicirclelogpdf, r, x)
-semicirclelogpdf(r::TrackedReal, x::TrackedReal) = Tracker.track(semicirclelogpdf, r, x)
+semicirclelogpdf(r::TrackedReal, x::Real) = track(semicirclelogpdf, r, x)
+semicirclelogpdf(r::Real, x::TrackedReal) = track(semicirclelogpdf, r, x)
+semicirclelogpdf(r::TrackedReal, x::TrackedReal) = track(semicirclelogpdf, r, x)
 Tracker.@grad function semicirclelogpdf(r, x)
-    rd = Tracker.data(r)
-    xd = Tracker.data(x)
+    rd = data(r)
+    xd = data(x)
     xx, rr = promote(xd, float(rd))
     d = Semicircle(rr)
     T = typeof(xx)
@@ -146,9 +146,9 @@ end
 
 ## Binomial ##
 
-binomlogpdf(n::Int, p::Tracker.TrackedReal, x::Int) = Tracker.track(binomlogpdf, n, p, x)
-Tracker.@grad function binomlogpdf(n::Int, p::Tracker.TrackedReal, x::Int)
-    return binomlogpdf(n, Tracker.data(p), x),
+binomlogpdf(n::Int, p::TrackedReal, x::Int) = track(binomlogpdf, n, p, x)
+Tracker.@grad function binomlogpdf(n::Int, p::TrackedReal, x::Int)
+    return binomlogpdf(n, data(p), x),
         Δ->(nothing, Δ * (x / p - (n - x) / (1 - p)), nothing)
 end
 ZygoteRules.@adjoint function binomlogpdf(n::Int, p::Real, x::Int)
@@ -171,19 +171,19 @@ end
 _nbinomlogpdf_grad_1(r, p, k) = k == 0 ? log(p) : sum(1 / (k + r - i) for i in 1:k) + log(p)
 _nbinomlogpdf_grad_2(r, p, k) = -k / (1 - p) + r / p
 
-nbinomlogpdf(n::Tracker.TrackedReal, p::Tracker.TrackedReal, x::Int) = Tracker.track(nbinomlogpdf, n, p, x)
-nbinomlogpdf(n::Real, p::Tracker.TrackedReal, x::Int) = Tracker.track(nbinomlogpdf, n, p, x)
-nbinomlogpdf(n::Tracker.TrackedReal, p::Real, x::Int) = Tracker.track(nbinomlogpdf, n, p, x)
-Tracker.@grad function nbinomlogpdf(r::Tracker.TrackedReal, p::Tracker.TrackedReal, k::Int)
-    return nbinomlogpdf(Tracker.data(r), Tracker.data(p), k),
+nbinomlogpdf(n::TrackedReal, p::TrackedReal, x::Int) = track(nbinomlogpdf, n, p, x)
+nbinomlogpdf(n::Real, p::TrackedReal, x::Int) = track(nbinomlogpdf, n, p, x)
+nbinomlogpdf(n::TrackedReal, p::Real, x::Int) = track(nbinomlogpdf, n, p, x)
+Tracker.@grad function nbinomlogpdf(r::TrackedReal, p::TrackedReal, k::Int)
+    return nbinomlogpdf(data(r), data(p), k),
         Δ->(Δ * _nbinomlogpdf_grad_1(r, p, k), Δ * _nbinomlogpdf_grad_2(r, p, k), nothing)
 end
-Tracker.@grad function nbinomlogpdf(r::Real, p::Tracker.TrackedReal, k::Int)
-    return nbinomlogpdf(Tracker.data(r), Tracker.data(p), k),
+Tracker.@grad function nbinomlogpdf(r::Real, p::TrackedReal, k::Int)
+    return nbinomlogpdf(data(r), data(p), k),
         Δ->(Tracker._zero(r), Δ * _nbinomlogpdf_grad_2(r, p, k), nothing)
 end
-Tracker.@grad function nbinomlogpdf(r::Tracker.TrackedReal, p::Real, k::Int)
-    return nbinomlogpdf(Tracker.data(r), Tracker.data(p), k),
+Tracker.@grad function nbinomlogpdf(r::TrackedReal, p::Real, k::Int)
+    return nbinomlogpdf(data(r), data(p), k),
         Δ->(Δ * _nbinomlogpdf_grad_1(r, p, k), Tracker._zero(p), nothing)
 end
 
@@ -212,9 +212,9 @@ end
 
 ## Poisson ##
 
-poislogpdf(v::Tracker.TrackedReal, x::Int) = Tracker.track(poislogpdf, v, x)
-Tracker.@grad function poislogpdf(v::Tracker.TrackedReal, x::Int)
-      return poislogpdf(Tracker.data(v), x),
+poislogpdf(v::TrackedReal, x::Int) = track(poislogpdf, v, x)
+Tracker.@grad function poislogpdf(v::TrackedReal, x::Int)
+      return poislogpdf(data(v), x),
           Δ->(Δ * (x/v - 1), nothing)
 end
 ZygoteRules.@adjoint function poislogpdf(v::Real, x::Int)
@@ -244,13 +244,13 @@ function logpdf(d::TuringPoissonBinomial{T}, k::Int) where T<:Real
     insupport(d, k) ? log(d.pmf[k + 1]) : -T(Inf)
 end
 quantile(d::TuringPoissonBinomial, x::Float64) = quantile(Categorical(d.pmf), x) - 1
-PoissonBinomial(p::Tracker.TrackedArray) = TuringPoissonBinomial(p)
+PoissonBinomial(p::TrackedArray) = TuringPoissonBinomial(p)
 Base.minimum(d::TuringPoissonBinomial) = 0
 Base.maximum(d::TuringPoissonBinomial) = length(d.p)
 
-poissonbinomial_pdf_fft(x::Tracker.TrackedArray) = Tracker.track(poissonbinomial_pdf_fft, x)
-Tracker.@grad function poissonbinomial_pdf_fft(x::Tracker.TrackedArray)
-    x_data = Tracker.data(x)
+poissonbinomial_pdf_fft(x::TrackedArray) = track(poissonbinomial_pdf_fft, x)
+Tracker.@grad function poissonbinomial_pdf_fft(x::TrackedArray)
+    x_data = data(x)
     T = eltype(x_data)
     fft = poissonbinomial_pdf_fft(x_data)
     return  fft, Δ -> begin
@@ -268,7 +268,7 @@ end
 # The code below doesn't work because of bugs in Zygote. The above is inefficient.
 #=
 ZygoteRules.@adjoint function poissonbinomial_pdf_fft(x::AbstractArray{<:Real})
-    return ZygoteRules.pullback(poissonbinomial_pdf_fft_zygote, x)
+    return pullback(poissonbinomial_pdf_fft_zygote, x)
 end
 function poissonbinomial_pdf_fft_zygote(p::AbstractArray{T}) where {T <: Real}
     n = length(p)

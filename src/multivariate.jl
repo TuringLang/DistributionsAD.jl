@@ -167,7 +167,7 @@ end
 for T in (:AbstractVector, :AbstractMatrix)
     @eval Distributions.logpdf(d::TuringMvLogNormal, x::$T) = _logpdf(d, x)
 end
-for T in (:(Tracker.TrackedVector), :(Tracker.TrackedMatrix))
+for T in (:TrackedVector, :TrackedMatrix)
     @eval Distributions.logpdf(d::TuringMvLogNormal, x::$T) = _logpdf(d, x)
 end
 function _logpdf(d::TuringMvLogNormal, x::AbstractVector{T}) where {T<:Real}
@@ -248,18 +248,18 @@ MvLogNormal(d::Int, σ::TrackedReal{<:Real}) = TuringMvLogNormal(TuringMvNormal(
 ZygoteRules.@adjoint function Distributions.MvNormal(
     A::Union{AbstractVector{<:Real}, AbstractMatrix{<:Real}},
 )
-    return ZygoteRules.pullback(TuringMvNormal, A)
+    return pullback(TuringMvNormal, A)
 end
 ZygoteRules.@adjoint function Distributions.MvNormal(
     m::AbstractVector{<:Real},
     A::Union{Real, UniformScaling, AbstractVecOrMat{<:Real}},
 )
-    return ZygoteRules.pullback(TuringMvNormal, m, A)
+    return pullback(TuringMvNormal, m, A)
 end
 ZygoteRules.@adjoint function Distributions.MvNormal(
     d::Int,
     A::Real,
 )
-    value, back = ZygoteRules.pullback(A -> TuringMvNormal(d, A), A)
+    value, back = pullback(A -> TuringMvNormal(d, A), A)
     return value, x -> (nothing, back(x)[1])
 end
