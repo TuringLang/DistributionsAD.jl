@@ -68,7 +68,7 @@ const flattened_dists = [   Bernoulli,
                             Truncated,
                         ]
 for T in flattened_dists
-    @eval toflatten(::T) = true
+    @eval toflatten(::$T) = true
 end
 toflatten(::Distribution) = false
 for T in flattened_dists
