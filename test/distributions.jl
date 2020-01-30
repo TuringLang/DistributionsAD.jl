@@ -60,7 +60,6 @@ separator()
         DistSpec(:Cauchy, (), 0.5),
         DistSpec(:Cauchy, (1,), 0.5),
         DistSpec(:Cauchy, (1, 2), 0.5),
-        DistSpec(:Chernoff, (), 0.5),
         DistSpec(:Chi, (1,), 0.5),
         DistSpec(:Chisq, (1,), 0.5),
         DistSpec(:Cosine, (1, 1), 0.5),
@@ -116,6 +115,7 @@ separator()
         DistSpec(:PGeneralizedGaussian, (1, 1, 1), 0.5),
         DistSpec(:Rayleigh, (), 0.5),
         DistSpec(:Rayleigh, (1,), 0.5),
+        DistSpec(:Semicircle, (1.0,), 0.5),
         DistSpec(:SymTriangularDist, (), 0.5),
         DistSpec(:SymTriangularDist, (1,), 0.5),
         DistSpec(:SymTriangularDist, (1, 2), 0.5),
@@ -130,9 +130,10 @@ separator()
         DistSpec(:Weibull, (), 1),
         DistSpec(:Weibull, (1,), 1),
         DistSpec(:Weibull, (1, 1), 1),
-        DistSpec(:Semicircle, (1.0,), 0.5),
     ]
     broken_uni_cont_dists = [
+        # Zygote
+        DistSpec(:Chernoff, (), 0.5),
         # Broken in Distributions even without autodiff
         DistSpec(:(()->KSDist(1)), (), 0.5), 
         DistSpec(:(()->KSOneSided(1)), (), 0.5), 
@@ -236,10 +237,11 @@ separator()
     test_head("Testing: Matrix-variate continuous distributions")
     matrix_cont_dists = [
         DistSpec(:((n1, n2)->MatrixBeta(dim, n1, n2)), (dim, dim), beta_mat),
-    ]
-    broken_matrix_cont_dists = [
         DistSpec(:Wishart, (dim, cov_mat), cov_mat),
         DistSpec(:InverseWishart, (dim, cov_mat), cov_mat),
+    ]
+    broken_matrix_cont_dists = [
+        # Other
         DistSpec(:MatrixNormal, (cov_mat, cov_mat, cov_mat), cov_mat),
         DistSpec(:(()->MatrixNormal(dim, dim)), (), cov_mat),
         DistSpec(:MatrixTDist, (1.0, cov_mat, cov_mat, cov_mat), cov_mat),

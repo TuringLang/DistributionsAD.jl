@@ -1,12 +1,9 @@
-using Test
-
-using ForwardDiff, Distributions, FiniteDifferences, Tracker, Random, LinearAlgebra, PDMats
-using DistributionsAD
+using ForwardDiff, Distributions, FiniteDifferences
+using Tracker, Zygote, Random, LinearAlgebra, PDMats
+using DistributionsAD, Test, LinearAlgebra, Combinatorics
 using ForwardDiff: Dual
 using StatsFuns: binomlogpdf, logsumexp
-using Test, LinearAlgebra
 const FDM = FiniteDifferences
-using Combinatorics
 
 include("test_utils.jl")
 include("distributions.jl")
