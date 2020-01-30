@@ -35,17 +35,17 @@ end
 Distributions.insupport(::Type{TuringWishart}, X::Matrix) = isposdef(X)
 Distributions.insupport(d::TuringWishart, X::Matrix) = size(X) == size(d) && isposdef(X)
 
-dim(d::TuringWishart) = size(d.chol, 1)
-Base.size(d::TuringWishart) = (p = dim(d); (p, p))
+Distributions.dim(d::TuringWishart) = size(d.chol, 1)
+Base.size(d::TuringWishart) = (p = Distributions.dim(d); (p, p))
 Base.size(d::TuringWishart, i) = size(d)[i]
-LinearAlgebra.rank(d::TuringWishart) = dim(d)
+LinearAlgebra.rank(d::TuringWishart) = Distributions.dim(d)
 
 #### Statistics
 
 Distributions.mean(d::TuringWishart) = d.df * Matrix(d.chol)
 
 function Distributions.mode(d::TuringWishart)
-    r = d.df - dim(d) - 1.0
+    r = d.df - Distributions.dim(d) - 1.0
     if r > 0.0
         return Matrix(d.chol) * r
     else
@@ -54,7 +54,7 @@ function Distributions.mode(d::TuringWishart)
 end
 
 function Distributions.meanlogdet(d::TuringWishart)
-    p = dim(d)
+    p = Distributions.dim(d)
     df = d.df
     v = logdet(d.chol) + p * logtwo
     for i = 1:p
@@ -64,7 +64,7 @@ function Distributions.meanlogdet(d::TuringWishart)
 end
 
 function Distributions.entropy(d::TuringWishart)
-    p = dim(d)
+    p = Distributions.dim(d)
     df = d.df
     d.c0 - 0.5 * (df - p - 1) * meanlogdet(d) + 0.5 * df * p
 end
@@ -84,14 +84,14 @@ end
 
 function Distributions.logpdf(d::TuringWishart, X::AbstractMatrix{<:Real})
     df = d.df
-    p = dim(d)
+    p = Distributions.dim(d)
     Xcf = cholesky(X)
     return 0.5 * ((df - (p + 1)) * logdet(Xcf) - tr(d.chol \ X)) - d.c0
 end
 
 #### Sampling
 function Distributions._rand!(rng::AbstractRNG, d::TuringWishart, A::AbstractMatrix)
-    _wishart_genA!(rng, dim(d), d.df, A)
+    _wishart_genA!(rng, Distributions.dim(d), d.df, A)
     unwhiten!(d.chol, A)
     A .= A * A'
 end
@@ -147,16 +147,16 @@ end
 Distributions.insupport(::Type{TuringInverseWishart}, X::Matrix) = isposdef(X)
 Distributions.insupport(d::TuringInverseWishart, X::Matrix) = size(X) == size(d) && isposdef(X)
 
-dim(d::TuringInverseWishart) = size(d.S, 1)
-Base.size(d::TuringInverseWishart) = (p = dim(d); (p, p))
+Distributions.dim(d::TuringInverseWishart) = size(d.S, 1)
+Base.size(d::TuringInverseWishart) = (p = Distributions.dim(d); (p, p))
 Base.size(d::TuringInverseWishart, i) = size(d)[i]
-LinearAlgebra.rank(d::TuringInverseWishart) = dim(d)
+LinearAlgebra.rank(d::TuringInverseWishart) = Distributions.dim(d)
 
 #### Statistics
 
 function Distributions.mean(d::TuringInverseWishart)
     df = d.df
-    p = dim(d)
+    p = Distributions.dim(d)
     r = df - (p + 1)
     if r > 0.0
         return d.S * (1.0 / r)
@@ -165,17 +165,17 @@ function Distributions.mean(d::TuringInverseWishart)
     end
 end
 
-Distributions.mode(d::TuringInverseWishart) = d.S * inv(d.df + dim(d) + 1.0)
+Distributions.mode(d::TuringInverseWishart) = d.S * inv(d.df + Distributions.dim(d) + 1.0)
 
 #  https://en.wikipedia.org/wiki/Inverse-Wishart_distribution#Moments
 function Distributions.cov(d::TuringInverseWishart, i::Integer, j::Integer, k::Integer, l::Integer)
-    p, ν, Ψ = (dim(d), d.df, d.S)
+    p, ν, Ψ = (Distributions.dim(d), d.df, d.S)
     ν > p + 3 || throw(ArgumentError("cov only defined for df > dim + 3"))
     inv((ν - p)*(ν - p - 3)*(ν - p - 1)^2)*(2Ψ[i,j]*Ψ[k,l] + (ν-p-1)*(Ψ[i,k]*Ψ[j,l] + Ψ[i,l]*Ψ[k,j]))
 end
 
 function Distributions.var(d::TuringInverseWishart, i::Integer, j::Integer)
-    p, ν, Ψ = (dim(d), d.df, d.S)
+    p, ν, Ψ = (Distributions.dim(d), d.df, d.S)
     ν > p + 3 || throw(ArgumentError("var only defined for df > dim + 3"))
     inv((ν - p)*(ν - p - 3)*(ν - p - 1)^2)*(ν - p + 1)*Ψ[i,j]^2 + (ν - p - 1)*Ψ[i,i]*Ψ[j,j]
 end
@@ -183,7 +183,7 @@ end
 #### Evaluation
 
 function Distributions.logpdf(d::TuringInverseWishart, X::AbstractMatrix{<:Real})
-    p = dim(d)
+    p = Distributions.dim(d)
     df = d.df
     Xcf = cholesky(X)
     # we use the fact: tr(Ψ * inv(X)) = tr(inv(X) * Ψ) = tr(X \ Ψ)
@@ -194,8 +194,10 @@ end
 
 #### Sampling
 
-Distributions._rand!(rng::AbstractRNG, d::TuringInverseWishart, A::AbstractMatrix) =
-    (A .= inv(cholesky!(_rand!(rng, TuringWishart(d.df, inv(cholesky(d.S))), A))))
+function Distributions._rand!(rng::AbstractRNG, d::TuringInverseWishart, A::AbstractMatrix)
+    X = Distributions._rand!(rng, TuringWishart(d.df, inv(cholesky(d.S))), A)
+    A .= inv(cholesky!(X))
+end
 
 ## Adjoints
 
