@@ -103,6 +103,12 @@ function MvNormal(
 )
     return TuringMvNormal(m, D)
 end
+function MvNormal(
+    m::TrackedVector{<:Real},
+    D::Diagonal{T, <:AbstractVector{T}} where {T<:Real},
+)
+    return TuringMvNormal(m, D)
+end
 
 # dense mean, diagonal covariance
 MvNormal(m::TrackedVector{<:Real}, σ::TrackedVector{<:Real}) = TuringMvNormal(m, σ)
@@ -210,6 +216,18 @@ function MvLogNormal(
     D::Diagonal{T, <:TrackedVector{T}} where {T<:Real},
 )
     return TuringMvLogNormal(TuringMvNormal(m, D))
+end
+function MvLogNormal(
+    m::TrackedVector{<:Real},
+    D::Diagonal{T, <:AbstractVector{T}} where {T<:Real},
+)
+    return TuringMvLogNormal(TuringMvNormal(m, D))
+end
+function MvLogNormal(
+    m::AbstractVector{<:Real},
+    D::Diagonal{T, <:AbstractVector{T}} where {T<:Real},
+)
+    return MvLogNormal(MvNormal(m, D))
 end
 
 # dense mean, diagonal covariance

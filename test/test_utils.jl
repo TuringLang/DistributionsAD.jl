@@ -10,6 +10,7 @@ struct DistSpec{Tθ<:Tuple, Tx}
 end
 
 vectorize(v::Number) = [v]
+vectorize(v::Diagonal) = v.diag
 vectorize(v) = vec(v)
 pack(vals...) = reduce(vcat, vectorize.(vals))
 @generated function unpack(x, vals...)
@@ -22,6 +23,9 @@ pack(vals...) = reduce(vcat, vectorize.(vals))
         elseif T <: Vector
             push!(unpacked, :(x[$ind:$ind+length(vals[$i])-1]))
             ind = :($ind + length(vals[$i]))
+        elseif T <: Diagonal
+            push!(unpacked, :(Diagonal(x[$ind:$ind+size(vals[$i],1)-1])))
+            ind = :($ind + size(vals[$i],1))
         elseif T <: Matrix
             push!(unpacked, :(reshape(x[$ind:($ind+length(vals[$i])-1)], size(vals[$i]))))
             ind = :($ind + length(vals[$i]))
