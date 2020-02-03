@@ -205,6 +205,8 @@ separator()
         DistSpec(:MvLogNormal, (cov_vec,), norm_val_mat),
         DistSpec(:MvLogNormal, (Diagonal(cov_vec),), norm_val_mat),
         DistSpec(:(cov_num -> MvLogNormal(dim, cov_num)), (cov_num,), norm_val_mat),
+        DistSpec(:Dirichlet, (alpha,), dir_val),
+        DistSpec(:Dirichlet, (alpha,), dir_val),
     ]
 
     broken_mult_cont_dists = [
@@ -215,14 +217,12 @@ separator()
         DistSpec(:MvNormalCanon, (cov_mat,), norm_val_vec),
         DistSpec(:MvNormalCanon, (cov_vec,), norm_val_vec),
         DistSpec(:(cov_num -> MvNormalCanon(dim, cov_num)), (cov_num,), norm_val_vec),
-        DistSpec(:Dirichlet, (alpha,), dir_val),
         DistSpec(:MvNormalCanon, (mean, cov_mat), norm_val_mat),
         DistSpec(:MvNormalCanon, (mean, cov_vec), norm_val_mat),
         DistSpec(:MvNormalCanon, (mean, cov_num), norm_val_mat),
         DistSpec(:MvNormalCanon, (cov_mat,), norm_val_mat),
         DistSpec(:MvNormalCanon, (cov_vec,), norm_val_mat),
         DistSpec(:(cov_num -> MvNormalCanon(dim, cov_num)), (cov_num,), norm_val_mat),
-        DistSpec(:Dirichlet, (alpha,), dir_val),
         # Test failure
         DistSpec(:MvNormal, (mean, cov_mat), norm_val_mat),
         DistSpec(:MvNormal, (cov_mat,), norm_val_mat),

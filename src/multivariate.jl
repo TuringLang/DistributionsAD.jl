@@ -1,3 +1,91 @@
+## Dirichlet ##
+
+struct TuringDirichlet{T, TV <: AbstractVector} <: ContinuousMultivariateDistribution
+    alpha::TV
+    alpha0::T
+    lmnB::T
+end
+function check(alpha)
+    all(ai -> ai > 0, alpha) || 
+        throw(ArgumentError("Dirichlet: alpha must be a positive vector."))
+end
+Zygote.@nograd DistributionsAD.check
+
+function TuringDirichlet(alpha::AbstractVector)
+    check(alpha)
+    alpha0 = sum(alpha)
+    lmnB = sum(loggamma, alpha) - loggamma(alpha0)
+    T = promote_type(typeof(alpha0), typeof(lmnB))
+    TV = typeof(alpha)
+    TuringDirichlet{T, TV}(alpha, alpha0, lmnB)
+end
+
+function TuringDirichlet(d::Integer, alpha::Real)
+    alpha0 = alpha * d
+    _alpha = fill(alpha, d)
+    lmnB = loggamma(alpha) * d - loggamma(alpha0)
+    T = promote_type(typeof(alpha0), typeof(lmnB))
+    TV = typeof(_alpha)
+    TuringDirichlet{T, TV}(_alpha, alpha0, lmnB)
+end
+function TuringDirichlet(alpha::AbstractVector{T}) where {T <: Integer}
+    Tf = float(T)
+    TuringDirichlet(convert(AbstractVector{Tf}, alpha))
+end
+TuringDirichlet(d::Integer, alpha::Integer) = TuringDirichlet(d, Float64(alpha))
+
+Distributions.Dirichlet(alpha::TrackedVector) = TuringDirichlet(alpha)
+Distributions.Dirichlet(d::Integer, alpha::TrackedReal) = TuringDirichlet(d, alpha)
+
+function Distributions.logpdf(d::TuringDirichlet, x::AbstractVector)
+    simplex_logpdf(d.alpha, d.lmnB, x)
+end
+function Distributions.logpdf(d::TuringDirichlet, x::AbstractMatrix)
+    simplex_logpdf(d.alpha, d.lmnB, x)
+end
+function Distributions.logpdf(d::Dirichlet{T}, x::TrackedVecOrMat) where {T}
+    TV = typeof(d.alpha)
+    logpdf(TuringDirichlet{T, TV}(d.alpha, d.alpha0, d.lmnB), x)
+end
+
+ZygoteRules.@adjoint function Distributions.Dirichlet(alpha)
+    return pullback(TuringDirichlet, alpha)
+end
+ZygoteRules.@adjoint function Distributions.Dirichlet(d, alpha)
+    return pullback(TuringDirichlet, d, alpha)
+end
+
+function simplex_logpdf(alpha, lmnB, x::AbstractVector)
+    sum((alpha .- 1) .* log.(x)) - lmnB
+end
+function simplex_logpdf(alpha, lmnB, x::AbstractMatrix)
+    @views init = vcat(sum((alpha .- 1) .* log.(x[:,1])))
+    mapreduce(vcat, drop(eachcol(x), 1); init = init) do c
+        sum((alpha .- 1) .* log.(c)) - lmnB
+    end
+end
+
+Tracker.@grad function simplex_logpdf(alpha, lmnB, x::AbstractVector)
+    simplex_logpdf(data(alpha), data(lmnB), data(x)), Δ -> begin
+        (Δ .* log.(data(x)), -Δ, Δ .* (data(alpha) .- 1))
+    end
+end
+Tracker.@grad function simplex_logpdf(alpha, lmnB, x::AbstractMatrix)
+    simplex_logpdf(data(alpha), data(lmnB), data(x)), Δ -> begin
+        (log.(data(x)) * Δ, -sum(Δ), repeat(data(alpha) .- 1, 1, size(x, 2)) * Diagonal(Δ))
+    end
+end
+
+ZygoteRules.@adjoint function simplex_logpdf(alpha, lmnB, x::AbstractVector)
+    simplex_logpdf(alpha, lmnB, x), Δ -> (Δ .* log.(x), -Δ, Δ .* (alpha .- 1))
+end
+
+ZygoteRules.@adjoint function simplex_logpdf(alpha, lmnB, x::AbstractMatrix)
+    simplex_logpdf(alpha, lmnB, x), Δ -> begin
+        (log.(x) * Δ, -sum(Δ), repeat(alpha .- 1, 1, size(x, 2)) * Diagonal(Δ))
+    end
+end
+
 ## MvNormal ##
 
 """
