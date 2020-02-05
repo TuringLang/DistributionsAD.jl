@@ -30,9 +30,9 @@ struct TuringDiagMvNormal{Tm<:AbstractVector, Tσ<:AbstractVector} <: Continuous
     σ::Tσ
 end
 
-Distributions.params(d::TuringMvDiagNormal) = (d.m, d.σ)
-Distributions.dim(d::TuringMvDiagNormal) = length(d.m)
-Base.length(d::TuringMvDiagNormal) = length(d.m)
+Distributions.params(d::TuringDiagMvNormal) = (d.m, d.σ)
+Distributions.dim(d::TuringDiagMvNormal) = length(d.m)
+Base.length(d::TuringDiagMvNormal) = length(d.m)
 Base.size(d::TuringDiagMvNormal) = (length(d), length(d))
 function Distributions.rand(rng::Random.AbstractRNG, d::TuringDiagMvNormal, n::Int)
     return d.m .+ d.σ .* randn(rng, length(d), n)
@@ -79,7 +79,7 @@ function _logpdf(d::TuringDenseMvNormal, x::AbstractMatrix)
 end
 
 import StatsBase: entropy
-function entropy(d::TuringMvDiagNormal)
+function entropy(d::TuringDiagMvNormal)
     T = eltype(d.σ)
     return (length(d) * (T(log2π) + one(T)) / 2 + sum(log.(d.σ)))
 end
