@@ -1,13 +1,13 @@
 ## Generic ##
 
 function Base.fill(
-    value::Tracker.TrackedReal,
+    value::TrackedReal,
     dims::Vararg{Union{Integer, AbstractUnitRange}},
 )
-    return Tracker.track(fill, value, dims...)
+    return track(fill, value, dims...)
 end
 Tracker.@grad function Base.fill(value::Real, dims...)
-    return fill(Tracker.data(value), dims...), function(Δ)
+    return fill(data(value), dims...), function(Δ)
         size(Δ) ≢  dims && error("Dimension mismatch")
         return (sum(Δ), map(_->nothing, dims)...)
     end
@@ -15,52 +15,51 @@ end
 
 ## StatsFuns ##
 
-logsumexp(x::Tracker.TrackedArray) = Tracker.track(logsumexp, x)
-Tracker.@grad function logsumexp(x::Tracker.TrackedArray)
-    lse = logsumexp(Tracker.data(x))
-    return lse,
-          Δ->(Δ .* exp.(x .- lse),)
+logsumexp(x::TrackedArray) = track(logsumexp, x)
+Tracker.@grad function logsumexp(x::TrackedArray)
+    lse = logsumexp(data(x))
+    return lse, Δ -> (Δ .* exp.(x .- lse),)
 end
 
 ## Linear algebra ##
 
-LinearAlgebra.UpperTriangular(A::Tracker.TrackedMatrix) = Tracker.track(UpperTriangular, A)
+LinearAlgebra.UpperTriangular(A::TrackedMatrix) = track(UpperTriangular, A)
 Tracker.@grad function LinearAlgebra.UpperTriangular(A::AbstractMatrix)
-    return UpperTriangular(Tracker.data(A)), Δ->(UpperTriangular(Δ),)
+    return UpperTriangular(data(A)), Δ->(UpperTriangular(Δ),)
 end
 
-function LinearAlgebra.cholesky(A::Tracker.TrackedMatrix; check=true)
+function LinearAlgebra.cholesky(A::TrackedMatrix; check=true)
     factors_info = turing_chol(A, check)
     factors = factors_info[1]
-    info = Tracker.data(factors_info[2])
+    info = data(factors_info[2])
     return Cholesky{eltype(factors), typeof(factors)}(factors, 'U', info)
 end
 function turing_chol(A::AbstractMatrix, check)
     chol = cholesky(A, check=check)
     (chol.factors, chol.info)
 end
-turing_chol(A::Tracker.TrackedMatrix, check) = Tracker.track(turing_chol, A, check)
+turing_chol(A::TrackedMatrix, check) = track(turing_chol, A, check)
 Tracker.@grad function turing_chol(A::AbstractMatrix, check)
-    C, back = Zygote.pullback(unsafe_cholesky, Tracker.data(A), Tracker.data(check))
-    return (C.factors, C.info), Δ->back((factors=Tracker.data(Δ[1]),))
+    C, back = pullback(unsafe_cholesky, data(A), data(check))
+    return (C.factors, C.info), Δ->back((factors=data(Δ[1]),))
 end
 
 unsafe_cholesky(x, check) = cholesky(x, check=check)
-Zygote.@adjoint function unsafe_cholesky(Σ::Real, check)
+ZygoteRules.@adjoint function unsafe_cholesky(Σ::Real, check)
     C = cholesky(Σ; check=check)
     return C, function(Δ::NamedTuple)
         issuccess(C) || return (zero(Σ), nothing)
         (Δ.factors[1, 1] / (2 * C.U[1, 1]), nothing)
     end
 end
-Zygote.@adjoint function unsafe_cholesky(Σ::Diagonal, check)
+ZygoteRules.@adjoint function unsafe_cholesky(Σ::Diagonal, check)
     C = cholesky(Σ; check=check)
     return C, function(Δ::NamedTuple)
         issuccess(C) || (Diagonal(zero(diag(Δ.factors))), nothing)
         (Diagonal(diag(Δ.factors) .* inv.(2 .* C.factors.diag)), nothing)
     end
 end
-Zygote.@adjoint function unsafe_cholesky(Σ::Union{StridedMatrix, Symmetric{<:Real, <:StridedMatrix}}, check)
+ZygoteRules.@adjoint function unsafe_cholesky(Σ::Union{StridedMatrix, Symmetric{<:Real, <:StridedMatrix}}, check)
     C = cholesky(Σ; check=check)
     return C, function(Δ::NamedTuple)
         issuccess(C) || return (zero(Δ.factors), nothing)
@@ -75,46 +74,33 @@ Zygote.@adjoint function unsafe_cholesky(Σ::Union{StridedMatrix, Symmetric{<:Re
         return (UpperTriangular(Σ̄), nothing)
     end
 end
-  
+
 # Specialised logdet for cholesky to target the triangle directly.
 logdet_chol_tri(U::AbstractMatrix) = 2 * sum(log, U[diagind(U)])
-logdet_chol_tri(U::Tracker.TrackedMatrix) = Tracker.track(logdet_chol_tri, U)
+logdet_chol_tri(U::TrackedMatrix) = track(logdet_chol_tri, U)
 Tracker.@grad function logdet_chol_tri(U::AbstractMatrix)
-    U_data = Tracker.data(U)
+    U_data = data(U)
     return logdet_chol_tri(U_data), Δ->(Matrix(Diagonal(2 .* Δ ./ diag(U_data))),)
 end
 
-function LinearAlgebra.logdet(C::Cholesky{<:Tracker.TrackedReal, <:Tracker.TrackedMatrix})
+function LinearAlgebra.logdet(C::Cholesky{<:TrackedReal, <:TrackedMatrix})
     return logdet_chol_tri(C.U)
 end
 
 # Tracker's implementation of ldiv isn't good. We'll use Zygote's instead.
-const TrackedVecOrMat = Union{Tracker.TrackedVector, Tracker.TrackedMatrix}
-function zygote_ldiv(A::AbstractMatrix, B::AbstractVecOrMat)
-    T = typeof((zero(eltype(A))*zero(eltype(B)) + zero(eltype(A))*zero(eltype(B)))/one(eltype(A)))
-    BB = similar(B, T)
-    copyto!(BB, B)
-    ldiv!(A, BB)
+zygote_ldiv(A::AbstractMatrix, B::AbstractVecOrMat) = A \ B
+function zygote_ldiv(A::TrackedMatrix, B::TrackedVecOrMat)
+    return track(zygote_ldiv, A, B)
 end
-function zygote_ldiv(A::Tracker.TrackedMatrix, B::TrackedVecOrMat)
-    return Tracker.track(zygote_ldiv, A, B)
+function zygote_ldiv(A::TrackedMatrix, B::AbstractVecOrMat)
+    return track(zygote_ldiv, A, B)
 end
-function zygote_ldiv(A::Tracker.TrackedMatrix, B::AbstractVecOrMat)
-    return Tracker.track(zygote_ldiv, A, B)
-end
-zygote_ldiv(A::AbstractMatrix, B::TrackedVecOrMat) =  Tracker.track(zygote_ldiv, A, B)
+zygote_ldiv(A::AbstractMatrix, B::TrackedVecOrMat) =  track(zygote_ldiv, A, B)
 Tracker.@grad function zygote_ldiv(A, B)
-    Y, back = Zygote.pullback(\, Tracker.data(A), Tracker.data(B))
-    return Y, Δ->back(Tracker.data(Δ))
+    Y, back = pullback(\, data(A), data(B))
+    return Y, Δ->back(data(Δ))
 end
 
-function Base.:\(a::Cholesky{<:Tracker.TrackedReal, <:Tracker.TrackedArray}, b::AbstractVecOrMat)
+function Base.:\(a::Cholesky{<:TrackedReal, <:TrackedArray}, b::AbstractVecOrMat)
     return (a.U \ (a.U' \ b))
 end
-
-## PDMats ##
-
-PDMats.invquad(Σ::PDiagMat, x::Tracker.TrackedVector) = sum(abs2.(x) ./ Σ.diag)
-getchol(m::PDMats.AbstractPDMat) = m.chol
-getchol(m::PDMats.PDiagMat) = cholesky(Diagonal(m.diag))
-getchol(m::PDMats.ScalMat) = cholesky(Diagonal(fill(m.value, m.dim)))

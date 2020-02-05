@@ -1,6 +1,6 @@
 name = "DistributionsAD"
 uuid = "ced4e74d-a319-5a8a-b0ac-84af2272839c"
-version = "0.1.2"
+version = "0.3.2"
 
 [deps]
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
@@ -10,18 +10,22 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 PDMats = "90014a1f-27ba-587c-ab20-58faa44d9150"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 StatsFuns = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
 Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
+ZygoteRules = "700de1a5-db45-46bc-99cf-38207098b444"
 
 [compat]
 Combinatorics = "0.7"
-Distributions = "0.21.6"
+Distributions = "0.22"
 ForwardDiff = "0.10.6"
 PDMats = "0.9"
+SpecialFunctions = "0.8, 0.9, 0.10"
 StatsFuns = "0.8, 0.9"
 Tracker = "0.2.5"
-Zygote = "0.4.1"
+Zygote = "0.4.7"
+ZygoteRules = "0.2"
 julia = "1"
 
 [extras]

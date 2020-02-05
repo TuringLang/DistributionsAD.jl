@@ -3,13 +3,16 @@ module DistributionsAD
 using PDMats, 
       ForwardDiff, 
       Zygote, 
-      Tracker, 
       LinearAlgebra, 
       Distributions, 
       Random, 
-      Combinatorics
+      Combinatorics,
+      SpecialFunctions,
+      StatsFuns
 
-using Tracker: TrackedReal
+using Tracker: Tracker, TrackedReal, TrackedVector, TrackedMatrix, TrackedArray,
+                TrackedVecOrMat, track, data
+using ZygoteRules: ZygoteRules, pullback
 using LinearAlgebra: copytri!
 using Distributions: AbstractMvLogNormal, 
                      ContinuousMultivariateDistribution
@@ -26,13 +29,17 @@ import Distributions: MvNormal,
                       quantile, 
                       PoissonBinomial
 
-export TuringDiagNormal,
-       TuringMvNormal,
+export TuringScalMvNormal,
+       TuringDiagMvNormal,
+       TuringDenseMvNormal,
        TuringMvLogNormal,
-       TuringPoissonBinomial
+       TuringPoissonBinomial,
+       TuringWishart,
+       TuringInverseWishart
 
 include("common.jl")
 include("univariate.jl")
 include("multivariate.jl")
+include("matrixvariate.jl")
 
 end
