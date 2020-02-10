@@ -30,11 +30,10 @@ struct TuringDiagMvNormal{Tm<:AbstractVector, Tσ<:AbstractVector} <: Continuous
     σ::Tσ
 end
 
+Distributions.params(d::TuringDiagMvNormal) = (d.m, d.σ)
+Distributions.dim(d::TuringDiagMvNormal) = length(d.m)
 Base.length(d::TuringDiagMvNormal) = length(d.m)
-Base.size(d::TuringDiagMvNormal) = (length(d), length(d))
-function Distributions.rand(rng::Random.AbstractRNG, d::TuringDiagMvNormal)
-    return d.m .+ d.σ .* randn(rng, length(d))
-end
+Base.size(d::TuringDiagMvNormal) = (length(d), )
 function Distributions.rand(rng::Random.AbstractRNG, d::TuringDiagMvNormal, n::Int)
     return d.m .+ d.σ .* randn(rng, length(d), n)
 end
@@ -77,6 +76,12 @@ function _logpdf(d::TuringDenseMvNormal, x::AbstractVector)
 end
 function _logpdf(d::TuringDenseMvNormal, x::AbstractMatrix)
     return -((size(x, 1) * log(2π) + logdet(d.C)) .+ vec(sum(abs2.(zygote_ldiv(d.C.U', x .- d.m)), dims=1))) ./ 2
+end
+
+import StatsBase: entropy
+function entropy(d::TuringDiagMvNormal)
+    T = eltype(d.σ)
+    return (length(d) * (T(log2π) + one(T)) / 2 + sum(log.(d.σ)))
 end
 
 # zero mean, dense covariance

@@ -1,3 +1,5 @@
+using StatsBase: entropy
+
 @testset "Others" begin
     @test fill(param(1.0), 3) isa TrackedArray
     x = rand(3)
@@ -10,4 +12,12 @@
     @test info == C.info
     B = copy(A)
     @test DistributionsAD.zygote_ldiv(A, B) == A \ B
+end
+
+@testset "Extras from StatsBase.jl" begin
+    sigmas = exp.(randn(10))
+    d1 = TuringDiagMvNormal(zeros(10), sigmas)
+    d2 = MvNormal(zeros(10), sigmas)
+
+    @test entropy(d1) == entropy(d2)
 end
