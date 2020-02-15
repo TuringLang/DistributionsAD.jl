@@ -61,7 +61,7 @@ function Distributions.rand(rng::Random.AbstractRNG, dist::MatrixOfUnivariate)
     return rand.(Ref(rng), dist.dists)
 end
 
-# Multivariate continuous
+# Multivariate
 
 struct VectorOfMultivariate{
     S <: ValueSupport,
