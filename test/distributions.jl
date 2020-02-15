@@ -155,7 +155,7 @@ separator()
     end
 end
 separator()
-=#
+
 @testset "Multivariate discrete distributions" begin
     test_head("Testing: Multivariate discrete distributions")
     mult_disc_dists = [
