@@ -8,11 +8,11 @@ const VectorOfUnivariate{
 
 function ArrayDist(dists::AbstractVector{<:Normal{T}}) where {T}
     if T <: TrackedReal
-        init_m = dists[1].μ
+        init_m = vcat(dists[1].μ)
         means = mapreduce(vcat, drop(dists, 1); init = init_m) do d
             d.μ
         end
-        init_v = dists[1].σ^2
+        init_v = vcat(dists[1].σ^2)
         vars = mapreduce(vcat, drop(dists, 1); init = init_v) do d
             d.σ^2
         end
