@@ -7,7 +7,7 @@ const FillVectorOfUnivariate{
 } = VectorOfUnivariate{S, T, Tdists}
 
 function FillDist(dist::UnivariateDistribution, N::Int)
-    return Product(Fill(dist, N))
+    return product_distribution(Fill(dist, N))
 end
 FillDist(d::Normal, N::Int) = MvNormal(fill(d.μ, N), d.σ)
 function Distributions.logpdf(
