@@ -155,10 +155,12 @@ separator()
     end
 end
 separator()
-
+=#
 @testset "Multivariate discrete distributions" begin
     test_head("Testing: Multivariate discrete distributions")
     mult_disc_dists = [
+        DistSpec(:((p) -> FillDist(Bernoulli(p), dim)), (0.45,), fill(1, dim)),
+        DistSpec(:((p) -> ArrayDist(fill(Bernoulli(p), dim))), (0.45,), fill(1, dim)),
         DistSpec(:((p) -> Multinomial(2, p / sum(p))), (fill(0.5, 2),), [2, 0]),
     ]
     for d in mult_disc_dists
