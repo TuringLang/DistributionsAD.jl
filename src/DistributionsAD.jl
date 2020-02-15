@@ -12,6 +12,7 @@ using PDMats,
 
 using Tracker: Tracker, TrackedReal, TrackedVector, TrackedMatrix, TrackedArray,
                 TrackedVecOrMat, track, @grad, data
+using SpecialFunctions: logabsgamma, digamma
 using ZygoteRules: ZygoteRules, @adjoint, pullback
 using LinearAlgebra: copytri!
 using Distributions: AbstractMvLogNormal, 
@@ -39,15 +40,15 @@ export TuringScalMvNormal,
        TuringPoissonBinomial,
        TuringWishart,
        TuringInverseWishart,
-       ArrayDist,
-       FillDist
+       arraydist,
+       filldist
 
 include("common.jl")
 include("univariate.jl")
 include("multivariate.jl")
 include("matrixvariate.jl")
 include("flatten.jl")
-include("array_dist.jl")
-include("multi.jl")
+include("arraydist.jl")
+include("filldist.jl")
 
 end

@@ -2,6 +2,18 @@
 
 Base.one(::Irrational) = 1
 
+function vcatmapreduce(f, args...)
+    init = vcat(f(first.(args)...,))
+    zipped_args = zip(args...,)
+    return mapreduce(vcat, drop(zipped_args, 1); init = init) do zarg
+        f(zarg...,)
+    end
+end
+@adjoint function vcatmapreduce(f, args...)
+    g(f, args...) = f.(args...,)
+    return pullback(g, f, args...)
+end
+
 function Base.fill(
     value::TrackedReal,
     dims::Vararg{Union{Integer, AbstractUnitRange}},
@@ -110,9 +122,12 @@ end
 
 # SpecialFunctions
 
-function SpecialFunctions.logabsgamma(x::TrackedReal)
-    v = loggamma(x)
-    return v, sign(data(v))
+SpecialFunctions.logabsgamma(x::TrackedReal) = track(logabsgamma, x)
+@grad function SpecialFunctions.logabsgamma(x::Real)
+    return logabsgamma(data(x)), Δ -> (digamma(data(x)) * Δ[1],)
+end
+@adjoint function SpecialFunctions.logabsgamma(x::Real)
+    return logabsgamma(x), Δ -> (digamma(x) * Δ[1],)
 end
 
 # Some Tracker fixes

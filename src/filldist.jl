@@ -6,28 +6,49 @@ const FillVectorOfUnivariate{
     Tdists <: Fill{T, 1},
 } = VectorOfUnivariate{S, T, Tdists}
 
-function FillDist(dist::UnivariateDistribution, N::Int)
-    return Product(Fill(dist, N))
+function filldist(dist::UnivariateDistribution, N::Int)
+    return product_distribution(Fill(dist, N))
 end
-FillDist(d::Normal, N::Int) = MvNormal(fill(d.μ, N), d.σ)
+filldist(d::Normal, N::Int) = MvNormal(fill(d.μ, N), d.σ)
+
 function Distributions.logpdf(
     dist::FillVectorOfUnivariate,
     x::AbstractVector{<:Real},
 )
-    return _flat_logpdf(dist.v.value, x)
+    return _logpdf(dist, x)
 end
 function Distributions.logpdf(
     dist::FillVectorOfUnivariate,
     x::AbstractMatrix{<:Real},
 )
+    return _logpdf(dist, x)
+end
+@adjoint function Distributions.logpdf(
+    dist::FillVectorOfUnivariate,
+    x::AbstractMatrix{<:Real},
+)
+    return pullback(_logpdf, dist, x)
+end
+
+function _logpdf(
+    dist::FillVectorOfUnivariate,
+    x::AbstractVector{<:Real},
+)
+    return _flat_logpdf(dist.v.value, x)
+end
+function _logpdf(
+    dist::FillVectorOfUnivariate,
+    x::AbstractMatrix{<:Real},
+)
     return _flat_logpdf_mat(dist.v.value, x)
 end
+
 function _flat_logpdf(dist, x)
     if toflatten(dist)
         f, args = flatten(dist)
         return sum(f.(args..., x))
     else
-        return sum(logpdf.(dist, x))
+        return sum(vcatmapreduce(x -> logpdf(dist, x), x))
     end
 end
 function _flat_logpdf_mat(dist, x)
@@ -35,7 +56,8 @@ function _flat_logpdf_mat(dist, x)
         f, args = flatten(dist)
         return vec(sum(f.(args..., x), dims = 1))
     else
-        return vec(sum(logpdf.(dist, x), dims = 1))
+        temp = vcatmapreduce(x -> logpdf(dist, x), x)
+        return vec(sum(reshape(temp, size(x)), dims = 1))
     end
 end
 
@@ -45,7 +67,7 @@ const FillMatrixOfUnivariate{
     Tdists <: Fill{T, 2},
 } = MatrixOfUnivariate{S, T, Tdists}
 
-function FillDist(dist::UnivariateDistribution, N1::Integer, N2::Integer)
+function filldist(dist::UnivariateDistribution, N1::Integer, N2::Integer)
     return MatrixOfUnivariate(Fill(dist, N1, N2))
 end
 function Distributions.logpdf(dist::FillMatrixOfUnivariate, x::AbstractMatrix{<:Real})
@@ -63,10 +85,22 @@ const FillVectorOfMultivariate{
     Tdists <: Fill{T, 1},
 } = VectorOfMultivariate{S, T, Tdists}
 
-function FillDist(dist::MultivariateDistribution, N::Int)
+function filldist(dist::MultivariateDistribution, N::Int)
     return VectorOfMultivariate(Fill(dist, N))
 end
 function Distributions.logpdf(
+    dist::FillVectorOfMultivariate,
+    x::AbstractMatrix{<:Real},
+)
+    return _logpdf(dist, x)
+end
+@adjoint function Distributions.logpdf(
+    dist::FillVectorOfMultivariate,
+    x::AbstractMatrix{<:Real},
+)
+    return pullback(_logpdf, dist, x)
+end
+function _logpdf(
     dist::FillVectorOfMultivariate,
     x::AbstractMatrix{<:Real},
 )

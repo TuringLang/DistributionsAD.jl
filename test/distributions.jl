@@ -159,8 +159,8 @@ separator()
 @testset "Multivariate discrete distributions" begin
     test_head("Testing: Multivariate discrete distributions")
     mult_disc_dists = [
-        DistSpec(:((p) -> FillDist(Bernoulli(p), dim)), (0.45,), fill(1, dim)),
-        DistSpec(:((p) -> ArrayDist(fill(Bernoulli(p), dim))), (0.45,), fill(1, dim)),
+        DistSpec(:((p) -> filldist(Bernoulli(p), dim)), (0.45,), fill(1, dim)),
+        DistSpec(:((p) -> arraydist(fill(Bernoulli(p), dim))), (0.45,), fill(1, dim)),
         DistSpec(:((p) -> Multinomial(2, p / sum(p))), (fill(0.5, 2),), [2, 0]),
     ]
     for d in mult_disc_dists
@@ -176,10 +176,10 @@ separator()
     test_head("Testing: Multivariate continuous distributions")
     mult_cont_dists = [
         # Vector case
-        DistSpec(:(() -> FillDist(Beta(), dim)), (), fill(0.5, dim)),
-        DistSpec(:(() -> ArrayDist(fill(Beta(), dim))), (), fill(0.5, dim)),
-        DistSpec(:((m, v) -> FillDist(Normal(m, sqrt(v)), dim)), (1.0, 1.0), norm_val_vec),
-        DistSpec(:((m, v) -> ArrayDist(fill(Normal(m, sqrt(v)), dim))), (1.0, 1.0), norm_val_vec),
+        DistSpec(:(() -> filldist(Beta(), dim)), (), fill(0.5, dim)),
+        DistSpec(:(() -> arraydist(fill(Beta(), dim))), (), fill(0.5, dim)),
+        DistSpec(:((m, v) -> filldist(Normal(m, sqrt(v)), dim)), (1.0, 1.0), norm_val_vec),
+        DistSpec(:((m, v) -> arraydist(fill(Normal(m, sqrt(v)), dim))), (1.0, 1.0), norm_val_vec),
         DistSpec(:MvNormal, (mean, cov_mat), norm_val_vec),
         DistSpec(:MvNormal, (mean, cov_vec), norm_val_vec),
         DistSpec(:MvNormal, (mean, Diagonal(cov_vec)), norm_val_vec),
@@ -198,10 +198,10 @@ separator()
         DistSpec(:MvLogNormal, (Diagonal(cov_vec),), norm_val_vec),
         DistSpec(:(cov_num -> MvLogNormal(dim, cov_num)), (cov_num,), norm_val_vec),
         # Matrix case
-        DistSpec(:(() -> FillDist(Beta(), dim)), (), fill(0.5, dim, dim)),
-        DistSpec(:(() -> ArrayDist(fill(Beta(), dim))), (), fill(0.5, dim, dim)),
-        DistSpec(:((m, v) -> FillDist(Normal(m, sqrt(v)), dim)), (1.0, 1.0), norm_val_mat),
-        DistSpec(:((m, v) -> ArrayDist(fill(Normal(m, sqrt(v)), dim))), (1.0, 1.0), norm_val_mat),
+        DistSpec(:(() -> filldist(Beta(), dim)), (), fill(0.5, dim, dim)),
+        DistSpec(:(() -> arraydist(fill(Beta(), dim))), (), fill(0.5, dim, dim)),
+        DistSpec(:((m, v) -> filldist(Normal(m, sqrt(v)), dim)), (1.0, 1.0), norm_val_mat),
+        DistSpec(:((m, v) -> arraydist(fill(Normal(m, sqrt(v)), dim))), (1.0, 1.0), norm_val_mat),
         DistSpec(:MvNormal, (mean, cov_vec), norm_val_mat),
         DistSpec(:MvNormal, (mean, Diagonal(cov_vec)), norm_val_mat),
         DistSpec(:MvNormal, (mean, cov_num), norm_val_mat),
@@ -254,10 +254,10 @@ separator()
 @testset "Matrix-variate continuous distributions" begin
     test_head("Testing: Matrix-variate continuous distributions")
     matrix_cont_dists = [
-        DistSpec(:(() -> FillDist(Beta(), dim, dim)), (), fill(0.5, dim, dim)),
-        DistSpec(:(() -> ArrayDist(fill(Beta(), dim, dim))), (), fill(0.5, dim, dim)),
-        DistSpec(:((m, v) -> FillDist(Normal(m, sqrt(v)), dim, 2)), (1.0, 1.0), norm_val_mat),
-        DistSpec(:((m, v) -> ArrayDist(fill(Normal(m, sqrt(v)), dim, 2))), (1.0, 1.0), norm_val_mat),
+        DistSpec(:(() -> filldist(Beta(), dim, dim)), (), fill(0.5, dim, dim)),
+        DistSpec(:(() -> arraydist(fill(Beta(), dim, dim))), (), fill(0.5, dim, dim)),
+        DistSpec(:((m, v) -> filldist(Normal(m, sqrt(v)), dim, 2)), (1.0, 1.0), norm_val_mat),
+        DistSpec(:((m, v) -> arraydist(fill(Normal(m, sqrt(v)), dim, 2))), (1.0, 1.0), norm_val_mat),
         DistSpec(:((n1, n2)->MatrixBeta(dim, n1, n2)), (dim, dim), beta_mat),
         DistSpec(:Wishart, (dim, cov_mat), cov_mat),
         DistSpec(:InverseWishart, (dim, cov_mat), cov_mat),

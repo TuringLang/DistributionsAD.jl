@@ -59,7 +59,7 @@ function simplex_logpdf(alpha, lmnB, x::AbstractVector)
     sum((alpha .- 1) .* log.(x)) - lmnB
 end
 function simplex_logpdf(alpha, lmnB, x::AbstractMatrix)
-    @views init = vcat(sum((alpha .- 1) .* log.(x[:,1])))
+    init = vcat(sum((alpha .- 1) .* log.(view(x, :, 1))))
     mapreduce(vcat, drop(eachcol(x), 1); init = init) do c
         sum((alpha .- 1) .* log.(c)) - lmnB
     end
