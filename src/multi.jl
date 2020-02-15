@@ -1,70 +1,26 @@
-# Multivariate continuous
+# Univariate
 
-struct MultipleContinuousMultivariate{
-    Tdist <: ContinuousMultivariateDistribution
-} <: ContinuousMatrixDistribution
-    dist::Tdist
-    N::Int
+const FillVectorOfUnivariate{
+    S <: ValueSupport,
+    T <: UnivariateDistribution{S},
+    Tdists <: Fill{T, 1},
+} = VectorOfUnivariate{S, T, Tdists}
+
+function FillDist(dist::UnivariateDistribution, N::Int)
+    return Product(Fill(dist, N))
 end
-Base.size(dist::MultipleContinuousMultivariate) = (length(dist.dist), dist.N)
-function Multi(dist::ContinuousMultivariateDistribution, N::Int)
-    return MultipleContinuousMultivariate(dist, N)
-end
+FillDist(d::Normal, N::Int) = MvNormal(fill(d.μ, N), d.σ)
 function Distributions.logpdf(
-    dist::MultipleContinuousMultivariate,
-    x::AbstractMatrix{<:Real}
-)
-    return sum(logpdf(dist.dist, x))
-end
-function Distributions.rand(rng::Random.AbstractRNG, dist::MultipleContinuousMultivariate)
-    return rand(rng, dist.dist, dist.N)
-end
-Distributions.MvNormal(m, s, N::Int) = MultipleContinuousMultivariate(MvNormal(m, s), N)
-
-
-# Multivariate discrete
-
-struct MultipleDiscreteMultivariate{
-    Tdist <: DiscreteMultivariateDistribution
-} <: DiscreteMatrixDistribution
-    dist::Tdist
-    N::Int
-end
-Base.size(dist::MultipleDiscreteMultivariate) = (length(dist.dist), dist.N)
-function Multi(dist::DiscreteMultivariateDistribution, N::Int)
-    return MultipleDiscreteMultivariate(dist, N)
-end
-function Distributions.logpdf(
-    dist::MultipleDiscreteMultivariate,
-    x::AbstractMatrix{<:Integer}
-)
-    return sum(logpdf(dist.dist, x))
-end
-function Distributions.rand(rng::Random.AbstractRNG, dist::MultipleDiscreteMultivariate)
-    return rand(rng, dist.dist, dist.N)
-end
-
-# Univariate continuous
-
-struct MultipleContinuousUnivariate{
-    Tdist <: ContinuousUnivariateDistribution,
-} <: ContinuousMultivariateDistribution
-    dist::Tdist
-    N::Int
-end
-Base.length(dist::MultipleContinuousUnivariate) = dist.N
-Base.size(dist::MultipleContinuousUnivariate) = (dist.N,)
-function Multi(dist::ContinuousUnivariateDistribution, N::Int)
-    return MultipleContinuousUnivariate(dist, N)
-end
-function Distributions.logpdf(
-    dist::MultipleContinuousUnivariate,
+    dist::FillVectorOfUnivariate,
     x::AbstractVector{<:Real},
 )
-    return _flat_logpdf(dist.dist, x)
+    return _flat_logpdf(dist.v.value, x)
 end
-function Distributions.rand(rng::Random.AbstractRNG, dist::MultipleContinuousUnivariate)
-    return rand(rng, dist.dist, dist.N)
+function Distributions.logpdf(
+    dist::FillVectorOfUnivariate,
+    x::AbstractMatrix{<:Real},
+)
+    return _flat_logpdf_mat(dist.v.value, x)
 end
 function _flat_logpdf(dist, x)
     if toflatten(dist)
@@ -74,68 +30,48 @@ function _flat_logpdf(dist, x)
         return sum(logpdf.(dist, x))
     end
 end
-
-struct MatrixContinuousUnivariate{
-    Tdist <: ContinuousUnivariateDistribution,
-    Tsize <: NTuple{2, Integer},
-} <: ContinuousMatrixDistribution
-    dist::Tdist
-    S::Tsize
+function _flat_logpdf_mat(dist, x)
+    if toflatten(dist)
+        f, args = flatten(dist)
+        return vec(sum(f.(args..., x), dims = 1))
+    else
+        return vec(sum(logpdf.(dist, x), dims = 1))
+    end
 end
-Base.size(dist::MatrixContinuousUnivariate) = dist.S
-function Multi(dist::ContinuousUnivariateDistribution, N1::Integer, N2::Integer)
-    return MatrixContinuousUnivariate(dist, (N1, N2))
+
+const FillMatrixOfUnivariate{
+    S <: ValueSupport,
+    T <: UnivariateDistribution{S},
+    Tdists <: Fill{T, 2},
+} = MatrixOfUnivariate{S, T, Tdists}
+
+function FillDist(dist::UnivariateDistribution, N1::Integer, N2::Integer)
+    return MatrixOfUnivariate(Fill(dist, N1, N2))
+end
+function Distributions.logpdf(dist::FillMatrixOfUnivariate, x::AbstractMatrix{<:Real})
+    return _flat_logpdf(dist.dists.value, x)
+end
+function Distributions.rand(rng::Random.AbstractRNG, dist::FillMatrixOfUnivariate)
+    return rand(rng, dist.dists.value, length.(dist.dists.axes))
+end
+
+# Multivariate
+
+const FillVectorOfMultivariate{
+    S <: ValueSupport,
+    T <: MultivariateDistribution{S},
+    Tdists <: Fill{T, 1},
+} = VectorOfMultivariate{S, T, Tdists}
+
+function FillDist(dist::MultivariateDistribution, N::Int)
+    return VectorOfMultivariate(Fill(dist, N))
 end
 function Distributions.logpdf(
-    dist::MatrixContinuousUnivariate,
-    x::AbstractMatrix{<:Real}
+    dist::FillVectorOfMultivariate,
+    x::AbstractMatrix{<:Real},
 )
-    return _flat_logpdf(dist.dist, x)
+    return sum(logpdf(dist.dists.value, x))
 end
-function Distributions.rand(rng::Random.AbstractRNG, dist::MatrixContinuousUnivariate)
-    return rand(rng, dist.dist, dist.S)
-end
-
-# Univariate discrete
-
-struct MultipleDiscreteUnivariate{
-    Tdist <: DiscreteUnivariateDistribution,
-} <: ContinuousMultivariateDistribution
-    dist::Tdist
-    N::Int
-end
-Base.length(dist::MultipleDiscreteUnivariate) = dist.N
-Base.size(dist::MultipleDiscreteUnivariate) = (dist.N,)
-function Multi(dist::DiscreteUnivariateDistribution, N::Int)
-    MultipleDiscreteUnivariate(dist, N)
-end
-function Distributions.logpdf(
-    dist::MultipleDiscreteUnivariate,
-    x::AbstractVector{<:Integer}
-)
-    return _flat_logpdf(dist.dist, x)
-end
-function Distributions.rand(rng::Random.AbstractRNG, dist::MultipleDiscreteUnivariate)
-    return rand(rng, dist.dist, dist.N)
-end
-
-struct MatrixDiscreteUnivariate{
-    Tdist <: DiscreteUnivariateDistribution,
-    Tsize <: NTuple{2, Integer},
-} <: DiscreteMatrixDistribution
-    dist::Tdist
-    S::Tsize
-end
-Base.size(dist::MatrixDiscreteUnivariate) = dist.S
-function Multi(dist::DiscreteUnivariateDistribution, N1::Integer, N2::Integer)
-    return MatrixDiscreteUnivariate(dist, (N1, N2))
-end
-function Distributions.logpdf(
-    dist::MatrixDiscreteUnivariate,
-    x::AbstractMatrix{<:Real}
-)
-    return _flat_logpdf(dist.dist, x)
-end
-function Distributions.rand(rng::Random.AbstractRNG, dist::MatrixDiscreteUnivariate)
-    return rand(rng, dist.dist, dist.S)
+function Distributions.rand(rng::Random.AbstractRNG, dist::FillVectorOfMultivariate)
+    return rand(rng, dist.dists.value, length.(dist.dists.axes))
 end

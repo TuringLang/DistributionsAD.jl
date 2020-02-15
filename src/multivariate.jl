@@ -48,10 +48,10 @@ function Distributions.logpdf(d::Dirichlet{T}, x::TrackedVecOrMat) where {T}
     logpdf(TuringDirichlet{T, TV}(d.alpha, d.alpha0, d.lmnB), x)
 end
 
-ZygoteRules.@adjoint function Distributions.Dirichlet(alpha)
+@adjoint function Distributions.Dirichlet(alpha)
     return pullback(TuringDirichlet, alpha)
 end
-ZygoteRules.@adjoint function Distributions.Dirichlet(d, alpha)
+@adjoint function Distributions.Dirichlet(d, alpha)
     return pullback(TuringDirichlet, d, alpha)
 end
 
@@ -65,23 +65,23 @@ function simplex_logpdf(alpha, lmnB, x::AbstractMatrix)
     end
 end
 
-Tracker.@grad function simplex_logpdf(alpha, lmnB, x::AbstractVector)
+@grad function simplex_logpdf(alpha, lmnB, x::AbstractVector)
     simplex_logpdf(data(alpha), data(lmnB), data(x)), Δ -> begin
         (Δ .* log.(data(x)), -Δ, Δ .* (data(alpha) .- 1))
     end
 end
-Tracker.@grad function simplex_logpdf(alpha, lmnB, x::AbstractMatrix)
+@grad function simplex_logpdf(alpha, lmnB, x::AbstractMatrix)
     simplex_logpdf(data(alpha), data(lmnB), data(x)), Δ -> begin
         (log.(data(x)) * Δ, -sum(Δ), repeat(data(alpha) .- 1, 1, size(x, 2)) * Diagonal(Δ))
     end
 end
 
-ZygoteRules.@adjoint function simplex_logpdf(alpha, lmnB, x::AbstractVector)
-    simplex_logpdf(alpha, lmnB, x), Δ -> (Δ .* log.(x), -Δ, Δ .* (alpha .- 1))
+@adjoint function simplex_logpdf(alpha, lmnB, x::AbstractVector)
+    return simplex_logpdf(alpha, lmnB, x), Δ -> (Δ .* log.(x), -Δ, Δ .* (alpha .- 1))
 end
 
-ZygoteRules.@adjoint function simplex_logpdf(alpha, lmnB, x::AbstractMatrix)
-    simplex_logpdf(alpha, lmnB, x), Δ -> begin
+@adjoint function simplex_logpdf(alpha, lmnB, x::AbstractMatrix)
+    return simplex_logpdf(alpha, lmnB, x), Δ -> begin
         (log.(x) * Δ, -sum(Δ), repeat(alpha .- 1, 1, size(x, 2)) * Diagonal(Δ))
     end
 end
@@ -353,18 +353,18 @@ MvLogNormal(d::Int, σ::TrackedReal{<:Real}) = TuringMvLogNormal(TuringMvNormal(
 
 ## Zygote adjoint
 
-ZygoteRules.@adjoint function Distributions.MvNormal(
+@adjoint function Distributions.MvNormal(
     A::Union{AbstractVector{<:Real}, AbstractMatrix{<:Real}},
 )
     return pullback(TuringMvNormal, A)
 end
-ZygoteRules.@adjoint function Distributions.MvNormal(
+@adjoint function Distributions.MvNormal(
     m::AbstractVector{<:Real},
     A::Union{Real, UniformScaling, AbstractVecOrMat{<:Real}},
 )
     return pullback(TuringMvNormal, m, A)
 end
-ZygoteRules.@adjoint function Distributions.MvNormal(
+@adjoint function Distributions.MvNormal(
     d::Int,
     A::Real,
 )

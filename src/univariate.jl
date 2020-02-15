@@ -30,7 +30,7 @@ end
 uniformlogpdf(a::Real, b::Real, x::TrackedReal) = track(uniformlogpdf, a, b, x)
 uniformlogpdf(a::TrackedReal, b::TrackedReal, x::Real) = track(uniformlogpdf, a, b, x)
 uniformlogpdf(a::TrackedReal, b::TrackedReal, x::TrackedReal) = track(uniformlogpdf, a, b, x)
-Tracker.@grad function uniformlogpdf(a, b, x)
+@grad function uniformlogpdf(a, b, x)
     diff = data(b) - data(a)
     T = typeof(diff)
     if a <= data(x) <= b && a < b
@@ -42,7 +42,7 @@ Tracker.@grad function uniformlogpdf(a, b, x)
         return l, Δ -> (n, n, n)
     end
 end
-ZygoteRules.@adjoint function uniformlogpdf(a, b, x)
+@adjoint function uniformlogpdf(a, b, x)
     diff = b - a
     T = typeof(diff)
     if a <= x <= b && a < b
@@ -54,7 +54,7 @@ ZygoteRules.@adjoint function uniformlogpdf(a, b, x)
         return l, Δ -> (n, n, n)
     end
 end
-ZygoteRules.@adjoint function Distributions.Uniform(args...)
+@adjoint function Distributions.Uniform(args...)
     return pullback(TuringUniform, args...)
 end
 
@@ -67,7 +67,7 @@ function _betalogpdfgrad(α, β, x)
     dx = (α - 1)/x + (1 - β)/(1 - x)
     return (dα, dβ, dx)
 end
-ZygoteRules.@adjoint function betalogpdf(α::Real, β::Real, x::Number)
+@adjoint function betalogpdf(α::Real, β::Real, x::Number)
     return betalogpdf(α, β, x), Δ -> (Δ .* _betalogpdfgrad(α, β, x))
 end    
 
@@ -79,7 +79,7 @@ function _gammalogpdfgrad(k, θ, x)
     dx = (k - 1)/x - 1/θ
     return (dk, dθ, dx)
 end
-ZygoteRules.@adjoint function gammalogpdf(k::Real, θ::Real, x::Number)
+@adjoint function gammalogpdf(k::Real, θ::Real, x::Number)
     return gammalogpdf(k, θ, x), Δ -> (Δ .* _gammalogpdfgrad(k, θ, x))
 end    
 
@@ -92,7 +92,7 @@ function _chisqlogpdfgrad(k, x)
     dx = (hk - 1)/x - one(hk)/2
     return (dk, dx)
 end
-ZygoteRules.@adjoint function chisqlogpdf(k::Real, x::Number)
+@adjoint function chisqlogpdf(k::Real, x::Number)
     return chisqlogpdf(k, x), Δ -> (Δ .* _chisqlogpdfgrad(k, x))
 end    
 
@@ -109,7 +109,7 @@ function _fdistlogpdfgrad(v1, v2, x)
     dx = v1 / 2 * (1 / x - temp3) - 1 / x
     return (dv1, dv2, dx)
 end
-ZygoteRules.@adjoint function fdistlogpdf(v1::Real, v2::Real, x::Number)
+@adjoint function fdistlogpdf(v1::Real, v2::Real, x::Number)
     return fdistlogpdf(v1, v2, x), Δ -> (Δ .* _fdistlogpdfgrad(v1, v2, x))
 end
 
@@ -120,7 +120,7 @@ function _tdistlogpdfgrad(v, x)
     dx = -x * (v + 1) / (v + x^2)
     return (dv, dx)
 end
-ZygoteRules.@adjoint function tdistlogpdf(v::Real, x::Number)
+@adjoint function tdistlogpdf(v::Real, x::Number)
     return tdistlogpdf(v, x), Δ -> (Δ .* _tdistlogpdfgrad(v, x))
 end
 
@@ -145,9 +145,9 @@ M, f, arity = DiffRules.@define_diffrule DistributionsAD.semicirclelogpdf(r, x) 
 da, db = DiffRules.diffrule(M, f, :a, :b)
 f = :($M.$f)
 @eval begin
-    Tracker.@grad $f(a::TrackedReal, b::TrackedReal) = $f(data(a), data(b)), Δ -> (Δ * $da, Δ * $db)
-    Tracker.@grad $f(a::TrackedReal, b::Real) = $f(data(a), b), Δ -> (Δ * $da, Tracker._zero(b))
-    Tracker.@grad $f(a::Real, b::TrackedReal) = $f(a, data(b)), Δ -> (Tracker._zero(a), Δ * $db)
+    @grad $f(a::TrackedReal, b::TrackedReal) = $f(data(a), data(b)), Δ -> (Δ * $da, Δ * $db)
+    @grad $f(a::TrackedReal, b::Real) = $f(data(a), b), Δ -> (Δ * $da, Tracker._zero(b))
+    @grad $f(a::Real, b::TrackedReal) = $f(a, data(b)), Δ -> (Tracker._zero(a), Δ * $db)
     $f(a::TrackedReal, b::TrackedReal)  = track($f, a, b)
     $f(a::TrackedReal, b::Real) = track($f, a, b)
     $f(a::Real, b::TrackedReal) = track($f, a, b)
@@ -159,11 +159,11 @@ end
 ## Binomial ##
 
 binomlogpdf(n::Int, p::TrackedReal, x::Int) = track(binomlogpdf, n, p, x)
-Tracker.@grad function binomlogpdf(n::Int, p::TrackedReal, x::Int)
+@grad function binomlogpdf(n::Int, p::TrackedReal, x::Int)
     return binomlogpdf(n, data(p), x),
         Δ->(nothing, Δ * (x / p - (n - x) / (1 - p)), nothing)
 end
-ZygoteRules.@adjoint function binomlogpdf(n::Int, p::Real, x::Int)
+@adjoint function binomlogpdf(n::Int, p::Real, x::Int)
     return binomlogpdf(n, p, x),
         Δ->(nothing, Δ * (x / p - (n - x) / (1 - p)), nothing)
 end
@@ -186,15 +186,15 @@ _nbinomlogpdf_grad_2(r, p, k) = -k / (1 - p) + r / p
 nbinomlogpdf(n::TrackedReal, p::TrackedReal, x::Int) = track(nbinomlogpdf, n, p, x)
 nbinomlogpdf(n::Real, p::TrackedReal, x::Int) = track(nbinomlogpdf, n, p, x)
 nbinomlogpdf(n::TrackedReal, p::Real, x::Int) = track(nbinomlogpdf, n, p, x)
-Tracker.@grad function nbinomlogpdf(r::TrackedReal, p::TrackedReal, k::Int)
+@grad function nbinomlogpdf(r::TrackedReal, p::TrackedReal, k::Int)
     return nbinomlogpdf(data(r), data(p), k),
         Δ->(Δ * _nbinomlogpdf_grad_1(r, p, k), Δ * _nbinomlogpdf_grad_2(r, p, k), nothing)
 end
-Tracker.@grad function nbinomlogpdf(r::Real, p::TrackedReal, k::Int)
+@grad function nbinomlogpdf(r::Real, p::TrackedReal, k::Int)
     return nbinomlogpdf(data(r), data(p), k),
         Δ->(Tracker._zero(r), Δ * _nbinomlogpdf_grad_2(r, p, k), nothing)
 end
-Tracker.@grad function nbinomlogpdf(r::TrackedReal, p::Real, k::Int)
+@grad function nbinomlogpdf(r::TrackedReal, p::Real, k::Int)
     return nbinomlogpdf(data(r), data(p), k),
         Δ->(Δ * _nbinomlogpdf_grad_1(r, p, k), Tracker._zero(p), nothing)
 end
@@ -226,11 +226,11 @@ end
 ## Poisson ##
 
 poislogpdf(v::TrackedReal, x::Int) = track(poislogpdf, v, x)
-Tracker.@grad function poislogpdf(v::TrackedReal, x::Int)
+@grad function poislogpdf(v::TrackedReal, x::Int)
       return poislogpdf(data(v), x),
           Δ->(Δ * (x/v - 1), nothing)
 end
-ZygoteRules.@adjoint function poislogpdf(v::Real, x::Int)
+@adjoint function poislogpdf(v::Real, x::Int)
     return poislogpdf(v, x),
         Δ->(Δ * (x/v - 1), nothing)
 end
@@ -262,7 +262,7 @@ Base.minimum(d::TuringPoissonBinomial) = 0
 Base.maximum(d::TuringPoissonBinomial) = length(d.p)
 
 poissonbinomial_pdf_fft(x::TrackedArray) = track(poissonbinomial_pdf_fft, x)
-Tracker.@grad function poissonbinomial_pdf_fft(x::TrackedArray)
+@grad function poissonbinomial_pdf_fft(x::TrackedArray)
     x_data = data(x)
     T = eltype(x_data)
     fft = poissonbinomial_pdf_fft(x_data)
@@ -271,7 +271,7 @@ Tracker.@grad function poissonbinomial_pdf_fft(x::TrackedArray)
     end
 end
 # FIXME: This is inefficient, replace with the commented code below once Zygote supports it.
-ZygoteRules.@adjoint function poissonbinomial_pdf_fft(x::AbstractArray)
+@adjoint function poissonbinomial_pdf_fft(x::AbstractArray)
     T = eltype(x)
     fft = poissonbinomial_pdf_fft(x)
     return  fft, Δ -> begin
@@ -281,7 +281,7 @@ end
 
 # The code below doesn't work because of bugs in Zygote. The above is inefficient.
 #=
-ZygoteRules.@adjoint function poissonbinomial_pdf_fft(x::AbstractArray{<:Real})
+@adjoint function poissonbinomial_pdf_fft(x::AbstractArray{<:Real})
     return pullback(poissonbinomial_pdf_fft_zygote, x)
 end
 function poissonbinomial_pdf_fft_zygote(p::AbstractArray{T}) where {T <: Real}

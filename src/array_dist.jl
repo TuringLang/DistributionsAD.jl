@@ -1,152 +1,90 @@
-# Multivariate continuous
+# Univariate
 
-struct ProductVectorContinuousMultivariate{
-    Tdists <: AbstractVector{<:ContinuousMultivariateDistribution},
-} <: ContinuousMatrixDistribution
-    dists::Tdists
+const VectorOfUnivariate{
+    S <: ValueSupport,
+    Tdist <: UnivariateDistribution{S},
+    Tdists <: AbstractVector{Tdist},
+} = Distributions.Product{S, Tdist, Tdists}
+
+function ArrayDist(dists::AbstractVector{<:Normal{T}}) where {T}
+    if T <: TrackedReal
+        init_m = dists[1].μ
+        means = mapreduce(vcat, drop(dists, 1); init = init_m) do d
+            d.μ
+        end
+        init_v = dists[1].σ^2
+        vars = mapreduce(vcat, drop(dists, 1); init = init_v) do d
+            d.σ^2
+        end
+    else
+        means = [d.μ for d in dists]
+        vars = [d.σ^2 for d in dists]
+    end
+
+    return MvNormal(means, vars)
 end
-Base.size(dist::ProductVectorContinuousMultivariate) = (length(dist.dists[1]), length(dist))
-Base.length(dist::ProductVectorContinuousMultivariate) = length(dist.dists)
-function ArrayDist(dists::AbstractVector{<:ContinuousMultivariateDistribution})
-    return ProductVectorContinuousMultivariate(dists)
+function ArrayDist(dists::AbstractVector{<:UnivariateDistribution})
+    return Distributions.Product(dists)
+end
+function Distributions.logpdf(dist::VectorOfUnivariate, x::AbstractVector{<:Real})
+    return sum(logpdf.(dist.v, x))
+end
+function Distributions.logpdf(dist::VectorOfUnivariate, x::AbstractMatrix{<:Real})
+    # Any other more efficient implementation breaks Zygote
+    return [logpdf(dist, x[:,i]) for i in 1:size(x, 2)]
 end
 function Distributions.logpdf(
-    dist::ProductVectorContinuousMultivariate,
-    x::AbstractMatrix{<:Real},
+    dist::VectorOfUnivariate,
+    x::AbstractVector{<:AbstractMatrix{<:Real}},
 )
+    return logpdf.(Ref(dist), x)
+end
+
+struct MatrixOfUnivariate{
+    S <: ValueSupport,
+    Tdist <: UnivariateDistribution{S},
+    Tdists <: AbstractMatrix{Tdist},
+} <: MatrixDistribution{S}
+    dists::Tdists
+end
+Base.size(dist::MatrixOfUnivariate) = size(dist.dists)
+function ArrayDist(dists::AbstractMatrix{<:UnivariateDistribution})
+    return MatrixOfUnivariate(dists)
+end
+function Distributions.logpdf(dist::MatrixOfUnivariate, x::AbstractMatrix{<:Real})
+    # Broadcasting here breaks Tracker for some reason
+    return sum(zip(dist.dists, x)) do (dist, x)
+        logpdf(dist, x)
+    end
+end
+function Distributions.rand(rng::Random.AbstractRNG, dist::MatrixOfUnivariate)
+    return rand.(Ref(rng), dist.dists)
+end
+
+# Multivariate continuous
+
+struct VectorOfMultivariate{
+    S <: ValueSupport,
+    Tdist <: MultivariateDistribution{S},
+    Tdists <: AbstractVector{Tdist},
+} <: MatrixDistribution{S}
+    dists::Tdists
+end
+Base.size(dist::VectorOfMultivariate) = (length(dist.dists[1]), length(dist))
+Base.length(dist::VectorOfMultivariate) = length(dist.dists)
+function ArrayDist(dists::AbstractVector{<:MultivariateDistribution})
+    return VectorOfMultivariate(dists)
+end
+function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractMatrix{<:Real})
     return sum(logpdf(dist.dists[i], x[:,i]) for i in 1:length(dist))
 end
 function Distributions.logpdf(
-    dist::ProductVectorContinuousMultivariate,
+    dist::VectorOfMultivariate,
     x::AbstractVector{<:AbstractVector{<:Real}},
 )
     return sum(logpdf(dist.dists[i], x[i]) for i in 1:length(dist))
 end
-function Distributions.rand(
-    rng::Random.AbstractRNG,
-    dist::ProductVectorContinuousMultivariate,
-)
-    return mapreduce(i -> rand(rng, dist.dists[i]), hcat, 1:length(dist))
-end
-
-# Multivariate discrete
-
-struct ProductVectorDiscreteMultivariate{
-    Tdists <: AbstractVector{<:DiscreteMultivariateDistribution},
-} <: DiscreteMatrixDistribution
-    dists::Tdists
-end
-Base.size(dist::ProductVectorDiscreteMultivariate) = (length(dist.dists[1]), length(dist))
-Base.length(dist::ProductVectorDiscreteMultivariate) = length(dist.dists)
-function ArrayDist(dists::AbstractVector{<:DiscreteMultivariateDistribution})
-    return ProductVectorDiscreteMultivariate(dists)
-end
-function Distributions.logpdf(
-    dist::ProductVectorDiscreteMultivariate,
-    x::AbstractMatrix{<:Integer},
-)
-    return sum(logpdf(dist.dists[i], x[:,i]) for i in 1:length(dist))
-end
-function Distributions.logpdf(
-    dist::ProductVectorDiscreteMultivariate,
-    x::AbstractVector{<:AbstractVector{<:Integer}},
-)
-    return sum(logpdf(dist.dists[i], x[i]) for i in 1:length(dist))
-end
-function Distributions.rand(
-    rng::Random.AbstractRNG,
-    dist::ProductVectorDiscreteMultivariate,
-)
-    return mapreduce(i -> rand(rng, dist.dists[i]), hcat, 1:length(dist))
-end
-
-# Univariate continuous
-
-struct ProductVectorContinuousUnivariate{
-    Tdists <: AbstractVector{<:ContinuousUnivariateDistribution},
-} <: ContinuousMultivariateDistribution
-    dists::Tdists
-end
-Base.length(dist::ProductVectorContinuousUnivariate) = length(dist.dists)
-Base.size(dist::ProductVectorContinuousUnivariate) = (length(dist),)
-function ArrayDist(dists::AbstractVector{<:ContinuousUnivariateDistribution})
-    return ProductVectorContinuousUnivariate(dists)
-end
-function Distributions.logpdf(
-    dist::ProductVectorContinuousUnivariate,
-    x::AbstractVector{<:Real},
-)
-    return sum(logpdf.(dist.dists, x))
-end
-function Distributions.rand(
-    rng::Random.AbstractRNG,
-    dist::ProductVectorContinuousUnivariate,
-)
-    return rand.(Ref(rng), dist.dists)
-end
-
-struct ProductMatrixContinuousUnivariate{
-    Tdists <: AbstractMatrix{<:ContinuousUnivariateDistribution},
-} <: ContinuousMatrixDistribution
-    dists::Tdists
-end
-Base.size(dist::ProductMatrixContinuousUnivariate) = size(dist.dists)
-function ArrayDist(dists::AbstractMatrix{<:ContinuousUnivariateDistribution})
-    return ProductMatrixContinuousUnivariate(dists)
-end
-function Distributions.logpdf(
-    dist::ProductMatrixContinuousUnivariate,
-    x::AbstractMatrix{<:Real},
-)
-    return sum(logpdf.(dist.dists, x))
-end
-function Distributions.rand(
-    rng::Random.AbstractRNG,
-    dist::ProductMatrixContinuousUnivariate,
-)
-    return rand.(Ref(rng), dist.dists)
-end
-
-# Univariate discrete
-
-struct ProductVectorDiscreteUnivariate{
-    Tdists <: AbstractVector{<:DiscreteUnivariateDistribution},
-} <: ContinuousMultivariateDistribution
-    dists::Tdists
-end
-Base.length(dist::ProductVectorDiscreteUnivariate) = length(dist.dists)
-Base.size(dist::ProductVectorDiscreteUnivariate) = (length(dist.dists[1]), length(dist))
-function ArrayDist(dists::AbstractVector{<:DiscreteUnivariateDistribution})
-    ProductVectorDiscreteUnivariate(dists)
-end
-function Distributions.logpdf(
-    dist::ProductVectorDiscreteUnivariate,
-    x::AbstractVector{<:Integer},
-)
-    return sum(logpdf.(dist.dists, x))
-end
-function Distributions.rand(
-    rng::Random.AbstractRNG,
-    dist::ProductVectorDiscreteUnivariate,
-)
-    return rand.(Ref(rng), dist.dists)
-end
-
-struct ProductMatrixDiscreteUnivariate{
-    Tdists <: AbstractMatrix{<:DiscreteUnivariateDistribution},
-} <: DiscreteMatrixDistribution
-    dists::Tdists
-end
-Base.size(dists::ProductMatrixDiscreteUnivariate) = size(dist.dists)
-function ArrayDist(dists::AbstractMatrix{<:DiscreteUnivariateDistribution})
-    return ProductMatrixDiscreteUnivariate(dists)
-end
-function Distributions.logpdf(
-    dist::ProductMatrixDiscreteUnivariate,
-    x::AbstractMatrix{<:Real},
-)
-    return sum(logpdf.(dist.dists, x))
-end
-function Distributions.rand(rng::Random.AbstractRNG, dist::ProductMatrixDiscreteUnivariate)
-    return rand.(Ref(rng), dist.dists)
+function Distributions.rand(rng::Random.AbstractRNG, dist::VectorOfMultivariate)
+    init = reshape(rand(rng, dist.dists[1]), :, 1)
+    return mapreduce(i -> rand(rng, dist.dists[i]), hcat, 2:length(dist); init = init)
 end
