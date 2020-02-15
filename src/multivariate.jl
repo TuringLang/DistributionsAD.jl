@@ -32,7 +32,7 @@ function TuringDirichlet(alpha::AbstractVector{T}) where {T <: Integer}
     Tf = float(T)
     TuringDirichlet(convert(AbstractVector{Tf}, alpha))
 end
-TuringDirichlet(d::Integer, alpha::Integer) = TuringDirichlet(d, Float64(alpha))
+TuringDirichlet(d::Integer, alpha::Integer) = TuringDirichlet(d, float(alpha))
 
 Distributions.Dirichlet(alpha::TrackedVector) = TuringDirichlet(alpha)
 Distributions.Dirichlet(d::Integer, alpha::TrackedReal) = TuringDirichlet(d, alpha)
@@ -119,7 +119,7 @@ end
 Distributions.params(d::TuringDiagMvNormal) = (d.m, d.σ)
 Distributions.dim(d::TuringDiagMvNormal) = length(d.m)
 Base.length(d::TuringDiagMvNormal) = length(d.m)
-Base.size(d::TuringDiagMvNormal) = (length(d), length(d))
+Base.size(d::TuringDiagMvNormal) = (length(d),)
 Distributions.rand(d::TuringDiagMvNormal, n::Int...) = rand(Random.GLOBAL_RNG, d, n...)
 function Distributions.rand(rng::Random.AbstractRNG, d::TuringDiagMvNormal, n::Int...)
     return d.m .+ d.σ .* randn(rng, length(d), n...)
@@ -131,7 +131,7 @@ struct TuringScalMvNormal{Tm<:AbstractVector, Tσ<:Real} <: ContinuousMultivaria
 end
 
 Base.length(d::TuringScalMvNormal) = length(d.m)
-Base.size(d::TuringScalMvNormal) = (length(d), length(d))
+Base.size(d::TuringScalMvNormal) = (length(d),)
 Distributions.rand(d::TuringScalMvNormal, n::Int...) = rand(Random.GLOBAL_RNG, d, n...)
 function Distributions.rand(rng::Random.AbstractRNG, d::TuringScalMvNormal, n::Int...)
     return d.m .+ d.σ .* randn(rng, length(d), n...)
