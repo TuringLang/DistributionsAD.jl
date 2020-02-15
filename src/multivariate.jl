@@ -131,7 +131,7 @@ struct TuringScalMvNormal{Tm<:AbstractVector, Tσ<:Real} <: ContinuousMultivaria
 end
 
 Base.length(d::TuringScalMvNormal) = length(d.m)
-Base.size(d::TuringScalMvNormal) = (length(d), length(d))
+Base.size(d::TuringScalMvNormal) = (length(d),)
 Distributions.rand(d::TuringScalMvNormal, n::Int...) = rand(Random.GLOBAL_RNG, d, n...)
 function Distributions.rand(rng::Random.AbstractRNG, d::TuringScalMvNormal, n::Int...)
     return d.m .+ d.σ .* randn(rng, length(d), n...)
