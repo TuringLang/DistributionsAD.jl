@@ -1,5 +1,7 @@
 ## Generic ##
 
+Base.one(::Irrational) = 1
+
 function Base.fill(
     value::TrackedReal,
     dims::Vararg{Union{Integer, AbstractUnitRange}},
