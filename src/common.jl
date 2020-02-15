@@ -1,6 +1,6 @@
 ## Generic ##
 
-Base.one(::Irrational) = 1
+Base.one(::Irrational) = true
 
 function vcatmapreduce(f, args...)
     init = vcat(f(first.(args)...,))
