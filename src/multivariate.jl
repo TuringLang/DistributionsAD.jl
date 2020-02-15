@@ -119,7 +119,7 @@ end
 Distributions.params(d::TuringDiagMvNormal) = (d.m, d.σ)
 Distributions.dim(d::TuringDiagMvNormal) = length(d.m)
 Base.length(d::TuringDiagMvNormal) = length(d.m)
-Base.size(d::TuringDiagMvNormal) = (length(d), length(d))
+Base.size(d::TuringDiagMvNormal) = (length(d),)
 Distributions.rand(d::TuringDiagMvNormal, n::Int...) = rand(Random.GLOBAL_RNG, d, n...)
 function Distributions.rand(rng::Random.AbstractRNG, d::TuringDiagMvNormal, n::Int...)
     return d.m .+ d.σ .* randn(rng, length(d), n...)
