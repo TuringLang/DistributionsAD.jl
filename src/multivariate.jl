@@ -13,11 +13,9 @@ function TuringDenseMvNormal(m::AbstractVector, A::AbstractMatrix)
     return TuringDenseMvNormal(m, cholesky(A))
 end
 Base.length(d::TuringDenseMvNormal) = length(d.m)
-function Distributions.rand(rng::Random.AbstractRNG, d::TuringDenseMvNormal)
-    return d.m .+ d.C.U' * randn(rng, length(d))
-end
-function Distributions.rand(rng::Random.AbstractRNG, d::TuringDenseMvNormal, n::Int)
-    return d.m .+ d.C.U' * randn(rng, length(d), n)
+Distributions.rand(d::TuringDenseMvNormal, n::Int...) = rand(Random.GLOBAL_RNG, d, n...)
+function Distributions.rand(rng::Random.AbstractRNG, d::TuringDenseMvNormal, n::Int...)
+    return d.m .+ d.C.U' * randn(rng, length(d), n...)
 end
 
 """
@@ -33,9 +31,10 @@ end
 Distributions.params(d::TuringDiagMvNormal) = (d.m, d.σ)
 Distributions.dim(d::TuringDiagMvNormal) = length(d.m)
 Base.length(d::TuringDiagMvNormal) = length(d.m)
-Base.size(d::TuringDiagMvNormal) = (length(d), )
-function Distributions.rand(rng::Random.AbstractRNG, d::TuringDiagMvNormal, n::Int)
-    return d.m .+ d.σ .* randn(rng, length(d), n)
+Base.size(d::TuringDiagMvNormal) = (length(d),)
+Distributions.rand(d::TuringDiagMvNormal, n::Int...) = rand(Random.GLOBAL_RNG, d, n...)
+function Distributions.rand(rng::Random.AbstractRNG, d::TuringDiagMvNormal, n::Int...)
+    return d.m .+ d.σ .* randn(rng, length(d), n...)
 end
 
 struct TuringScalMvNormal{Tm<:AbstractVector, Tσ<:Real} <: ContinuousMultivariateDistribution
@@ -44,12 +43,10 @@ struct TuringScalMvNormal{Tm<:AbstractVector, Tσ<:Real} <: ContinuousMultivaria
 end
 
 Base.length(d::TuringScalMvNormal) = length(d.m)
-Base.size(d::TuringScalMvNormal) = (length(d), )
-function Distributions.rand(rng::Random.AbstractRNG, d::TuringScalMvNormal)
-    return d.m .+ d.σ .* randn(rng, length(d))
-end
-function Distributions.rand(rng::Random.AbstractRNG, d::TuringScalMvNormal, n::Int)
-    return d.m .+ d.σ .* randn(rng, length(d), n)
+Base.size(d::TuringScalMvNormal) = (length(d),)
+Distributions.rand(d::TuringScalMvNormal, n::Int...) = rand(Random.GLOBAL_RNG, d, n...)
+function Distributions.rand(rng::Random.AbstractRNG, d::TuringScalMvNormal, n::Int...)
+    return d.m .+ d.σ .* randn(rng, length(d), n...)
 end
 
 for T in (:AbstractVector, :AbstractMatrix)
@@ -268,18 +265,18 @@ MvLogNormal(d::Int, σ::TrackedReal{<:Real}) = TuringMvLogNormal(TuringMvNormal(
 
 ## Zygote adjoint
 
-ZygoteRules.@adjoint function Distributions.MvNormal(
+@adjoint function Distributions.MvNormal(
     A::Union{AbstractVector{<:Real}, AbstractMatrix{<:Real}},
 )
     return pullback(TuringMvNormal, A)
 end
-ZygoteRules.@adjoint function Distributions.MvNormal(
+@adjoint function Distributions.MvNormal(
     m::AbstractVector{<:Real},
     A::Union{Real, UniformScaling, AbstractVecOrMat{<:Real}},
 )
     return pullback(TuringMvNormal, m, A)
 end
-ZygoteRules.@adjoint function Distributions.MvNormal(
+@adjoint function Distributions.MvNormal(
     d::Int,
     A::Real,
 )
