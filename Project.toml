@@ -4,6 +4,7 @@ version = "0.3.2"
 
 [deps]
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
+Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
 DiffRules = "b552c78f-8df3-52c6-915a-8e097449b14b"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 FillArrays = "1a297f60-69ca-5386-bcde-b61e274b549b"
@@ -20,6 +21,7 @@ ZygoteRules = "700de1a5-db45-46bc-99cf-38207098b444"
 
 [compat]
 Combinatorics = "0.7"
+Compat = "3.6"
 DiffRules = "0.1, 1.0"
 Distributions = "0.22"
 FillArrays = "0.8"
