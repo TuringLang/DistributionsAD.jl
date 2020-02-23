@@ -1,5 +1,7 @@
 # Univariate
 
+Tracker.dual(x::Int, p) = x
+
 const FillVectorOfUnivariate{
     S <: ValueSupport,
     T <: UnivariateDistribution{S},
@@ -46,7 +48,11 @@ end
 function _flat_logpdf(dist, x)
     if toflatten(dist)
         f, args = flatten(dist)
-        return sum(f.(args..., x))
+        if any(Tracker.istracked, args)
+            return sum(f.(args..., x))
+        else
+            return sum(logpdf.(dist, x))
+        end
     else
         return sum(vcatmapreduce(x -> logpdf(dist, x), x))
     end
@@ -54,7 +60,11 @@ end
 function _flat_logpdf_mat(dist, x)
     if toflatten(dist)
         f, args = flatten(dist)
-        return vec(sum(f.(args..., x), dims = 1))
+        if any(Tracker.istracked, args)
+            return vec(sum(f.(args..., x), dims = 1))
+        else
+            return vec(sum(logpdf.(dist, x), dims = 1))
+        end
     else
         temp = vcatmapreduce(x -> logpdf(dist, x), x)
         return vec(sum(reshape(temp, size(x)), dims = 1))
@@ -74,7 +84,7 @@ function Distributions.logpdf(dist::FillMatrixOfUnivariate, x::AbstractMatrix{<:
     return _flat_logpdf(dist.dists.value, x)
 end
 function Distributions.rand(rng::Random.AbstractRNG, dist::FillMatrixOfUnivariate)
-    return rand(rng, dist.dists.value, length.(dist.dists.axes))
+    return rand(rng, dist.dists.value, length.(dist.dists.axes)...,)
 end
 
 # Multivariate
@@ -94,18 +104,18 @@ function Distributions.logpdf(
 )
     return _logpdf(dist, x)
 end
-@adjoint function Distributions.logpdf(
-    dist::FillVectorOfMultivariate,
-    x::AbstractMatrix{<:Real},
-)
-    return pullback(_logpdf, dist, x)
-end
 function _logpdf(
     dist::FillVectorOfMultivariate,
     x::AbstractMatrix{<:Real},
 )
     return sum(logpdf(dist.dists.value, x))
 end
+@adjoint function Distributions.logpdf(
+    dist::FillVectorOfMultivariate,
+    x::AbstractMatrix{<:Real},
+)
+    return pullback(_logpdf, dist, x)
+end
 function Distributions.rand(rng::Random.AbstractRNG, dist::FillVectorOfMultivariate)
-    return rand(rng, dist.dists.value, length.(dist.dists.axes))
+    return rand(rng, dist.dists.value, length.(dist.dists.axes)...,)
 end

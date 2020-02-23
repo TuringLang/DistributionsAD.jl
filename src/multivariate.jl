@@ -116,8 +116,6 @@ struct TuringDiagMvNormal{Tm<:AbstractVector, Tσ<:AbstractVector} <: Continuous
     σ::Tσ
 end
 
-Distributions.params(d::TuringDiagMvNormal) = (d.m, d.σ)
-Distributions.dim(d::TuringDiagMvNormal) = length(d.m)
 Base.length(d::TuringDiagMvNormal) = length(d.m)
 Base.size(d::TuringDiagMvNormal) = (length(d),)
 Distributions.rand(d::TuringDiagMvNormal, n::Int...) = rand(Random.GLOBAL_RNG, d, n...)
@@ -162,6 +160,20 @@ function _logpdf(d::TuringDenseMvNormal, x::AbstractVector)
 end
 function _logpdf(d::TuringDenseMvNormal, x::AbstractMatrix)
     return -((size(x, 1) * log(2π) + logdet(d.C)) .+ vec(sum(abs2.(zygote_ldiv(d.C.U', x .- d.m)), dims=1))) ./ 2
+end
+
+for T in (:TrackedVector, :TrackedMatrix)
+    @eval begin
+        function Distributions.logpdf(d::MvNormal{<:Any, <:PDMats.ScalMat}, x::$T)
+            logpdf(TuringScalMvNormal(d.μ, d.Σ.value), x)
+        end
+        function Distributions.logpdf(d::MvNormal{<:Any, <:PDMats.PDiagMat}, x::$T)
+            logpdf(TuringDiagMvNormal(d.μ, d.Σ.diag), x)
+        end
+        function Distributions.logpdf(d::MvNormal{<:Any, <:PDMats.PDMat}, x::$T)
+            logpdf(TuringDenseMvNormal(d.μ, d.Σ.chol), x)
+        end
+    end
 end
 
 import StatsBase: entropy

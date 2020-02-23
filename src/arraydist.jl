@@ -44,6 +44,12 @@ function Distributions.logpdf(dist::MatrixOfUnivariate, x::AbstractMatrix{<:Real
     # A Zygote adjoint is defined for vcatmapreduce to use broadcasting
     return sum(vcatmapreduce(logpdf, dist.dists, x))
 end
+function Distributions.logpdf(dist::MatrixOfUnivariate, x::AbstractArray{<:AbstractMatrix{<:Real}})
+    return vcatmapreduce(x -> logpdf(dist, x), x)
+end
+function Distributions.logpdf(dist::MatrixOfUnivariate, x::AbstractArray{<:Matrix{<:Real}})
+    return vcatmapreduce(x -> logpdf(dist, x), x)
+end
 function Distributions.rand(rng::Random.AbstractRNG, dist::MatrixOfUnivariate)
     return rand.(Ref(rng), dist.dists)
 end
@@ -65,6 +71,12 @@ end
 function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractMatrix{<:Real})
     # eachcol breaks Zygote, so we define an adjoint
     return sum(vcatmapreduce(logpdf, dist.dists, eachcol(x)))
+end
+function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractArray{<:AbstractMatrix{<:Real}})
+    return reshape(vcatmapreduce(x -> logpdf(dist, x), x), size(x))
+end
+function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractArray{<:Matrix{<:Real}})
+    return reshape(vcatmapreduce(x -> logpdf(dist, x), x), size(x))
 end
 @adjoint function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractMatrix{<:Real})
     f(dist, x) = sum(vcatmapreduce(i -> logpdf(dist.dists[i], view(x, :, i)), 1:size(x, 2)))

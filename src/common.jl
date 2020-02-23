@@ -14,7 +14,7 @@ function vcatmapreduce(f, args...)
     end
 end
 @adjoint function vcatmapreduce(f, args...)
-    g(f, args...) = f.(args...,)
+    g(f, args...) = f.(args...)
     return pullback(g, f, args...)
 end
 

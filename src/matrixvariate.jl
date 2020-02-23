@@ -1,3 +1,13 @@
+## MatrixBeta
+
+function Distributions.logpdf(d::MatrixBeta, X::AbstractArray{<:TrackedMatrix{<:Real}})
+    return reshape(vcatmapreduce(x -> logpdf(d, x), X), size(X))
+end
+@adjoint function Distributions.logpdf(d::MatrixBeta, X::AbstractArray{<:Matrix{<:Real}})
+    f(d, X) = map(x -> logpdf(d, x), X)
+    return pullback(f, d, X)
+end
+
 # Adapted from Distributions.jl
 
 ## Wishart
@@ -11,6 +21,13 @@ struct TuringWishart{T<:Real, ST <: Cholesky} <: ContinuousMatrixDistribution
 end
 
 #### Constructors
+
+function TuringWishart(d::Wishart)
+    d = TuringWishart(d.df, getchol(d.S), d.c0)
+end
+getchol(p::PDMat) = p.chol
+getchol(p::PDiagMat) = Diagonal(map(sqrt, p.diag))
+getchol(p::ScalMat) = Diagonal(fill(sqrt(p.value), p.dim))
 
 function TuringWishart(df::T, S::AbstractMatrix) where {T <: Real}
     p = size(S, 1)
@@ -66,7 +83,7 @@ end
 function Distributions.entropy(d::TuringWishart)
     p = Distributions.dim(d)
     df = d.df
-    d.c0 - 0.5 * (df - p - 1) * meanlogdet(d) + 0.5 * df * p
+    d.c0 - 0.5 * (df - p - 1) * Distributions.meanlogdet(d) + 0.5 * df * p
 end
 
 #  Gupta/Nagar (1999) Theorem 3.3.15.i
@@ -82,11 +99,23 @@ end
 
 #### Evaluation
 
+function Distributions.logpdf(d::Wishart, X::TrackedMatrix)
+    return logpdf(TuringWishart(d), X)
+end
+function Distributions.logpdf(d::Wishart, X::AbstractArray{<:TrackedMatrix})
+    return logpdf(TuringWishart(d), X)
+end
 function Distributions.logpdf(d::TuringWishart, X::AbstractMatrix{<:Real})
     df = d.df
     p = Distributions.dim(d)
     Xcf = cholesky(X)
     return 0.5 * ((df - (p + 1)) * logdet(Xcf) - tr(d.chol \ X)) - d.c0
+end
+function Distributions.logpdf(d::TuringWishart, X::AbstractArray{<:AbstractMatrix{<:Real}})
+    return reshape(vcatmapreduce(x -> logpdf(d, x), X), size(X))
+end
+function Distributions.logpdf(d::TuringWishart, X::AbstractArray{<:Matrix{<:Real}})
+    return reshape(vcatmapreduce(x -> logpdf(d, x), X), size(X))
 end
 
 #### Sampling
@@ -127,6 +156,13 @@ struct TuringInverseWishart{T<:Real, ST<:AbstractMatrix} <: ContinuousMatrixDist
 end
 
 #### Constructors
+
+function TuringInverseWishart(d::InverseWishart)
+    d = TuringInverseWishart(d.df, getmatrix(d.Ψ), d.c0)
+end
+getmatrix(p::PDMat) = p.mat
+getmatrix(p::PDiagMat) = Diagonal(p.diag)
+getmatrix(p::ScalMat) = Diagonal(fill(p.value, p.dim))
 
 function TuringInverseWishart(df::T, Ψ::AbstractMatrix) where T<:Real
     p = size(Ψ, 1)
@@ -182,6 +218,12 @@ end
 
 #### Evaluation
 
+function Distributions.logpdf(d::InverseWishart, X::TrackedMatrix)
+    return logpdf(TuringInverseWishart(d), X)
+end
+function Distributions.logpdf(d::InverseWishart, X::AbstractArray{<:TrackedMatrix})
+    return logpdf(TuringInverseWishart(d), X)
+end
 function Distributions.logpdf(d::TuringInverseWishart, X::AbstractMatrix{<:Real})
     p = Distributions.dim(d)
     df = d.df
@@ -190,7 +232,12 @@ function Distributions.logpdf(d::TuringInverseWishart, X::AbstractMatrix{<:Real}
     Ψ = d.S
     -0.5 * ((df + p + 1) * logdet(Xcf) + tr(Xcf \ Ψ)) - d.c0
 end
-
+function Distributions.logpdf(d::TuringInverseWishart, X::AbstractArray{<:AbstractMatrix{<:Real}})
+    return reshape(vcatmapreduce(x -> logpdf(d, x), X), size(X))
+end
+function Distributions.logpdf(d::TuringInverseWishart, X::AbstractArray{<:Matrix{<:Real}})
+    return reshape(vcatmapreduce(x -> logpdf(d, x), X), size(X))
+end
 
 #### Sampling
 

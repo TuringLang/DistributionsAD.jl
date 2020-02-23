@@ -11,8 +11,10 @@ end
 
 vectorize(v::Number) = [v]
 vectorize(v::Diagonal) = v.diag
+vectorize(v::Vector{<:Matrix}) = mapreduce(vec, vcat, v)
 vectorize(v) = vec(v)
 pack(vals...) = reduce(vcat, vectorize.(vals))
+
 @generated function unpack(x, vals...)
     unpacked = []
     ind = :(1)
@@ -20,6 +22,9 @@ pack(vals...) = reduce(vcat, vectorize.(vals))
         if T <: Number
             push!(unpacked, :(x[$ind]))
             ind = :($ind + 1)
+        elseif T <: Vector{<:Matrix}
+            push!(unpacked, :(unpack_vec_of_mats(x[$ind:$ind+sum(length, vals[$i])-1], vals[$i])))
+            ind = :($ind + sum(length, vals[$i]))
         elseif T <: Vector
             push!(unpacked, :(x[$ind:$ind+length(vals[$i])-1]))
             ind = :($ind + length(vals[$i]))
@@ -38,6 +43,15 @@ pack(vals...) = reduce(vcat, vectorize.(vals))
         return ($(unpacked...),)
     end
 end
+function unpack_vec_of_mats(x, val)
+    ind = 1
+    return map(1:length(val)) do i 
+        out = reshape(x[ind : ind + length(val[i]) - 1], size(val[i]))        
+        ind += length(val[i])
+        out
+    end
+end
+
 function get_function(dist::DistSpec, inds, val)
     syms = []
     args = []
@@ -55,7 +69,14 @@ function get_function(dist::DistSpec, inds, val)
         push!(syms, sym)
         expr = quote
             ($(syms...),) -> begin
-                temp = logpdf($(dist.name)($(args...)), $(sym))
+                temp_args = ($(args...),)
+                temp_dist = $(dist.name)(temp_args...)
+                temp_x = $(sym)
+                if temp_dist isa UnivariateDistribution && temp_x isa AbstractArray
+                    temp = logpdf.(temp_dist, temp_x)
+                else
+                    temp = logpdf(temp_dist, temp_x)
+                end
                 if temp isa AbstractVector
                     return sum(temp)
                 else
@@ -74,7 +95,14 @@ function get_function(dist::DistSpec, inds, val)
         @assert length(inds) > 0
         expr = quote
             ($(syms...),) -> begin
-                temp = logpdf($(dist.name)($(args...)), $(dist.x))
+                temp_args = ($(args...),)
+                temp_dist = $(dist.name)(temp_args...)
+                temp_x = $(dist.x)
+                if temp_dist isa UnivariateDistribution && temp_x isa AbstractArray
+                    temp = logpdf.(temp_dist, temp_x)
+                else
+                    temp = logpdf(temp_dist, temp_x)
+                end
                 if temp isa AbstractVector
                     return sum(temp)
                 else
