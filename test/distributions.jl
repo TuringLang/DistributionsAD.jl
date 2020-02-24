@@ -532,7 +532,14 @@ separator()
 
 @testset "Matrix-variate continuous distributions" begin
     test_head("Testing: Matrix-variate continuous distributions")
-    for d in xmatrix_cont_dists
+    n = length(xmulti_disc_dists)
+    for d in xmatrix_cont_dists[1:div(n,2)]
+        test_info(d.name)
+        for testf in get_all_functions(d, true)
+            test_ad(testf.f, testf.x)
+        end
+    end
+    for d in xmatrix_cont_dists[div(n,2)+1:end]
         test_info(d.name)
         for testf in get_all_functions(d, true)
             test_ad(testf.f, testf.x)
