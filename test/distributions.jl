@@ -30,7 +30,8 @@ function filldist_spec(dist::DistSpec; disttype = :uni, n = 2, d = 1)
     disttype == :uni && dist.x isa Vector && return
     disttype == :multi && dist.x isa Matrix && return
     # Broken
-    (dist.name == :VonMises || dist.name == :TriangularDist) && return
+    (dist.name in (:VonMises, :TriangularDist)) && return
+    (dist.name == :Weibull && n isa Tuple) && return
     # Tests are failing for matrix covariance vectorized MvNormal
     # Note the 2 MvNormal cases in broken_multi_cont_dists
     dist.name == :MvNormal && any(x -> isa(x, Matrix), dist.θ) && return
