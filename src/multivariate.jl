@@ -164,12 +164,6 @@ function _logpdf(d::TuringDenseMvNormal, x::AbstractMatrix)
     return -((size(x, 1) * log(2π) + logdet(d.C)) .+ vec(sum(abs2.(zygote_ldiv(d.C.U', x .- d.m)), dims=1))) ./ 2
 end
 
-for T in (:TrackedVector, :TrackedMatrix)
-    @eval function Distributions.logpdf(d::MvNormal{<:Any, <:PDMats.ScalMat}, x::$T)
-        logpdf(TuringScalMvNormal(d.μ, d.Σ.value), x)
-    end
-end
-
 import StatsBase: entropy
 function entropy(d::TuringDiagMvNormal)
     T = eltype(d.σ)
