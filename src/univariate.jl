@@ -338,3 +338,183 @@ function _dft_zygote(x::Vector{T}) where T
     return copy(y)
 end
 =#
+
+## Categorical ##
+
+struct TuringDiscreteNonParametric{T<:Real,P<:Real,Ts<:AbstractVector{T},Ps<:AbstractVector{P}} <: DiscreteUnivariateDistribution
+    support::Ts
+    p::Ps
+    
+    function TuringDiscreteNonParametric{T, P, Ts, Ps}(vs, ps; check_args=true) where {
+        T <: Real,
+        P <: Real,
+        Ts <: AbstractVector{T},
+        Ps <: AbstractVector{P},
+    }
+        check_args || return new{T, P, Ts, Ps}(vs, ps)
+        Distributions.@check_args(TuringDiscreteNonParametric, length(vs) == length(ps))
+        Distributions.@check_args(TuringDiscreteNonParametric, isprobvec(ps))
+        Distributions.@check_args(TuringDiscreteNonParametric, allunique(vs))
+        sort_order = sortperm(vs)
+        vs = vs[sort_order]
+        ps = ps[sort_order]
+        new{T, P, Ts, Ps}(vs, ps)
+    end    
+end
+function TuringDiscreteNonParametric(vs::Ts, ps::Ps; check_args=true) where {
+    T <: Real,
+    P <: Real,
+    Ts <: AbstractVector{T},
+    Ps <: AbstractVector{P},
+}
+    return TuringDiscreteNonParametric{T, P, Ts, Ps}(vs, ps; check_args = check_args)
+end
+function TuringDiscreteNonParametric(vs::Ts, ps::Ps; check_args=true) where {
+    T <: Real,
+    P <: Real,
+    Ts <: AbstractVector{T},
+    Ps <: SubArray,
+}
+    _ps = collect(ps)
+    _Ps = typeof(ps)
+    return TuringDiscreteNonParametric{T, P, Ts, _Ps}(vs, _ps, check_args = check_args)
+end
+function TuringDiscreteNonParametric(vs::Ts, ps::Ps; check_args=true) where {
+    T <: Real,
+    P <: Real,
+    Ts <: AbstractVector{T},
+    Ps <: TrackedVector{P, <:SubArray},
+}
+    _ps = ps[:]
+    _Ps = typeof(_ps)
+    return TuringDiscreteNonParametric{T, P, Ts, _Ps}(vs, _ps, check_args = check_args)
+end
+
+Base.eltype(::Type{<:TuringDiscreteNonParametric{T}}) where T = T
+
+# Accessors
+Distributions.support(d::TuringDiscreteNonParametric) = d.support
+
+Distributions.probs(d::TuringDiscreteNonParametric)  = d.p
+
+Base.isapprox(c1::D, c2::D) where D <: TuringDiscreteNonParametric =
+    (support(c1) ≈ support(c2) || all(support(c1) .≈ support(c2))) &&
+    (probs(c1) ≈ probs(c2) || all(probs(c1) .≈ probs(c2)))
+
+function Distributions.rand(rng::AbstractRNG, d::TuringDiscreteNonParametric{T,P}) where {T,P}
+    x = support(d)
+    p = probs(d)
+    n = length(p)
+    draw = rand(rng, P)
+    cp = zero(P)
+    i = 0
+    while cp < draw && i < n
+        cp += p[i +=1]
+    end
+    x[max(i,1)]
+end
+
+Distributions.rand(d::TuringDiscreteNonParametric) = rand(GLOBAL_RNG, d)
+
+Distributions.sampler(d::TuringDiscreteNonParametric) =
+    DiscreteNonParametricSampler(support(d), probs(d))
+
+Distributions.get_evalsamples(d::TuringDiscreteNonParametric, ::Float64) = support(d)
+
+Distributions.pdf(d::TuringDiscreteNonParametric) = copy(probs(d))
+
+# Helper functions for pdf and cdf required to fix ambiguous method
+# error involving [pc]df(::DisceteUnivariateDistribution, ::Int)
+function _pdf(d::TuringDiscreteNonParametric{T,P}, x::T) where {T,P}
+    idx_range = searchsorted(support(d), x)
+    if length(idx_range) > 0
+        return probs(d)[first(idx_range)]
+    else
+        return zero(P)
+    end
+end
+Distributions.pdf(d::TuringDiscreteNonParametric{T}, x::Int) where T  = _pdf(d, convert(T, x))
+Distributions.pdf(d::TuringDiscreteNonParametric{T}, x::Real) where T = _pdf(d, convert(T, x))
+
+function _cdf(d::TuringDiscreteNonParametric{T,P}, x::T) where {T,P}
+    x > maximum(d) && return 1.0
+    s = zero(P)
+    ps = probs(d)
+    stop_idx = searchsortedlast(support(d), x)
+    for i in 1:stop_idx
+        s += ps[i]
+    end
+    return s
+end
+Distributions.cdf(d::TuringDiscreteNonParametric{T}, x::Integer) where T = _cdf(d, convert(T, x))
+Distributions.cdf(d::TuringDiscreteNonParametric{T}, x::Real) where T = _cdf(d, convert(T, x))
+
+function _ccdf(d::TuringDiscreteNonParametric{T,P}, x::T) where {T,P}
+    x < minimum(d) && return 1.0
+    s = zero(P)
+    ps = probs(d)
+    stop_idx = searchsortedlast(support(d), x)
+    for i in (stop_idx+1):length(ps)
+        s += ps[i]
+    end
+    return s
+end
+Distributions.ccdf(d::TuringDiscreteNonParametric{T}, x::Integer) where T = _ccdf(d, convert(T, x))
+Distributions.ccdf(d::TuringDiscreteNonParametric{T}, x::Real) where T = _ccdf(d, convert(T, x))
+
+function Distributions.quantile(d::TuringDiscreteNonParametric, q::Real)
+    0 <= q <= 1 || throw(DomainError())
+    x = support(d)
+    p = probs(d)
+    k = length(x)
+    i = 1
+    cp = p[1]
+    while cp < q && i < k #Note: is i < k necessary?
+        i += 1
+        @inbounds cp += p[i]
+    end
+    x[i]
+end
+
+Base.minimum(d::TuringDiscreteNonParametric) = first(support(d))
+Base.maximum(d::TuringDiscreteNonParametric) = last(support(d))
+Distributions.insupport(d::TuringDiscreteNonParametric, x::Real) =
+    length(searchsorted(support(d), x)) > 0
+
+Distributions.mean(d::TuringDiscreteNonParametric) = dot(probs(d), support(d))
+
+function Distributions.var(d::TuringDiscreteNonParametric{T}) where T
+    m = mean(d)
+    x = support(d)
+    p = probs(d)
+    k = length(x)
+    σ² = zero(T)
+    for i in 1:k
+        @inbounds σ² += abs2(x[i] - m) * p[i]
+    end
+    σ²
+end
+
+Distributions.mode(d::TuringDiscreteNonParametric) = support(d)[argmax(probs(d))]
+function Distributions.modes(d::TuringDiscreteNonParametric{T,P}) where {T,P}
+    x = support(d)
+    p = probs(d)
+    k = length(x)
+    mds = T[]
+    max_p = zero(P)
+    @inbounds for i in 1:k
+        pi = p[i]
+        xi = x[i]
+        if pi > max_p
+            max_p = pi
+            mds = [xi]
+        elseif pi == max_p
+            push!(mds, xi)
+        end
+    end
+    mds
+end
+
+function Distributions.Categorical(p::TrackedVector; check_args = true)
+    return TuringDiscreteNonParametric(1:length(p), p, check_args = check_args)
+end
