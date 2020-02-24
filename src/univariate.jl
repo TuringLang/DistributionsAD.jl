@@ -338,3 +338,13 @@ function _dft_zygote(x::Vector{T}) where T
     return copy(y)
 end
 =#
+
+## Categorical ##
+
+function Base.convert(
+    ::Type{Distributions.DiscreteNonParametric{T,P,Ts,Ps}},
+    d::Distributions.DiscreteNonParametric{T,P,Ts,Ps},
+) where {T<:Real,P<:Real,Ts<:AbstractVector{T},Ps<:AbstractVector{P}}
+    DiscreteNonParametric{T,P,Ts,Ps}(support(d), probs(d), check_args=false)
+end
+
