@@ -8,7 +8,8 @@ using PDMats,
       Random, 
       Combinatorics,
       SpecialFunctions,
-      StatsFuns
+      StatsFuns,
+      Compat
 
 using Tracker: Tracker, TrackedReal, TrackedVector, TrackedMatrix, TrackedArray,
                 TrackedVecOrMat, track, @grad, data

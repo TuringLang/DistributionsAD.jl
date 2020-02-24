@@ -4,8 +4,6 @@ if VERSION < v"1.1"
     eachcol(A::AbstractVecOrMat) = (view(A, :, i) for i in axes(A, 2))
 end
 
-Base.one(::Irrational) = true
-
 function vcatmapreduce(f, args...)
     init = vcat(f(first.(args)...,))
     zipped_args = zip(args...,)
@@ -14,7 +12,7 @@ function vcatmapreduce(f, args...)
     end
 end
 @adjoint function vcatmapreduce(f, args...)
-    g(f, args...) = f.(args...,)
+    g(f, args...) = f.(args...)
     return pullback(g, f, args...)
 end
 
