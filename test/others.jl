@@ -125,3 +125,22 @@ end
     B = copy(A)
     @test DistributionsAD.zygote_ldiv(A, B) == A \ B
 end
+
+@testset "Entropy" begin
+    sigmas = exp.(randn(10))
+    d1 = TuringDiagMvNormal(zeros(10), sigmas)
+    d2 = MvNormal(zeros(10), sigmas)
+
+    @test entropy(d1) == entropy(d2)
+end
+
+@testset "Params" begin
+    m = rand(10)
+    sigmas = randexp(10)
+    
+    d = TuringDiagMvNormal(m, sigmas)
+    @test params(d) == (m, sigmas)
+
+    d = TuringScalMvNormal(m, sigmas[1])
+    @test params(d) == (m, sigmas[1])
+end
