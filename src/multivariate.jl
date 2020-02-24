@@ -116,6 +116,7 @@ struct TuringDiagMvNormal{Tm<:AbstractVector, Tσ<:AbstractVector} <: Continuous
     σ::Tσ
 end
 
+Distributions.params(d::TuringDiagMvNormal) = (d.m, d.σ)
 Base.length(d::TuringDiagMvNormal) = length(d.m)
 Base.size(d::TuringDiagMvNormal) = (length(d),)
 Distributions.rand(d::TuringDiagMvNormal, n::Int...) = rand(Random.GLOBAL_RNG, d, n...)
@@ -128,6 +129,7 @@ struct TuringScalMvNormal{Tm<:AbstractVector, Tσ<:Real} <: ContinuousMultivaria
     σ::Tσ
 end
 
+Distributions.params(d::TuringScalMvNormal) = (d.m, d.σ)
 Base.length(d::TuringScalMvNormal) = length(d.m)
 Base.size(d::TuringScalMvNormal) = (length(d),)
 Distributions.rand(d::TuringScalMvNormal, n::Int...) = rand(Random.GLOBAL_RNG, d, n...)
