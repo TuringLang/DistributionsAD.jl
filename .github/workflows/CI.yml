@@ -27,3 +27,5 @@ jobs:
       - uses: julia-actions/julia-runtest@master
       - name: Coveralls GitHub Action
       uses: coverallsapp/github-action@v1.0.1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
