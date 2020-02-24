@@ -456,6 +456,8 @@ matrix_cont_dists = [
     #DistSpec(:TuringInverseWishart, (dim, cov_mat), fill(cov_mat, 2)),
 ]
 xmatrix_cont_dists = [
+    matrix_cont_dists;
+
     # Matrix x
     filter(!isnothing, filldist_spec.(uni_cont_dists; n = (2, 2)));
     filter(!isnothing, filldist_spec.(multi_cont_dists; disttype = :multi, n = 2));
@@ -467,8 +469,6 @@ xmatrix_cont_dists = [
     filter(!isnothing, filldist_spec.(multi_cont_dists; disttype = :multi, n = 2, d = 2));
     filter(!isnothing, arraydist_spec.(uni_cont_dists; n = (2, 2), d = 2));    
     filter(!isnothing, arraydist_spec.(multi_cont_dists; disttype = :multi, n = 2, d = 2));
-
-    matrix_cont_dists;
 ]
 broken_matrix_cont_dists = [
     # Other
@@ -532,14 +532,7 @@ separator()
 
 @testset "Matrix-variate continuous distributions" begin
     test_head("Testing: Matrix-variate continuous distributions")
-    n = length(xmulti_disc_dists)
-    for d in xmatrix_cont_dists[1:div(n,2)]
-        test_info(d.name)
-        for testf in get_all_functions(d, true)
-            test_ad(testf.f, testf.x)
-        end
-    end
-    for d in xmatrix_cont_dists[div(n,2)+1:end]
+    for d in xmatrix_cont_dists
         test_info(d.name)
         for testf in get_all_functions(d, true)
             test_ad(testf.f, testf.x)
