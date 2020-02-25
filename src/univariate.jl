@@ -13,6 +13,8 @@ function TuringUniform(a::Real, b::Real)
     return TuringUniform{T}(T(a), T(b))
 end
 Distributions.logpdf(d::TuringUniform, x::Real) = uniformlogpdf(d.a, d.b, x)
+Base.minimum(d::TuringUniform) = d.a
+Base.maximum(d::TuringUniform) = d.b
 
 Distributions.Uniform(a::TrackedReal, b::Real) = TuringUniform{TrackedReal}(a, b)
 Distributions.Uniform(a::Real, b::TrackedReal) = TuringUniform{TrackedReal}(a, b)
@@ -348,3 +350,21 @@ function Base.convert(
     DiscreteNonParametric{T,P,Ts,Ps}(support(d), probs(d), check_args=false)
 end
 
+# Fix SubArray support
+function Distributions.DiscreteNonParametric{T,P,Ts,Ps}(
+    vs::Ts,
+    ps::Ps;
+    check_args=true,
+) where {T<:Real, P<:Real, Ts<:AbstractVector{T}, Ps<:SubArray{P, 1}}
+    cps = ps[:]
+    return DiscreteNonParametric{T,P,Ts,typeof(cps)}(vs, cps; check_args = check_args)
+end
+
+function Distributions.DiscreteNonParametric{T,P,Ts,Ps}(
+    vs::Ts,
+    ps::Ps;
+    check_args=true,
+) where {T<:Real,P<:Real,Ts<:AbstractVector{T},Ps<:TrackedArray{P, 1, <:SubArray{P, 1}}}
+    cps = ps[:]
+    return DiscreteNonParametric{T,P,Ts,typeof(cps)}(vs, cps; check_args = check_args)
+end

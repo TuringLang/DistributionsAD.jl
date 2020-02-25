@@ -1,13 +1,17 @@
 ## Generic ##
 
-function vcatmapreduce(f, args...)
-    init = vcat(f(first.(args)...,))
-    zipped_args = zip(args...,)
-    return mapreduce(vcat, drop(zipped_args, 1); init = init) do zarg
-        f(zarg...,)
+_istracked(x) = false
+_istracked(x::AbstractArray{<:TrackedReal}) = true
+function mapvcat(f, args...)
+    out = f.(args...,)
+    if _istracked(out)
+        init = vcat(out[1])
+        return reshape(reduce(vcat, drop(out, 1); init = init), size(out))
+    else
+        return out
     end
 end
-@adjoint function vcatmapreduce(f, args...)
+@adjoint function mapvcat(f, args...)
     g(f, args...) = f.(args...)
     return pullback(g, f, args...)
 end

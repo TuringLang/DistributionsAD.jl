@@ -63,6 +63,7 @@ const flattened_dists = [   Bernoulli,
                             TDist,
                             TriangularDist,
                             Triweight,
+                            TuringUniform,
                             #Truncated,
                             #VonMises,
                         ]

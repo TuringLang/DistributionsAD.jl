@@ -54,7 +54,7 @@ function _flat_logpdf(dist, x)
             return sum(logpdf.(dist, x))
         end
     else
-        return sum(vcatmapreduce(x -> logpdf(dist, x), x))
+        return sum(logpdf.(dist, x))
     end
 end
 function _flat_logpdf_mat(dist, x)
@@ -66,7 +66,7 @@ function _flat_logpdf_mat(dist, x)
             return vec(sum(logpdf.(dist, x), dims = 1))
         end
     else
-        temp = vcatmapreduce(x -> logpdf(dist, x), x)
+        temp = mapvcat(x -> logpdf(dist, x), x)
         return vec(sum(reshape(temp, size(x)), dims = 1))
     end
 end
