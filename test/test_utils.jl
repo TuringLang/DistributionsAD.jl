@@ -134,20 +134,61 @@ function get_all_functions(dist::DistSpec, continuous=false)
     return fs
 end
 
+# Taken from Turing.jl
+function get_stage()
+    if get(ENV, "TRAVIS", "") == "true" || get(ENV, "GITHUB_ACTIONS", "") == "true"
+        if "STAGE" in keys(ENV)
+            return ENV["STAGE"]
+        else
+            return "all"
+        end
+    end
+
+    return "all"
+end
+
 function test_ad(f, at = 0.5; rtol = 1e-8, atol = 1e-8)
-    isarr = isa(at, AbstractArray)
-    reverse_tracker = Tracker.data(Tracker.gradient(f, at)[1])
-    reverse_zygote = Zygote.gradient(f, at)[1]
-    if isarr
-        forward = ForwardDiff.gradient(f, at)
-        @test isapprox(reverse_tracker, forward, rtol=rtol, atol=atol)
-        @test isapprox(reverse_zygote, forward, rtol=rtol, atol=atol)
+    stg = get_stage()
+    if stg == "all"
+        isarr = isa(at, AbstractArray)
+        reverse_tracker = Tracker.data(Tracker.gradient(f, at)[1])
+        reverse_zygote = Zygote.gradient(f, at)[1]
+        if isarr
+            forward = ForwardDiff.gradient(f, at)
+            @test isapprox(reverse_tracker, forward, rtol=rtol, atol=atol)
+            @test isapprox(reverse_zygote, forward, rtol=rtol, atol=atol)
+        else
+            forward = ForwardDiff.derivative(f, at)
+            finite_diff = central_fdm(5,1)(f, at)
+            @test isapprox(reverse_tracker, forward, rtol=rtol, atol=atol)
+            @test isapprox(reverse_tracker, finite_diff, rtol=rtol, atol=atol)
+            @test isapprox(reverse_zygote, finite_diff, rtol=rtol, atol=atol)
+        end
+    elseif stg == "ForwardDiff_Tracker"
+        isarr = isa(at, AbstractArray)
+        reverse_tracker = Tracker.data(Tracker.gradient(f, at)[1])
+        if isarr
+            forward = ForwardDiff.gradient(f, at)
+            @test isapprox(reverse_tracker, forward, rtol=rtol, atol=atol)
+        else
+            forward = ForwardDiff.derivative(f, at)
+            finite_diff = central_fdm(5,1)(f, at)
+            @test isapprox(reverse_tracker, forward, rtol=rtol, atol=atol)
+            @test isapprox(reverse_tracker, finite_diff, rtol=rtol, atol=atol)
+        end
+    elseif stg == "Zygote"
+        isarr = isa(at, AbstractArray)
+        reverse_zygote = Zygote.gradient(f, at)[1]
+        if isarr
+            forward = ForwardDiff.gradient(f, at)
+            @test isapprox(reverse_zygote, forward, rtol=rtol, atol=atol)
+        else
+            forward = ForwardDiff.derivative(f, at)
+            finite_diff = central_fdm(5,1)(f, at)
+            @test isapprox(reverse_zygote, finite_diff, rtol=rtol, atol=atol)
+        end
     else
-        forward = ForwardDiff.derivative(f, at)
-        finite_diff = central_fdm(5,1)(f, at)
-        @test isapprox(reverse_tracker, forward, rtol=rtol, atol=atol)
-        @test isapprox(reverse_tracker, finite_diff, rtol=rtol, atol=atol)
-        @test isapprox(reverse_zygote, finite_diff, rtol=rtol, atol=atol)
+        throw("Unsupported test stage.")
     end
 end
 
