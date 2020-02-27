@@ -18,7 +18,7 @@ function Distributions.logpdf(dist::VectorOfUnivariate, x::AbstractMatrix{<:Real
     # eachcol breaks Zygote, so we need an adjoint
     return mapvcat(dist.v, eachcol(x)) do dist, c
         sum(map(c) do x
-            logpdf(dist, c)
+            logpdf(dist, x)
         end)
     end
 end

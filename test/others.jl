@@ -13,7 +13,7 @@ if get_stage() in ("Others", "all")
         A = Matrix{Float64}(I, dim, dim)
         dW1 = Wishart(dim + 4, A)
         dW2 = TuringWishart(dim + 4, A)
-
+        mean = Distributions.mean
         @testset "$F" for F in (size, rank, mean, meanlogdet, entropy, cov, var)
             @test F(dW1) == F(dW2)
         end
@@ -29,7 +29,7 @@ if get_stage() in ("Others", "all")
         A = Matrix{Float64}(I, dim, dim)
         dIW1 = InverseWishart(dim + 4, A)
         dIW2 = TuringInverseWishart(dim + 4, A)
-
+        mean = Distributions.mean
         @testset "$F" for F in (size, rank, mean, cov, var)
             @test F(dIW1) == F(dIW2)
         end
