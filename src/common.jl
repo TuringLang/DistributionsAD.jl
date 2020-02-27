@@ -1,9 +1,10 @@
 ## Generic ##
 
 _istracked(x) = false
+_istracked(x::TrackedArray) = false
 _istracked(x::AbstractArray{<:TrackedReal}) = true
 function mapvcat(f, args...)
-    out = f.(args...,)
+    out = map(f, args...)
     if _istracked(out)
         init = vcat(out[1])
         return reshape(reduce(vcat, drop(out, 1); init = init), size(out))
@@ -12,7 +13,7 @@ function mapvcat(f, args...)
     end
 end
 @adjoint function mapvcat(f, args...)
-    g(f, args...) = f.(args...)
+    g(f, args...) = map(f, args...)
     return pullback(g, f, args...)
 end
 

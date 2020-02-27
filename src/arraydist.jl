@@ -5,12 +5,22 @@ const VectorOfUnivariate = Distributions.Product
 function arraydist(dists::AbstractVector{<:UnivariateDistribution})
     return product_distribution(dists)
 end
+function arraydist(dists::AbstractVector{<:Normal})
+    m = mapvcat(mean, dists)
+    v = mapvcat(var, dists)
+    return MvNormal(m, v)
+end
+
 function Distributions.logpdf(dist::VectorOfUnivariate, x::AbstractVector{<:Real})
-    return sum(logpdf.(dist.v, x))
+    return sum(map((d, x) -> logpdf(d, x), dist.v, x))
 end
 function Distributions.logpdf(dist::VectorOfUnivariate, x::AbstractMatrix{<:Real})
     # eachcol breaks Zygote, so we need an adjoint
-    return mapvcat((dist, c) -> logpdf.(dist, c), dist.v, eachcol(x))
+    return mapvcat(dist.v, eachcol(x)) do dist, c
+        sum(map(c) do x
+            logpdf(dist, c)
+        end)
+    end
 end
 @adjoint function Distributions.logpdf(dist::VectorOfUnivariate, x::AbstractMatrix{<:Real})
     # Any other more efficient implementation breaks Zygote
@@ -32,7 +42,9 @@ end
 function Distributions.logpdf(dist::MatrixOfUnivariate, x::AbstractMatrix{<:Real})
     # Broadcasting here breaks Tracker for some reason
     # A Zygote adjoint is defined for mapvcat to use broadcasting
-    return sum(logpdf.(dist.dists, x))
+    return sum(map(dist.dists, x) do dist, x
+        logpdf(dist, x)
+    end)
 end
 function Distributions.logpdf(dist::MatrixOfUnivariate, x::AbstractArray{<:AbstractMatrix{<:Real}})
     return mapvcat(x -> logpdf(dist, x), x)
@@ -69,7 +81,7 @@ function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractArray{<:Mat
     return mapvcat(x -> logpdf(dist, x), x)
 end
 @adjoint function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractMatrix{<:Real})
-    f(dist, x) = sum(i -> logpdf(dist.dists[i], view(x, :, i)), 1:size(x, 2))
+    f(dist, x) = sum(mapvcat(i -> logpdf(dist.dists[i], view(x, :, i)), 1:size(x, 2)))
     return pullback(f, dist, x)
 end
 function Distributions.rand(rng::Random.AbstractRNG, dist::VectorOfMultivariate)
