@@ -1,4 +1,4 @@
-name: CI
+name: ForwardDiff and Tracker tests
 
 on:
   push:
@@ -25,3 +25,5 @@ jobs:
         with:
           version: ${{ matrix.julia-version }}
       - uses: julia-actions/julia-runtest@master
+        env:
+          STAGE: ForwardDiff_Tracker

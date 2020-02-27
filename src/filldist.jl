@@ -48,26 +48,20 @@ end
 function _flat_logpdf(dist, x)
     if toflatten(dist)
         f, args = flatten(dist)
-        if any(Tracker.istracked, args)
-            return sum(f.(args..., x))
-        else
-            return sum(logpdf.(dist, x))
-        end
+        return sum(f.(args..., x))
     else
-        return sum(vcatmapreduce(x -> logpdf(dist, x), x))
+        return sum(mapvcat(x) do x
+            logpdf(dist, x)
+        end)
     end
 end
 function _flat_logpdf_mat(dist, x)
     if toflatten(dist)
         f, args = flatten(dist)
-        if any(Tracker.istracked, args)
-            return vec(sum(f.(args..., x), dims = 1))
-        else
-            return vec(sum(logpdf.(dist, x), dims = 1))
-        end
+        return vec(sum(f.(args..., x), dims = 1))
     else
-        temp = vcatmapreduce(x -> logpdf(dist, x), x)
-        return vec(sum(reshape(temp, size(x)), dims = 1))
+        temp = mapvcat(x -> logpdf(dist, x), x)
+        return vec(sum(temp, dims = 1))
     end
 end
 

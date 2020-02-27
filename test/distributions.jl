@@ -456,8 +456,6 @@ matrix_cont_dists = [
     #DistSpec(:TuringInverseWishart, (dim, cov_mat), fill(cov_mat, 2)),
 ]
 xmatrix_cont_dists = [
-    matrix_cont_dists;
-
     # Matrix x
     filter(!isnothing, filldist_spec.(uni_cont_dists; n = (2, 2)));
     filter(!isnothing, filldist_spec.(multi_cont_dists; disttype = :multi, n = 2));
@@ -469,6 +467,8 @@ xmatrix_cont_dists = [
     filter(!isnothing, filldist_spec.(multi_cont_dists; disttype = :multi, n = 2, d = 2));
     filter(!isnothing, arraydist_spec.(uni_cont_dists; n = (2, 2), d = 2));    
     filter(!isnothing, arraydist_spec.(multi_cont_dists; disttype = :multi, n = 2, d = 2));
+
+    matrix_cont_dists;
 ]
 broken_matrix_cont_dists = [
     # Other
@@ -478,65 +478,67 @@ broken_matrix_cont_dists = [
     DistSpec(:MatrixFDist, (dim, dim, cov_mat), cov_mat),
 ]
 
-test_head(s) = println("\n"*s*"\n")
-separator() = println("\n"*"="^50)
+if get_stage() != "Others"
+    test_head(s) = println("\n"*s*"\n")
+    separator() = println("\n"*"="^50)
 
-separator()
-@testset "Univariate discrete distributions" begin
-    test_head("Testing: Univariate discrete distributions")
-    for d in uni_disc_dists
-        test_info(d.name)
-        for testf in get_all_functions(d, false)
-            test_ad(testf.f, testf.x)
+    separator()
+    @testset "Univariate discrete distributions" begin
+        test_head("Testing: Univariate discrete distributions")
+        for d in uni_disc_dists
+            test_info(d.name)
+            for testf in get_all_functions(d, false)
+                test_ad(testf.f, testf.x)
+            end
         end
     end
-end
-separator()
+    separator()
 
-# Note: broadcasting logpdf with univariate distributions having tracked parameters breaks
-# Tracker. Ref: https://github.com/FluxML/Tracker.jl/issues/65
-# filldist works around this so it is the recommended way for AD-friendly "broadcasting"
-# of logpdf with univariate distributions
-@testset "Univariate continuous distributions" begin
-    test_head("Testing: Univariate continuous distributions")
-    for d in uni_cont_dists
-        test_info(d.name)
-        for testf in get_all_functions(d, true)
-            test_ad(testf.f, testf.x)
+    # Note: broadcasting logpdf with univariate distributions having tracked parameters breaks
+    # Tracker. Ref: https://github.com/FluxML/Tracker.jl/issues/65
+    # filldist works around this so it is the recommended way for AD-friendly "broadcasting"
+    # of logpdf with univariate distributions
+    @testset "Univariate continuous distributions" begin
+        test_head("Testing: Univariate continuous distributions")
+        for d in uni_cont_dists
+            test_info(d.name)
+            for testf in get_all_functions(d, true)
+                test_ad(testf.f, testf.x)
+            end
         end
     end
-end
-separator()
+    separator()
 
-@testset "Multivariate discrete distributions" begin
-    test_head("Testing: Multivariate discrete distributions")
-    for d in xmulti_disc_dists
-        test_info(d.name)
-        for testf in get_all_functions(d, false)
-            test_ad(testf.f, testf.x)
+    @testset "Multivariate discrete distributions" begin
+        test_head("Testing: Multivariate discrete distributions")
+        for d in xmulti_disc_dists
+            test_info(d.name)
+            for testf in get_all_functions(d, false)
+                test_ad(testf.f, testf.x)
+            end
         end
     end
-end
 
-separator()
-@testset "Multivariate continuous distributions" begin
-    test_head("Testing: Multivariate continuous distributions")
-    for d in xmulti_cont_dists
-        test_info(d.name)
-        for testf in get_all_functions(d, true)
-            test_ad(testf.f, testf.x)
+    separator()
+    @testset "Multivariate continuous distributions" begin
+        test_head("Testing: Multivariate continuous distributions")
+        for d in xmulti_cont_dists
+            test_info(d.name)
+            for testf in get_all_functions(d, true)
+                test_ad(testf.f, testf.x)
+            end
         end
     end
-end
-separator()
+    separator()
 
-@testset "Matrix-variate continuous distributions" begin
-    test_head("Testing: Matrix-variate continuous distributions")
-    for d in xmatrix_cont_dists
-        test_info(d.name)
-        for testf in get_all_functions(d, true)
-            test_ad(testf.f, testf.x)
+    @testset "Matrix-variate continuous distributions" begin
+        test_head("Testing: Matrix-variate continuous distributions")
+        for d in xmatrix_cont_dists
+            test_info(d.name)
+            for testf in get_all_functions(d, true)
+                test_ad(testf.f, testf.x)
+            end
         end
     end
+    separator()
 end
-separator()
