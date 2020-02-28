@@ -147,6 +147,8 @@ function get_stage()
     return "all"
 end
 
+const zygote_counter = Ref(0)
+
 function test_ad(f, at = 0.5; rtol = 1e-8, atol = 1e-8)
     stg = get_stage()
     if stg == "all"
@@ -177,7 +179,11 @@ function test_ad(f, at = 0.5; rtol = 1e-8, atol = 1e-8)
             @test isapprox(reverse_tracker, finite_diff, rtol=rtol, atol=atol)
         end
     elseif stg == "Zygote"
+        zygote_counter[] += 1
         isarr = isa(at, AbstractArray)
+        if mod(zygote_counter[], 10) == 0
+            Zygote.refresh()
+        end
         reverse_zygote = Zygote.gradient(f, at)[1]
         if isarr
             forward = ForwardDiff.gradient(f, at)
