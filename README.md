@@ -1,6 +1,8 @@
 # DistributionsAD.jl
 
-[![Build Status](https://travis-ci.org/TuringLang/DistributionsAD.jl.svg?branch=master)](https://travis-ci.org/TuringLang/DistributionsAD.jl)
+![ForwardDiff and Tracker tests](https://github.com/TuringLang/DistributionsAD.jl/workflows/ForwardDiff%20and%20Tracker%20tests/badge.svg?branch=master)
+
+![Zygote tests](https://github.com/TuringLang/DistributionsAD.jl/workflows/Zygote%20tests/badge.svg?branch=master)
 
 [![Coverage Status](https://coveralls.io/repos/github/TuringLang/DistributionsAD.jl/badge.svg?branch=master)](https://coveralls.io/github/TuringLang/DistributionsAD.jl?branch=master)
 
