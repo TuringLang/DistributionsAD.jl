@@ -132,7 +132,7 @@ if get_stage() in ("Others", "all")
         d1 = TuringDiagMvNormal(zeros(10), sigmas)
         d2 = MvNormal(zeros(10), sigmas)
 
-        @test entropy(d1) == entropy(d2)
+        @test isapprox(entropy(d1), entropy(d2), rtol = 1e-6)
     end
 
     @testset "Params" begin
