@@ -181,7 +181,7 @@ function test_ad(f, at = 0.5; rtol = 1e-8, atol = 1e-8)
     elseif stg == "Zygote"
         zygote_counter[] += 1
         isarr = isa(at, AbstractArray)
-        if mod(zygote_counter[], 10) == 0
+        if mod(zygote_counter[], 50) == 0
             Zygote.refresh()
         end
         reverse_zygote = Zygote.gradient(f, at)[1]
