@@ -13,6 +13,7 @@ function TuringUniform(a::Real, b::Real)
     return TuringUniform{T}(T(a), T(b))
 end
 Distributions.logpdf(d::TuringUniform, x::Real) = uniformlogpdf(d.a, d.b, x)
+Distributions.logpdf(d::TuringUniform, x::AbstractArray) = uniformlogpdf.(d.a, d.b, x)
 Base.minimum(d::TuringUniform) = d.a
 Base.maximum(d::TuringUniform) = d.b
 
@@ -20,7 +21,7 @@ Distributions.Uniform(a::TrackedReal, b::Real) = TuringUniform{TrackedReal}(a, b
 Distributions.Uniform(a::Real, b::TrackedReal) = TuringUniform{TrackedReal}(a, b)
 Distributions.Uniform(a::TrackedReal, b::TrackedReal) = TuringUniform{TrackedReal}(a, b)
 Distributions.logpdf(d::Uniform, x::TrackedReal) = uniformlogpdf(d.a, d.b, x)
-
+Distributions.logpdf(d::Uniform, x::TrackedArray) = uniformlogpdf.(d.a, d.b, x)
 function uniformlogpdf(a, b, x)
     c = -log(b - a)
     if a <= x <= b
@@ -53,7 +54,7 @@ end
         return l, Δ -> (da * Δ, -da * Δ, zero(T) * Δ)
     else
         n = T(NaN)
-        return l, Δ -> (n, n, n)
+        return n, Δ -> (n, n, n)
     end
 end
 @adjoint function Distributions.Uniform(args...)
