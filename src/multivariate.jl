@@ -175,6 +175,16 @@ for T in (:TrackedVector, :TrackedMatrix)
         function Distributions.logpdf(d::MvNormal{<:Any, <:PDMats.PDMat}, x::$T)
             logpdf(TuringDenseMvNormal(d.μ, d.Σ.chol), x)
         end
+        
+        function Distributions.logpdf(d::MvLogNormal{<:Any, <:PDMats.ScalMat}, x::$T)
+            logpdf(TuringMvLogNormal(TuringScalMvNormal(d.normal.μ, d.normal.Σ.value)), x)
+        end
+        function Distributions.logpdf(d::MvLogNormal{<:Any, <:PDMats.PDiagMat}, x::$T)
+            logpdf(TuringMvLogNormal(TuringDiagMvNormal(d.normal.μ, d.normal.Σ.diag)), x)
+        end
+        function Distributions.logpdf(d::MvLogNormal{<:Any, <:PDMats.PDMat}, x::$T)
+            logpdf(TuringMvLogNormal(TuringDenseMvNormal(d.normal.μ, d.normal.Σ.chol)), x)
+        end
     end
 end
 
