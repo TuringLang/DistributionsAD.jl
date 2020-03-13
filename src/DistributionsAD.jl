@@ -15,7 +15,7 @@ using Tracker: Tracker, TrackedReal, TrackedVector, TrackedMatrix, TrackedArray,
                 TrackedVecOrMat, track, @grad, data
 using SpecialFunctions: logabsgamma, digamma
 using ZygoteRules: ZygoteRules, @adjoint, pullback
-using LinearAlgebra: copytri!
+using LinearAlgebra: copytri!, AbstractTriangular
 using Distributions: AbstractMvLogNormal, 
                      ContinuousMultivariateDistribution
 using DiffRules, SpecialFunctions, FillArrays

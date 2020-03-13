@@ -40,9 +40,42 @@ end
 
 ## Linear algebra ##
 
-LinearAlgebra.UpperTriangular(A::TrackedMatrix) = track(UpperTriangular, A)
-@grad function LinearAlgebra.UpperTriangular(A::AbstractMatrix)
-    return UpperTriangular(data(A)), Δ->(UpperTriangular(Δ),)
+# Work around https://github.com/FluxML/Tracker.jl/pull/9#issuecomment-480051767
+
+upper(A::AbstractMatrix) = UpperTriangular(A)
+lower(A::AbstractMatrix) = LowerTriangular(A)
+function upper(C::Cholesky)
+    if C.uplo == 'U'
+        return upper(C.factors)
+    else
+        return copy(lower(C.factors)')
+    end
+end
+function lower(C::Cholesky)
+    if C.uplo == 'U'
+        return copy(upper(C.factors)')
+    else
+        return lower(C.factors)
+    end
+end
+
+LinearAlgebra.LowerTriangular(A::TrackedMatrix) = lower(A)
+lower(A::TrackedMatrix) = track(lower, A)
+@grad lower(A) = lower(Tracker.data(A)), ∇ -> (lower(∇),)
+
+LinearAlgebra.UpperTriangular(A::TrackedMatrix) = upper(A)
+upper(A::TrackedMatrix) = track(upper, A)
+@grad upper(A) = upper(Tracker.data(A)), ∇ -> (upper(∇),)
+
+function Base.copy(
+    A::TrackedArray{T, 2, <:Adjoint{T, <:AbstractTriangular{T, <:AbstractMatrix{T}}}},
+) where {T <: Real}
+    return track(copy, A)
+end
+@grad function Base.copy(
+    A::TrackedArray{T, 2, <:Adjoint{T, <:AbstractTriangular{T, <:AbstractMatrix{T}}}},
+) where {T <: Real}
+    return copy(data(A)), ∇ -> (copy(∇),)
 end
 
 function LinearAlgebra.cholesky(A::TrackedMatrix; check=true)
@@ -57,40 +90,10 @@ function turing_chol(A::AbstractMatrix, check)
 end
 turing_chol(A::TrackedMatrix, check) = track(turing_chol, A, check)
 @grad function turing_chol(A::AbstractMatrix, check)
-    C, back = pullback(unsafe_cholesky, data(A), data(check))
+    C, back = pullback(_turing_chol, data(A), data(check))
     return (C.factors, C.info), Δ->back((factors=data(Δ[1]),))
 end
-
-unsafe_cholesky(x, check) = cholesky(x, check=check)
-@adjoint function unsafe_cholesky(Σ::Real, check)
-    C = cholesky(Σ; check=check)
-    return C, function(Δ::NamedTuple)
-        issuccess(C) || return (zero(Σ), nothing)
-        (Δ.factors[1, 1] / (2 * C.U[1, 1]), nothing)
-    end
-end
-@adjoint function unsafe_cholesky(Σ::Diagonal, check)
-    C = cholesky(Σ; check=check)
-    return C, function(Δ::NamedTuple)
-        issuccess(C) || (Diagonal(zero(diag(Δ.factors))), nothing)
-        (Diagonal(diag(Δ.factors) .* inv.(2 .* C.factors.diag)), nothing)
-    end
-end
-@adjoint function unsafe_cholesky(Σ::Union{StridedMatrix, Symmetric{<:Real, <:StridedMatrix}}, check)
-    C = cholesky(Σ; check=check)
-    return C, function(Δ::NamedTuple)
-        issuccess(C) || return (zero(Δ.factors), nothing)
-        U, Ū = C.U, Δ.factors
-        Σ̄ = Ū * U'
-        Σ̄ = copytri!(Σ̄, 'U')
-        Σ̄ = ldiv!(U, Σ̄)
-        BLAS.trsm!('R', 'U', 'T', 'N', one(eltype(Σ)), U.data, Σ̄)
-        @inbounds for n in diagind(Σ̄)
-            Σ̄[n] /= 2
-        end
-        return (UpperTriangular(Σ̄), nothing)
-    end
-end
+_turing_chol(x, check) = cholesky(x, check=check)
 
 # Specialised logdet for cholesky to target the triangle directly.
 logdet_chol_tri(U::AbstractMatrix) = 2 * sum(log, U[diagind(U)])
