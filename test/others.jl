@@ -1,13 +1,6 @@
 using StatsBase: entropy
 
 if get_stage() in ("Others", "all")
-    @testset "unsafe_cholesky" begin
-        A = rand(3, 3); A = A + A' + 3I
-        @test Matrix(DistributionsAD.unsafe_cholesky(A, true)) == Matrix(cholesky(A))
-        @test !issuccess(DistributionsAD.unsafe_cholesky(rand(3,3), false))
-        @test_throws PosDefException DistributionsAD.unsafe_cholesky(rand(3,3), true)
-    end
-
     @testset "TuringWishart" begin
         dim = 3
         A = Matrix{Float64}(I, dim, dim)
