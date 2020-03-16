@@ -4,6 +4,8 @@ const RTM = ReverseDiff.TrackedMatrix
 import SpecialFunctions: logbeta
 import Distributions: Gamma
 
+# Use ForwardDiff for binomlogpdf and logbeta
+
 ReverseDiff.@forward binomlogpdf(n::Int, p::RTR, x::Int) = begin
     return binomlogpdf(n, p, x)
 end
