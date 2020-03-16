@@ -23,7 +23,7 @@ end
 #### Constructors
 
 function TuringWishart(d::Wishart)
-    d = TuringWishart(d.df, getchol(d.S), d.c0)
+    return TuringWishart(d.df, getchol(d.S), d.c0)
 end
 getchol(p::PDMat) = p.chol
 getchol(p::PDiagMat) = Diagonal(map(sqrt, p.diag))

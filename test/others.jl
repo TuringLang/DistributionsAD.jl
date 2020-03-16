@@ -6,15 +6,17 @@ if get_stage() in ("Others", "all")
         A = Matrix{Float64}(I, dim, dim)
         dW1 = Wishart(dim + 4, A)
         dW2 = TuringWishart(dim + 4, A)
+        dW3 = TuringWishart(dW1)
         mean = Distributions.mean
         @testset "$F" for F in (size, rank, mean, meanlogdet, entropy, cov, var)
-            @test F(dW1) == F(dW2)
+            @test F(dW1) == F(dW2) == F(dW3)
         end
-        @test Matrix(mode(dW1)) == mode(dW2)
+        @test Matrix(mode(dW1)) == mode(dW2) == mode(dW3)
         xw = rand(dW2)
         @test insupport(dW1, xw)
         @test insupport(dW2, xw)
-        @test logpdf(dW1, xw) == logpdf(dW2, xw)
+        @test insupport(dW3, xw)
+        @test logpdf(dW1, xw) == logpdf(dW2, xw) == logpdf(dW3, xw)
     end
 
     @testset "TuringInverseWishart" begin
@@ -22,15 +24,17 @@ if get_stage() in ("Others", "all")
         A = Matrix{Float64}(I, dim, dim)
         dIW1 = InverseWishart(dim + 4, A)
         dIW2 = TuringInverseWishart(dim + 4, A)
+        dIW3 = TuringInverseWishart(dIW1)
         mean = Distributions.mean
         @testset "$F" for F in (size, rank, mean, cov, var)
-            @test F(dIW1) == F(dIW2)
+            @test F(dIW1) == F(dIW2) == F(dIW3)
         end
-        @test Matrix(mode(dIW1)) == mode(dIW2)
+        @test Matrix(mode(dIW1)) == mode(dIW2) == mode(dIW3)
         xiw = rand(dIW2)
         @test insupport(dIW1, xiw)
         @test insupport(dIW2, xiw)
-        @test logpdf(dIW1, xiw) == logpdf(dIW2, xiw)
+        @test insupport(dIW3, xiw)
+        @test logpdf(dIW1, xiw) == logpdf(dIW2, xiw) == logpdf(dIW3, xiw)
     end
 
     @testset "TuringMvNormal" begin

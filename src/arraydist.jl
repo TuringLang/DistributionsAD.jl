@@ -7,8 +7,8 @@ function arraydist(dists::AbstractVector{<:UnivariateDistribution})
 end
 function arraydist(dists::AbstractVector{<:Normal})
     m = mapvcat(mean, dists)
-    v = mapvcat(var, dists)
-    return MvNormal(m, v)
+    s = mapvcat(std, dists)
+    return TuringMvNormal(m, s)
 end
 
 function Distributions.logpdf(dist::VectorOfUnivariate, x::AbstractVector{<:Real})

@@ -1,5 +1,5 @@
 using ForwardDiff, Distributions, FiniteDifferences
-using Tracker, Zygote, Random, LinearAlgebra, PDMats
+using Tracker, Zygote, ReverseDiff, Random, LinearAlgebra, PDMats
 using DistributionsAD, Test, LinearAlgebra, Combinatorics
 using ForwardDiff: Dual
 using StatsFuns: binomlogpdf, logsumexp

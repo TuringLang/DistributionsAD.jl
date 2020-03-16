@@ -21,6 +21,7 @@ using Distributions: AbstractMvLogNormal,
 using DiffRules, SpecialFunctions, FillArrays
 using ForwardDiff: @define_binary_dual_op # Needed for `eval`ing diffrules here
 using Base.Iterators: drop
+using ReverseDiff
 
 import StatsFuns: logsumexp, 
                   binomlogpdf, 
@@ -51,5 +52,6 @@ include("matrixvariate.jl")
 include("flatten.jl")
 include("arraydist.jl")
 include("filldist.jl")
+include("reversediff.jl")
 
 end
