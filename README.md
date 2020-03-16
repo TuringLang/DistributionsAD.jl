@@ -4,6 +4,8 @@
 
 [![Zygote tests](https://github.com/TuringLang/DistributionsAD.jl/workflows/Zygote%20tests/badge.svg?branch=master)](https://github.com/TuringLang/DistributionsAD.jl/actions?query=workflow%3A%22Zygote+tests%22)
 
+[![ReverseDiff tests](https://github.com/TuringLang/DistributionsAD.jl/workflows/ReverseDiff%20tests/badge.svg)](https://github.com/TuringLang/DistributionsAD.jl/actions?query=workflow%3A%22ReverseDiff+tests%22)
+
 [![Coverage Status](https://coveralls.io/repos/github/TuringLang/DistributionsAD.jl/badge.svg?branch=master)](https://coveralls.io/github/TuringLang/DistributionsAD.jl?branch=master)
 
 
