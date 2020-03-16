@@ -396,3 +396,38 @@ end
     value, back = pullback(A -> TuringMvNormal(d, A), A)
     return value, x -> (nothing, back(x)[1])
 end
+for T in (:AbstractVector, :AbstractMatrix)
+    @eval begin
+        @adjoint function Distributions.logpdf(d::MvNormal{<:Any, <:PDMats.ScalMat}, x::$T)
+            return pullback(d, x) do d, x
+                logpdf(TuringScalMvNormal(d.μ, d.Σ.value), x)
+            end
+        end
+        @adjoint function Distributions.logpdf(d::MvNormal{<:Any, <:PDMats.PDiagMat}, x::$T)
+            return pullback(d, x) do d, x
+                logpdf(TuringDiagMvNormal(d.μ, d.Σ.diag), x)
+            end
+        end
+        @adjoint function Distributions.logpdf(d::MvNormal{<:Any, <:PDMats.PDMat}, x::$T)
+            return pullback(d, x) do d, x
+                logpdf(TuringDenseMvNormal(d.μ, d.Σ.chol), x)
+            end
+        end
+        
+        @adjoint function Distributions.logpdf(d::MvLogNormal{<:Any, <:PDMats.ScalMat}, x::$T)
+            return pullback(d, x) do d, x
+                logpdf(TuringMvLogNormal(TuringScalMvNormal(d.normal.μ, d.normal.Σ.value)), x)
+            end
+        end
+        @adjoint function Distributions.logpdf(d::MvLogNormal{<:Any, <:PDMats.PDiagMat}, x::$T)
+            return pullback(d, x) do d, x
+                logpdf(TuringMvLogNormal(TuringDiagMvNormal(d.normal.μ, d.normal.Σ.diag)), x)
+            end
+        end
+        @adjoint function Distributions.logpdf(d::MvLogNormal{<:Any, <:PDMats.PDMat}, x::$T)
+            return pullback(d, x) do d, x
+                logpdf(TuringMvLogNormal(TuringDenseMvNormal(d.normal.μ, d.normal.Σ.chol)), x)
+            end
+        end
+    end
+end
