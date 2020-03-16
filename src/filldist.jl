@@ -11,7 +11,7 @@ const FillVectorOfUnivariate{
 function filldist(dist::UnivariateDistribution, N::Int)
     return product_distribution(Fill(dist, N))
 end
-filldist(d::Normal, N::Int) = MvNormal(fill(d.μ, N), d.σ)
+filldist(d::Normal, N::Int) = TuringMvNormal(fill(d.μ, N), d.σ)
 
 function Distributions.logpdf(
     dist::FillVectorOfUnivariate,

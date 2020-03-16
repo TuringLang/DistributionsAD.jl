@@ -191,7 +191,7 @@ end
     input = instruction.input
     input_deriv = ReverseDiff.deriv(input[1])
     P = instruction.cache[1]
-    input_deriv .= P((factors = ReverseDiff.deriv(output),))[1]
+    input_deriv .+= P((factors = ReverseDiff.deriv(output),))[1]
     ReverseDiff.unseed!(output)
     return nothing
 end
