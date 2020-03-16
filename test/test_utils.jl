@@ -155,16 +155,19 @@ function test_ad(f, at = 0.5; rtol = 1e-8, atol = 1e-8)
         isarr = isa(at, AbstractArray)
         reverse_tracker = Tracker.data(Tracker.gradient(f, at)[1])
         reverse_zygote = Zygote.gradient(f, at)[1]
+        reverse_diff = ReverseDiff.gradient(f, at)
         if isarr
             forward = ForwardDiff.gradient(f, at)
             @test isapprox(reverse_tracker, forward, rtol=rtol, atol=atol)
             @test isapprox(reverse_zygote, forward, rtol=rtol, atol=atol)
+            @test isapprox(reverse_diff, reverse_tracker, rtol=rtol, atol=atol)
         else
             forward = ForwardDiff.derivative(f, at)
             finite_diff = central_fdm(5,1)(f, at)
             @test isapprox(reverse_tracker, forward, rtol=rtol, atol=atol)
             @test isapprox(reverse_tracker, finite_diff, rtol=rtol, atol=atol)
             @test isapprox(reverse_zygote, finite_diff, rtol=rtol, atol=atol)
+            @test isapprox(reverse_diff, reverse_tracker, rtol=rtol, atol=atol)
         end
     elseif stg == "ForwardDiff_Tracker"
         isarr = isa(at, AbstractArray)
@@ -185,14 +188,12 @@ function test_ad(f, at = 0.5; rtol = 1e-8, atol = 1e-8)
             Zygote.refresh()
         end
         reverse_zygote = Zygote.gradient(f, at)[1]
-        if isarr
-            forward = ForwardDiff.gradient(f, at)
-            @test isapprox(reverse_zygote, forward, rtol=rtol, atol=atol)
-        else
-            forward = ForwardDiff.derivative(f, at)
-            finite_diff = central_fdm(5,1)(f, at)
-            @test isapprox(reverse_zygote, finite_diff, rtol=rtol, atol=atol)
-        end
+        forward = ForwardDiff.gradient(f, at)
+        @test isapprox(reverse_zygote, forward, rtol=rtol, atol=atol)
+    elseif stg == "ReverseDiff"
+        reverse_diff = ReverseDiff.gradient(f, at)
+        reverse_tracker = Tracker.data(Tracker.gradient(f, at)[1])
+        @test isapprox(reverse_diff, reverse_tracker, rtol=rtol, atol=atol)
     else
         throw("Unsupported test stage.")
     end

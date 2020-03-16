@@ -247,9 +247,9 @@ end
 
 ## PoissonBinomial ##
 
-struct TuringPoissonBinomial{T<:Real, TV<:AbstractVector{T}} <: DiscreteUnivariateDistribution
-    p::TV
-    pmf::TV
+struct TuringPoissonBinomial{T<:Real, TV1<:AbstractVector{T}, TV2<:AbstractVector} <: DiscreteUnivariateDistribution
+    p::TV1
+    pmf::TV2
 end
 function TuringPoissonBinomial(p::AbstractArray{<:Real})
     pb = Distributions.poissonbinomial_pdf_fft(p)
