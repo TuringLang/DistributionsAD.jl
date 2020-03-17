@@ -4,22 +4,6 @@ const RTM = ReverseDiff.TrackedMatrix
 import SpecialFunctions: logbeta
 import Distributions: Gamma
 
-# Use ForwardDiff for binomlogpdf and logbeta
-
-ReverseDiff.@forward binomlogpdf(n::Int, p::RTR, x::Int) = begin
-    return binomlogpdf(n, p, x)
-end
-
-ReverseDiff.@forward logbeta(x::RTR, y::RTR) = begin
-    return logbeta(x, y)
-end
-ReverseDiff.@forward logbeta(x::RTR, y::Real) = begin
-    return logbeta(x, y)
-end
-ReverseDiff.@forward logbeta(x::Real, y::RTR) = begin
-    return logbeta(x, y)
-end
-
 Gamma(α::RTR, θ::Real; check_args=true) = pgamma(α, θ, check_args = check_args)
 Gamma(α::Real, θ::RTR; check_args=true) = pgamma(α, θ, check_args = check_args)
 Gamma(α::RTR, θ::RTR; check_args=true) = pgamma(α, θ, check_args = check_args)
@@ -28,6 +12,22 @@ Gamma(α::T; check_args=true) where {T <: RTR} = Gamma(α, one(T), check_args = 
 function Gamma(α::T, θ::T; check_args=true) where {T <: RTR}
     check_args && Distributions.@check_args(Gamma, α > zero(α) && θ > zero(θ))
     return Gamma{T}(α, θ)
+end
+
+# Work around to stop TrackedReal of Inf and -Inf from producing NaN in the derivative
+function Base.minimum(d::LocationScale{T}) where {T <: RTR}
+    if isfinite(minimum(d.ρ))
+        return d.μ + d.σ * minimum(d.ρ)
+    else
+        return convert(T, ReverseDiff.@skip(minimum)(d.ρ))
+    end
+end
+function Base.maximum(d::LocationScale{T}) where {T <: RTR}
+    if isfinite(minimum(d.ρ))
+        return d.μ + d.σ * maximum(d.ρ)
+    else
+        return convert(T, ReverseDiff.@skip(maximum)(d.ρ))
+    end
 end
 
 for T in (:RTV, :RTM)
