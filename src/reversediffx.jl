@@ -1,22 +1,27 @@
 module ReverseDiffX
 
-# A lot of this module is adapted from Tracker.jl.
+# A lot of this module is adapted from Tracker.jl and ReverseDiff.jl
 # ReverseDiff.jl is not actively developed but it would be nice to move the code in this 
 # module to ReverseDiff at some point.
 
 export NotTracked
 
-using MacroTools, LinearAlgebra
-import SpecialFunctions, NaNMath, Zygote
-using ..ReverseDiff
+using MacroTools, LinearAlgebra, ..ReverseDiff
+import SpecialFunctions, NaNMath, Zygote, StaticArrays
+
+using Base.Broadcast: BroadcastStyle, ArrayStyle, Broadcasted, broadcasted
+using ForwardDiff: ForwardDiff, Dual
+using ..ReverseDiff: SpecialInstruction, value, value!, deriv, track, record!, tape, unseed!
+using ..DistributionsAD: DistributionsAD, _turing_chol
+
+import ..DistributionsAD: turing_chol
+import Base.Broadcast: materialize
+
 const RTR = ReverseDiff.TrackedReal
 const RTV = ReverseDiff.TrackedVector
 const RTM = ReverseDiff.TrackedMatrix
 const RTA = ReverseDiff.TrackedArray
-using ..ReverseDiff: SpecialInstruction, value, value!, deriv, track, record!, tape, unseed!
-using ..DistributionsAD: DistributionsAD, _turing_chol
-import ..DistributionsAD: turing_chol
-using Base.Broadcast: BroadcastStyle, ArrayStyle, Broadcasted, broadcasted
+const RDBroadcasted{F, T} = Broadcasted{<:Any, <:Any, F, T}
 
 """
     f(x) = dot(x, x)
@@ -70,7 +75,7 @@ macro grad(expr)
                     back = instruction.cache[1]
                     input_derivs = back(ReverseDiff.deriv(output))
                     @assert input_derivs isa Tuple
-                    ReverseDiff.add_to_deriv!.(input, input_derivs)
+                    DistributionsAD.ReverseDiffX.add_to_deriv!.(input, input_derivs)
                     ReverseDiff.unseed!(output)
                     return nothing
                 end
@@ -82,6 +87,7 @@ macro grad(expr)
             )
                 @noinline function ReverseDiff.special_forward_exec!(instruction::ReverseDiff.SpecialInstruction{typeof($f)})
                     output, input = instruction.output, instruction.input
+                    ReverseDiff.pull_value!.(input)
                     pullback = instruction.cache[2]
                     out_value = pullback(input...)[1]
                     ReverseDiff.value!(output, out_value)
@@ -95,8 +101,7 @@ macro grad(expr)
 end
 add_to_deriv!(d1, d2) = nothing
 function add_to_deriv!(d1::Union{RTR, RTA}, d2)
-    d = deriv(d1)
-    d .+= d2
+    ReverseDiff.increment_deriv!(d1, d2)
 end
 function getargs_expr(args_with_types)
     expr = Expr(:tuple)
@@ -271,30 +276,27 @@ end
 # Broadcasting #
 ################
 
-using StaticArrays
-using ForwardDiff
-
-isclosure(::Any) = false
-@generated isclosure(::F) where {F <: Function} = :($(fieldcount(F) > 0))
-hasclosure(b) = isclosure(b)
-hasclosure(b::Broadcasted) = isclosure(b.f) || any(hasclosure, b.args)
-
 """
     NotTracked(f::Function)
 
-A callable struct that can be used to wrap around closures declaring that they are not closures of tracked variables. This enables the broadcasting of such functions producing a `TrackedArray` instead of an `Array{<:TrackedReal}`.
+A struct that can be used to wrap around closures, structs and arrays of structs declaring that they do not contain tracked variables. This enables a more efficient broadcasting of such functions and structs when doing automatic differentiation with `ReverseDiff` producing a `TrackedArray` instead of an `Array{<:TrackedReal}`.
 """
-struct NotTracked{F <: Function} <: Function
+struct NotTracked{F} <: Function
     f::F
 end
-(f::NotTracked)(args...; kwargs...) = f.f(args...; kwargs...)
+(f::NotTracked{<:Union{Function, Type}})(args...; kwargs...) = f.f(args...; kwargs...)
 
-@inline maybetrackedclosure(f) = false
-@inline maybetrackedclosure(f::NotTracked) = false
-@inline maybetrackedclosure(f::Function) = isclosure(f)
-@inline mayhavetrackedclosure(b) = false
-@inline mayhavetrackedclosure(b::Broadcasted) = maybetrackedclosure(b.f) || 
-    any(mayhavetrackedclosure, b.args)
+istypeorclosure(::F) where {F} = _istypeorclosure(F)
+istypeorclosure(::AbstractArray{F}) where {F} = _istypeorclosure(F)
+istypeorclosure(::Base.RefValue{F}) where {F} = _istypeorclosure(F)
+istypeorclosure(::AbstractArray{<:Real}) = false
+istypeorclosure(::Real) = false
+@generated _istypeorclosure(::Type{F}) where {F} = :($(fieldcount(F) > 0))
+
+@inline mayhavetracked(b) = istypeorclosure(b)
+@inline mayhavetracked(b::NotTracked) = false
+@inline mayhavetracked(b::Base.RefValue{<:NotTracked}) = false
+@inline mayhavetracked(b::Broadcasted) = mayhavetracked(b.f) || any(mayhavetracked, b.args)
 
 struct TrackedStyle <: BroadcastStyle end
 
@@ -307,21 +309,58 @@ broadcast_rebuild(xs) = value(xs)
 function broadcast_rebuild(bc::Broadcasted)
     broadcasted(bc.f, broadcast_rebuild.(bc.args)...)
 end
-preprocess(x) = x
 
 getstyle(::Broadcasted{Style}) where {Style} = Style
-function Base.copy(bc::Broadcasted{TrackedStyle})
-    bc1 = Broadcast.flatten(bc)
-    untracked_bc = broadcast_rebuild(bc)
-    bc2 = Broadcast.flatten(untracked_bc)
-    f, args = bc2.f, bc1.args
-    T = Core.Compiler.return_type(f, Tuple{eltype.(args)...})
-    isreal = (T <: Real) && (T !== Union{})
-    if hasclosure(bc) && mayhavetrackedclosure(bc) || !isreal
-        style, axes = getstyle(bc2), bc1.axes
-        return copy(Broadcasted{style, typeof(axes), typeof(f), typeof(args)}(f, args, axes))
+remove_not_tracked(f) = f
+remove_not_tracked(f::NotTracked) = f.f
+remove_not_tracked(f::Base.RefValue{<:NotTracked}) = Ref(remove_not_tracked(f[]))
+remove_not_tracked(f::Base.RefValue{<:NotTracked{<:AbstractArray}}) = remove_not_tracked(f[])
+function remove_not_tracked(b::Broadcasted{style}) where {style}
+    return Broadcasted{style}(remove_not_tracked(b.f), remove_not_tracked.(b.args), b.axes)
+end
+
+@generated function onlyrealarrays(args::T) where {T <: Tuple}
+    o = all(map(x -> (x <: AbstractArray{<:Real} || !(x <: AbstractArray)), T.types))
+    return :($o)
+end
+@generated function anyreals(args::T) where {T <: Tuple}
+    o = any(map(x -> x <: Real, T.types))
+    return :($o)
+end
+
+function get_implementation(bc, f, T, args)
+    outputisreal = (T <: AbstractArray{<:Real}) && (T !== Union{})
+    # Any arg is a real number or an array of untracked non-reals,
+    # Output is real, and
+    # No tracked closure or arguments, except TrackedReal and TrackedArray.
+    if !mayhavetracked(bc) && outputisreal && (anyreals(args) || !onlyrealarrays(args))
+        return Val(:tracker)
+    # No arg is a real number and array args must be arrays of reals,
+    # Output is real, and
+    # No tracked closure or arguments, except TrackedReal and TrackedArray.
+    elseif !mayhavetracked(bc) && outputisreal
+        return Val(:reversediff)
+    # Function or any arg is possibly a tracked non-real or array of tracked non-reals,
+    # Or output is not an array of reals
     else
+        return Val(:fallback)
+    end
+end
+function Base.copy(_bc::Broadcasted{TrackedStyle})
+    bc = remove_not_tracked(_bc)
+    flattened_bc = Broadcast.flatten(bc)
+    untracked_bc = broadcast_rebuild(bc)
+    flattened_untracked_bc = Broadcast.flatten(untracked_bc)
+    T = Core.Compiler.return_type(copy, Tuple{typeof(untracked_bc)})
+    f, args = flattened_untracked_bc.f, flattened_bc.args
+    implementation = get_implementation(_bc, f, T, args)
+    if implementation isa Val{:reversediff}
         return ∇broadcast(f, args...)
+    elseif implementation isa Val{:tracker}
+        return tracker_∇broadcast(f, args...)
+    else
+        style, axes = getstyle(flattened_untracked_bc), flattened_bc.axes
+        return copy(Broadcasted{style, typeof(axes), typeof(f), typeof(args)}(f, args, axes))
     end
 end
 
@@ -389,8 +428,11 @@ end
     untracked = Expr(:tuple, [:(args[$i]) for i in 1:N if !(i in inds)]...)
     return :($indsval, $maybetracked, $untracked)
 end
+
+## A generalization of the broadcasting approach in ReverseDiff for general functions
+
 @inline function ∇broadcast(f::F, args::Vararg{<:Any}) where {F}
-    inds, targs, untracked = trackedargs(args)
+    inds, targs, untracked = splitargs(args)
     N = length(targs)
     D = promote_type(getouttype.(targs)...)
     result = DiffResults.GradientResult(zero(SVector{N, D}))
@@ -403,7 +445,9 @@ end
     end
     results = broadcast(df, value.(targs)...)
     tp = tape(targs...)
-	out = track(DiffResults.value.(results), D, tp)
+    out_value = DiffResults.value.(results)
+    eltype(out_value) == Bool && return out_value
+    out = track(out_value, D, tp)
 	cache = (results, df, ReverseDiff.index_bound.(targs, (out,)))
 	record!(tp, SpecialInstruction, ∇broadcast, targs, out, cache)
     return out
@@ -425,32 +469,115 @@ end
 
 @generated function add_to_deriv!(xs::T, o, r) where {T <: Tuple}
     N = length(T.types)
-    return Expr(:block, [:(_add_to_deriv!(xs[$i], o, r, $i)) for i in 1:N]...)
+    return Expr(:block, [:(_add_to_deriv!(xs[$i], o, r, Val($i))) for i in 1:N]...)
 end
 _add_to_deriv!(_, _, _, _) = nothing
-function _add_to_deriv!(x::Union{RTR, RTA}, out_deriv, results, i)
+function _add_to_deriv!(x::Union{RTR, RTA}, out_deriv, results, ::Val{i}) where {i}
     return ReverseDiff.istracked(x) && ReverseDiff.diffresult_increment_deriv!(x, out_deriv, results, i)
 end
 
 @generated function add_to_deriv!(xs::T, o, r, bounds) where {T <: Tuple}
     N = length(T.types)
-    return Expr(:block, [:(_add_to_deriv!(xs[$i], o, r, $i, bounds[$i])) for i in 1:N]...)
+    return Expr(:block, [:(_add_to_deriv!(xs[$i], o, r, Val($i), bounds[$i])) for i in 1:N]...)
 end
 _add_to_deriv!(_, _, _, _, _) = nothing
-function _add_to_deriv!(x::Union{RTR, RTA}, out_deriv, results, i, bound)
+function _add_to_deriv!(x::Union{RTR, RTA}, out_deriv, results, ::Val{i}, bound) where {i}
     return ReverseDiff.istracked(x) && ReverseDiff.diffresult_increment_deriv!(x, out_deriv, results, i, bound)
 end
 
 @noinline function ReverseDiff.special_forward_exec!(instruction::SpecialInstruction{typeof(∇broadcast)})
     input, output = instruction.input, instruction.output
     results, df, _ = instruction.cache
-    ReverseDiff.pull_value!.(input)
     broadcast!(df, results, value.(input)...)
     output_value = value(output)
-    for i in eachindex(output_value)
-        output_value[i] = DiffResults.value(results[i])
-    end
+    output_value .= DiffResults.value.(results)
     return nothing
+end
+
+## Tracker style broadcasting
+## Good for broadcasting real numbers or arrays of non-tracked structs
+
+trim(x, Δ) = reshape(Δ, ntuple(i -> size(Δ, i), Val(ndims(x))))
+
+unbroadcast(x::AbstractArray, Δ) =
+  size(x) == size(Δ) ? Δ :
+  length(x) == length(Δ) ? trim(x, Δ) :
+    trim(x, sum(Δ, dims = ntuple(i -> size(x, i) == 1 ? i : ndims(Δ)+1, Val(ndims(Δ)))))
+
+unbroadcast(x::Number, Δ) = sum(Δ)
+unbroadcast(x::Base.RefValue, _) = nothing
+
+dual(x, p) = x
+dual(x::Real, p) = Dual(x, p)
+
+function _deriv(f, G, ::Val{i}, args::Vararg{Any, N}) where {N, i}
+    dargs = ntuple(j -> dual(args[j], i==j), Val(N))
+    return f(dargs...).partials[1] * G
+end
+@generated function _derivs(f, G, args::Vararg{Any, N}) where {N}
+    return Expr(:tuple, [:(_deriv.(f, G, Val($i), args...)) for i in 1:N]...)
+end
+@inline function tracker_∇broadcast(f, args::Vararg{Any, N}) where {N}
+    args_values = map(value, args)
+    out_value = broadcast(f, args_values...)
+    tp = tape(args...)
+    eltype(out_value) == Bool && return out_value
+	out = track(out_value, tp)
+	cache = (f,)
+	record!(tp, SpecialInstruction, tracker_∇broadcast, args, out, cache)
+    return out
+end
+
+@noinline function ReverseDiff.special_forward_exec!(instruction::SpecialInstruction{typeof(tracker_∇broadcast)})
+    input, output = instruction.input, instruction.output
+    f = instruction.cache[1]
+    output_value = value(output)
+    broadcast!(f, output_value, value.(input)...)
+    return nothing
+end
+
+@noinline function ReverseDiff.special_reverse_exec!(instruction::SpecialInstruction{typeof(tracker_∇broadcast)})
+    input = instruction.input
+    output = instruction.output
+    f = instruction.cache[1]
+    output_deriv = deriv(output)
+    N = length(input)
+    Δargs = _derivs(f, output_deriv, value.(input)...)
+    dxs = map(unbroadcast, input, Δargs)
+    map(add_to_deriv!, input, dxs)
+    unseed!(output)
+    return nothing
+end
+
+## Limited ReverseDiff broadcasting
+## Efficient broadcasting for specific functions, e.g. +, -
+
+@inline _materialize(f, args) = broadcast(f, args...)
+
+for (M, f, arity) in ReverseDiff.DiffRules.diffrules()
+    if arity == 1
+        @eval @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{RTA}}) = _materialize(bc.f, bc.args)
+    elseif arity == 2
+        @eval begin
+            @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{RTA, RTA}}) = _materialize(bc.f, bc.args)
+            @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{RTA, RTR}}) = _materialize(bc.f, bc.args)
+            @noinline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{RTR, RTA}}) = _materialize(bc.f, bc.args)
+        end
+        for A in ReverseDiff.ARRAY_TYPES
+            @eval begin
+                @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{$A, RTA}}) = _materialize(bc.f, bc.args)
+                @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{RTA, $A}}) = _materialize(bc.f, bc.args)
+                @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{$A, RTR}}) = _materialize(bc.f, bc.args)
+                @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{RTR, $A}}) = _materialize(bc.f, bc.args)
+            end
+        end
+        for R in ReverseDiff.REAL_TYPES
+            @eval begin
+                @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{$R, RTA}}) = _materialize(bc.f, bc.args)
+                @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{RTA, $R}}) = _materialize(bc.f, bc.args)
+            end
+        end
+    end
 end
 
 end
