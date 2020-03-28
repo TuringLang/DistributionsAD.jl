@@ -6,14 +6,13 @@ module ReverseDiffX
 
 export NotTracked
 
-using MacroTools, LinearAlgebra, ..ReverseDiff
-import SpecialFunctions, NaNMath, Zygote, StaticArrays
-
+using MacroTools, LinearAlgebra, ..ReverseDiff, StaticArrays
 using Base.Broadcast: BroadcastStyle, ArrayStyle, Broadcasted, broadcasted
 using ForwardDiff: ForwardDiff, Dual
 using ..ReverseDiff: SpecialInstruction, value, value!, deriv, track, record!, tape, unseed!
 using ..DistributionsAD: DistributionsAD, _turing_chol
 
+import SpecialFunctions, NaNMath, Zygote
 import ..DistributionsAD: turing_chol
 import Base.Broadcast: materialize
 
