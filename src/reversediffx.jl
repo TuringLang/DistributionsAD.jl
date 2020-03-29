@@ -130,16 +130,16 @@ function remove_tp(t)
     end
 end
 
-_fill(v::Real, dims::Vararg{Union{Integer, AbstractUnitRange}}) = fill(v[], dims...)
-Base.fill(v::RTR, dims::Vararg{Union{Integer, AbstractUnitRange}}) = _fill(Ref(v), dims...)
+_fill(v::Real, dims::Vararg{Union{Integer, AbstractUnitRange}}) = fill(v, dims...)
+Base.fill(v::RTR, dims::Vararg{Union{Integer, AbstractUnitRange}}) = _fill(v, dims...)
 function _fill(
-    value::Base.RefValue{<:RTR},
+    value::RTR,
     dims::Vararg{Union{Integer, AbstractUnitRange}},
 )
     return track(_fill, value, dims...)
 end
-@grad function _fill(v::Base.RefValue{<:Real}, dims...)
-    return fill(value(v[]), dims...), function(Δ)
+@grad function _fill(v::Real, dims...)
+    return fill(value(v), dims...), function(Δ)
         size(Δ) ≢  dims && error("Dimension mismatch")
         return (sum(Δ), map(_->nothing, dims)...)
     end
@@ -289,6 +289,7 @@ istypeorclosure(::F) where {F} = _istypeorclosure(F)
 istypeorclosure(::AbstractArray{F}) where {F} = _istypeorclosure(F)
 istypeorclosure(::Base.RefValue{F}) where {F} = _istypeorclosure(F)
 istypeorclosure(::AbstractArray{<:Real}) = false
+istypeorclosure(::AbstractArray{<:RTR}) = true
 istypeorclosure(::Real) = false
 @generated _istypeorclosure(::Type{F}) where {F} = :($(fieldcount(F) > 0))
 
@@ -329,17 +330,17 @@ end
 
 function get_implementation(bc, f, T, args)
     outputisreal = (T <: AbstractArray{<:Real}) && (T !== Union{})
-    # Any arg is a real number or an array of untracked non-reals,
+    # Each arg is either a real number, an array of untraked reals, a tracked array of reals or an array of untracked non-reals,
     # Output is real, and
     # No tracked closure or arguments, except TrackedReal and TrackedArray.
     if !mayhavetracked(bc) && outputisreal && (anyreals(args) || !onlyrealarrays(args))
         return Val(:tracker)
-    # No arg is a real number and array args must be arrays of reals,
+    # No arg is a real number and array args must be arrays of untracked reals or tracked arrays of reals,
     # Output is real, and
     # No tracked closure or arguments, except TrackedReal and TrackedArray.
     elseif !mayhavetracked(bc) && outputisreal
         return Val(:reversediff)
-    # Function or any arg is possibly a tracked non-real or array of tracked non-reals,
+    # Function or any arg is possibly a tracked non-real or an array of tracked reals/non-reals,
     # Or output is not an array of reals
     else
         return Val(:fallback)
@@ -522,7 +523,7 @@ end
     tp = tape(args...)
     eltype(out_value) == Bool && return out_value
 	out = track(out_value, tp)
-	cache = (f,)
+    cache = (f,)
 	record!(tp, SpecialInstruction, tracker_∇broadcast, args, out, cache)
     return out
 end

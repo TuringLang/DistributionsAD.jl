@@ -33,7 +33,10 @@ import Distributions: MvNormal,
                       poissonbinomial_pdf_fft, 
                       logpdf, 
                       quantile, 
-                      PoissonBinomial
+                      PoissonBinomial,
+                      Binomial,
+                      BetaBinomial,
+                      Erlang
 
 export TuringScalMvNormal,
        TuringDiagMvNormal,
