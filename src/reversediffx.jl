@@ -27,7 +27,7 @@ const RDBroadcasted{F, T} = Broadcasted{<:Any, <:Any, F, T}
     f(x::ReverseDiff.TrackedVector) = ReverseDiff.track(f, x)
     ReverseDiff.@grad function f(x)
         xv = ReverseDiff.value(x)
-        return dot(xv, xv), ∇ -> (∇ * 2 * xv,)
+        return dot(xv, xv), Δ -> (Δ * 2 * xv,)
     end
 The `@grad` macro provides a way for the users to define custom adjoints for single-output functions wrt to their input numbers or arrays.
 """
@@ -192,13 +192,13 @@ Base.vcat(xs::RTV...) = track(vcat, xs...)
     out_value = vcat(xs_value...)
     function back(Δ)
         start = 0
-        Δs = [begin
+        Δs = map(xs) do xsi
           x = map(_ -> :, size(xsi))
           i = isempty(x) ? x : Base.tail(x)
           d = Δ[start+1:start+size(xsi,1), i...]
           start += size(xsi, 1)
           d
-        end for xsi in xs]
+        end
         return (Δs...,)
     end
     return out_value, back
@@ -211,7 +211,7 @@ Base.hcat(xs::RTV...) = track(hcat, xs...)
     out_value = hcat(xs_value...)
     function back(Δ)
         start = 0
-        Δs = [begin
+        Δs = map(xs) do xsi
           d = if ndims(xsi) == 1
             Δ[:, start+1]
           else
@@ -220,7 +220,7 @@ Base.hcat(xs::RTV...) = track(hcat, xs...)
           end
           start += size(xsi, 2)
           d
-        end for xsi in xs]
+        end
         return (Δs...,)
     end        
     return out_value, back
@@ -234,14 +234,14 @@ function _cat(dims, Xs::Union{RTV{<:Any, D}, RTM{<:Any, D}}...) where {D}
     out_value = cat(Xs_value...; dims = dims)
     function back(Δ)
         start = ntuple(i -> 0, Val(ndims(Δ)))
-        Δs = [begin
+        Δs = map(Xs) do xs
           dim_xs = 1:ndims(xs)
           till_xs = ntuple((i -> i in dims ? (i in dim_xs ? size(xs,i) : 1) : 0), Val(ndims(Δ)))
           xs_in_Δ = ntuple(i -> till_xs[i] > 0 ? (start[i]+1:start[i]+till_xs[i]) : Colon(), Val(ndims(Δ)))
           d = reshape(Δ[xs_in_Δ...],size(xs))
           start = start .+ till_xs
           d
-        end for xs in Xs]
+        end
         return (Δs...,)
     end        
     out = track(out_value, D, tp)
@@ -293,10 +293,10 @@ istypeorclosure(::AbstractArray{<:RTR}) = true
 istypeorclosure(::Real) = false
 @generated _istypeorclosure(::Type{F}) where {F} = :($(fieldcount(F) > 0))
 
-@inline mayhavetracked(b) = istypeorclosure(b)
-@inline mayhavetracked(b::NotTracked) = false
-@inline mayhavetracked(b::Base.RefValue{<:NotTracked}) = false
-@inline mayhavetracked(b::Broadcasted) = mayhavetracked(b.f) || any(mayhavetracked, b.args)
+mayhavetracked(b) = istypeorclosure(b)
+mayhavetracked(b::NotTracked) = false
+mayhavetracked(b::Base.RefValue{<:NotTracked}) = false
+mayhavetracked(b::Broadcasted) = mayhavetracked(b.f) || any(mayhavetracked, b.args)
 
 struct TrackedStyle <: BroadcastStyle end
 
@@ -319,14 +319,14 @@ function remove_not_tracked(b::Broadcasted{style}) where {style}
     return Broadcasted{style}(remove_not_tracked(b.f), remove_not_tracked.(b.args), b.axes)
 end
 
-@generated function onlyrealarrays(args::T) where {T <: Tuple}
-    o = all(map(x -> (x <: AbstractArray{<:Real} || !(x <: AbstractArray)), T.types))
-    return :($o)
-end
-@generated function anyreals(args::T) where {T <: Tuple}
-    o = any(map(x -> x <: Real, T.types))
-    return :($o)
-end
+onlyrealarrays(args::Tuple) = onlyrealarray(first(args)) && onlyrealarrays(Base.tail(args))
+onlyrealarrays(::Tuple{}) = true
+onlyrealarray(::AbstractArray{<:Real}) = true
+onlyrealarray(::AbstractArray) = false
+onlyrealarray(::Any) = true
+
+anyreals(args::Tuple) = first(args) isa Real || anyreals(Base.tail(args))
+anyreals(args::Tuple{}) = false
 
 function get_implementation(bc, f, T, args)
     outputisreal = (T <: AbstractArray{<:Real}) && (T !== Union{})
