@@ -42,7 +42,7 @@ uniformlogpdf(a::TrackedReal, b::TrackedReal, x::TrackedReal) = track(uniformlog
         return l, Δ -> (da * Δ, -da * Δ, zero(T) * Δ)
     else
         n = T(NaN)
-        return l, Δ -> (n, n, n)
+        return n, Δ -> (n, n, n)
     end
 end
 @adjoint function uniformlogpdf(a, b, x)
