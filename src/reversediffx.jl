@@ -289,6 +289,7 @@ istypeorclosure(::F) where {F} = _istypeorclosure(F)
 istypeorclosure(::AbstractArray{F}) where {F} = _istypeorclosure(F)
 istypeorclosure(::Base.RefValue{F}) where {F} = _istypeorclosure(F)
 istypeorclosure(::AbstractArray{<:Real}) = false
+istypeorclosure(::RTA) = false
 istypeorclosure(::AbstractArray{<:RTR}) = true
 istypeorclosure(::Real) = false
 @generated _istypeorclosure(::Type{F}) where {F} = :($(fieldcount(F) > 0))
