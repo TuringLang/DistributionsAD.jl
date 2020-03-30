@@ -295,6 +295,7 @@ istypeorclosure(::Real) = false
 @generated _istypeorclosure(::Type{F}) where {F} = :($(fieldcount(F) > 0))
 
 mayhavetracked(b) = istypeorclosure(b)
+mayhavetracked(b::Type) = false
 mayhavetracked(b::NotTracked) = false
 mayhavetracked(b::Base.RefValue{<:NotTracked}) = false
 mayhavetracked(b::Broadcasted) = mayhavetracked(b.f) || any(mayhavetracked, b.args)
@@ -334,6 +335,7 @@ function get_implementation(bc, f, T, args)
     # Each arg is either a real number, an array of untraked reals, a tracked array of reals or an array of untracked non-reals,
     # Output is real, and
     # No tracked closure or arguments, except TrackedReal and TrackedArray.
+    @show mayhavetracked(bc)
     if !mayhavetracked(bc) && outputisreal && (anyreals(args) || !onlyrealarrays(args))
         return Val(:tracker)
     # No arg is a real number and array args must be arrays of untracked reals or tracked arrays of reals,
