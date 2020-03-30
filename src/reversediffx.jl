@@ -335,7 +335,6 @@ function get_implementation(bc, f, T, args)
     # Each arg is either a real number, an array of untraked reals, a tracked array of reals or an array of untracked non-reals,
     # Output is real, and
     # No tracked closure or arguments, except TrackedReal and TrackedArray.
-    @show mayhavetracked(bc)
     if !mayhavetracked(bc) && outputisreal && (anyreals(args) || !onlyrealarrays(args))
         return Val(:tracker)
     # No arg is a real number and array args must be arrays of untracked reals or tracked arrays of reals,
