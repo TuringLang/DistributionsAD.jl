@@ -136,15 +136,11 @@ end
 
 # Taken from Turing.jl
 function get_stage()
-    if get(ENV, "TRAVIS", "") == "true" || get(ENV, "GITHUB_ACTIONS", "") == "true"
-        if "STAGE" in keys(ENV)
-            return ENV["STAGE"]
-        else
-            return "all"
-        end
+    if "STAGE" in keys(ENV)
+        return ENV["STAGE"]
+    else
+        return "all"
     end
-
-    return "all"
 end
 
 const zygote_counter = Ref(0)
