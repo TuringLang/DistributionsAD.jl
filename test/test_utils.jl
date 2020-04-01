@@ -136,15 +136,11 @@ end
 
 # Taken from Turing.jl
 function get_stage()
-    if get(ENV, "TRAVIS", "") == "true" || get(ENV, "GITHUB_ACTIONS", "") == "true"
-        if "STAGE" in keys(ENV)
-            return ENV["STAGE"]
-        else
-            return "all"
-        end
+    if "STAGE" in keys(ENV)
+        return ENV["STAGE"]
+    else
+        return "all"
     end
-
-    return "all"
 end
 
 const zygote_counter = Ref(0)
@@ -160,14 +156,14 @@ function test_ad(f, at = 0.5; rtol = 1e-8, atol = 1e-8)
             forward = ForwardDiff.gradient(f, at)
             @test isapprox(reverse_tracker, forward, rtol=rtol, atol=atol)
             @test isapprox(reverse_zygote, forward, rtol=rtol, atol=atol)
-            @test isapprox(reverse_diff, reverse_tracker, rtol=rtol, atol=atol)
+            @test isapprox(reverse_diff, forward, rtol=rtol, atol=atol)
         else
             forward = ForwardDiff.derivative(f, at)
             finite_diff = central_fdm(5,1)(f, at)
             @test isapprox(reverse_tracker, forward, rtol=rtol, atol=atol)
             @test isapprox(reverse_tracker, finite_diff, rtol=rtol, atol=atol)
             @test isapprox(reverse_zygote, finite_diff, rtol=rtol, atol=atol)
-            @test isapprox(reverse_diff, reverse_tracker, rtol=rtol, atol=atol)
+            @test isapprox(reverse_diff, forward, rtol=rtol, atol=atol)
         end
     elseif stg == "ForwardDiff_Tracker"
         isarr = isa(at, AbstractArray)
@@ -192,8 +188,8 @@ function test_ad(f, at = 0.5; rtol = 1e-8, atol = 1e-8)
         @test isapprox(reverse_zygote, forward, rtol=rtol, atol=atol)
     elseif stg == "ReverseDiff"
         reverse_diff = ReverseDiff.gradient(f, at)
-        reverse_tracker = Tracker.data(Tracker.gradient(f, at)[1])
-        @test isapprox(reverse_diff, reverse_tracker, rtol=rtol, atol=atol)
+        forward = ForwardDiff.gradient(f, at)
+        @test isapprox(reverse_diff, forward, rtol=rtol, atol=atol)
     else
         throw("Unsupported test stage.")
     end

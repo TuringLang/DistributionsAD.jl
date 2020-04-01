@@ -226,6 +226,16 @@ function nbinomlogpdf(r::ForwardDiff.Dual{T}, p::Real, k::Int) where {T}
     return FD(nbinomlogpdf(val_r, p, k),  Δ_r)
 end
 
+## Integer dual ##
+
+function BetaBinomial(n::ForwardDiff.Dual{<:Any, <:Integer}, α::Real, β::Real; check_args = true)
+    return BetaBinomial(ForwardDiff.value(n), α, β; check_args = check_args)
+end
+Binomial(n::ForwardDiff.Dual{<:Any, <:Integer}, p::Real) = Binomial(ForwardDiff.value(n), p)
+function Erlang(α::ForwardDiff.Dual{<:Any, <:Integer}, θ::Real; check_args = true)
+    return Erlang(ForwardDiff.value(α), θ, check_args = check_args)
+end
+
 ## Poisson ##
 
 poislogpdf(v::TrackedReal, x::Int) = track(poislogpdf, v, x)
