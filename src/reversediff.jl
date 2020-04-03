@@ -2,7 +2,9 @@ include("reversediffx.jl")
 
 import Distributions: Gamma
 using .ReverseDiffX
-using .ReverseDiffX: RTR, RTV, RTM
+using .ReverseDiffX: RTR, RTV, RTM, RTA
+
+PoissonBinomial(p::RTA{<:Real}; check_args=true) = TuringPoissonBinomial(p; check_args = check_args)
 
 Gamma(α::RTR, θ::Real; check_args=true) = pgamma(α, θ, check_args = check_args)
 Gamma(α::Real, θ::RTR; check_args=true) = pgamma(α, θ, check_args = check_args)
