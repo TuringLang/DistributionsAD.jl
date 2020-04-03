@@ -13,10 +13,10 @@ jobs:
       matrix:
         version:
           - '1.0'
-          - '1.4'
+          - '1'
         os:
           - ubuntu-latest
-          - macOS-latest 
+          - macOS-latest
         arch:
           - x86
           - x64
