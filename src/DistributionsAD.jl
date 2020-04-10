@@ -9,7 +9,8 @@ using PDMats,
       Combinatorics,
       SpecialFunctions,
       StatsFuns,
-      Compat
+      Compat,
+      Requires
 
 using Tracker: Tracker, TrackedReal, TrackedVector, TrackedMatrix, TrackedArray,
                 TrackedVecOrMat, track, @grad, data
@@ -21,7 +22,6 @@ using Distributions: AbstractMvLogNormal,
 using DiffRules, SpecialFunctions, FillArrays
 using ForwardDiff: @define_binary_dual_op # Needed for `eval`ing diffrules here
 using Base.Iterators: drop
-using ReverseDiff
 
 import StatsFuns: logsumexp, 
                   binomlogpdf, 
@@ -55,6 +55,8 @@ include("matrixvariate.jl")
 include("flatten.jl")
 include("arraydist.jl")
 include("filldist.jl")
-include("reversediff.jl")
+@require ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267" begin
+    include("reversediff.jl")
+end
 
 end

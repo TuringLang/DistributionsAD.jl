@@ -1,5 +1,62 @@
 ## Generic ##
 
+Tracker.dual(x::Bool, p) = x
+Base.prevfloat(r::TrackedReal) = track(prevfloat, r)
+@grad function prevfloat(r::Real)
+    prevfloat(data(r)), Δ -> Δ
+end
+Base.nextfloat(r::TrackedReal) = track(nextfloat, r)
+@grad function nextfloat(r::Real)
+    nextfloat(data(r)), Δ -> Δ
+end
+
+for f = [:hcat, :vcat]
+    for c = [
+        [:TrackedReal],
+        [:AbstractVecOrMat, :TrackedReal],
+        [:TrackedVecOrMat, :TrackedReal],
+    ]
+        cnames = map(_ -> gensym(), c)
+        @eval begin
+            function Base.$f(
+                $([:($x::$c) for (x, c) in zip(cnames, c)]...),
+                x::Union{TrackedArray,TrackedReal},
+                xs::Union{AbstractArray,Number}...,
+            )
+                return track($f, $(cnames...), x, xs...)
+            end
+        end
+    end
+    @eval begin
+        @grad function $f(x::Real)
+            $f(data(x)), (Δ) -> (Δ[1],)
+        end
+        @grad function $f(x1::Real, x2::Real)
+            $f(data(x1), data(x2)), (Δ) -> (Δ[1], Δ[2])
+        end
+        @grad function $f(x1::AbstractVector, x2::Real)
+            $f(data(x1), data(x2)), (Δ) -> (Δ[1:length(x1)], Δ[length(x1)+1])
+        end
+    end
+end
+
+function Base.copy(
+    A::TrackedArray{T, 2, <:Adjoint{T, <:AbstractTriangular{T, <:AbstractMatrix{T}}}},
+) where {T <: Real}
+    return track(copy, A)
+end
+@grad function Base.copy(
+    A::TrackedArray{T, 2, <:Adjoint{T, <:AbstractTriangular{T, <:AbstractMatrix{T}}}},
+) where {T <: Real}
+    return copy(data(A)), ∇ -> (copy(∇),)
+end
+
+Base.:*(A::TrackedMatrix, B::AbstractTriangular) = track(*, A, B)
+Base.:*(A::AbstractTriangular{T}, B::TrackedVector) where {T} = track(*, A, B)
+Base.:*(A::AbstractTriangular{T}, B::TrackedMatrix) where {T} = track(*, A, B)
+Base.:*(A::Adjoint{T, <:AbstractTriangular{T}}, B::TrackedMatrix) where {T} = track(*, A, B)
+Base.:*(A::Adjoint{T, <:AbstractTriangular{T}}, B::TrackedVector) where {T} = track(*, A, B)
+
 _istracked(x) = false
 _istracked(x::TrackedArray) = false
 _istracked(x::AbstractArray{<:TrackedReal}) = true
@@ -32,10 +89,11 @@ end
 
 ## StatsFuns ##
 
-logsumexp(x::TrackedArray) = track(logsumexp, x)
-@grad function logsumexp(x::TrackedArray)
-    lse = logsumexp(data(x))
-    return lse, Δ -> (Δ .* exp.(x .- lse),)
+logsumexp(x::TrackedArray; dims=:) = _logsumexp(x, dims)
+_logsumexp(x::TrackedArray, dims=:) = track(_logsumexp, x, dims)
+@grad function _logsumexp(x::TrackedArray, dims)
+    lse = logsumexp(data(x), dims = dims)
+    return lse, Δ -> (Δ .* exp.(x .- lse), nothing)
 end
 
 ## Linear algebra ##
@@ -66,17 +124,6 @@ lower(A::TrackedMatrix) = track(lower, A)
 LinearAlgebra.UpperTriangular(A::TrackedMatrix) = upper(A)
 upper(A::TrackedMatrix) = track(upper, A)
 @grad upper(A) = upper(Tracker.data(A)), ∇ -> (upper(∇),)
-
-function Base.copy(
-    A::TrackedArray{T, 2, <:Adjoint{T, <:AbstractTriangular{T, <:AbstractMatrix{T}}}},
-) where {T <: Real}
-    return track(copy, A)
-end
-@grad function Base.copy(
-    A::TrackedArray{T, 2, <:Adjoint{T, <:AbstractTriangular{T, <:AbstractMatrix{T}}}},
-) where {T <: Real}
-    return copy(data(A)), ∇ -> (copy(∇),)
-end
 
 function LinearAlgebra.cholesky(A::TrackedMatrix; check=true)
     factors_info = turing_chol(A, check)
@@ -136,25 +183,6 @@ end
     return logabsgamma(x), Δ -> (digamma(x) * Δ[1],)
 end
 
-# Some Tracker fixes
-
-for i = 0:2, c = Tracker.combinations([:AbstractArray, :TrackedArray, :TrackedReal, :Number], i), f = [:hcat, :vcat]
-    if :TrackedReal in c
-        cnames = map(_ -> gensym(), c)
-        @eval Base.$f($([:($x::$c) for (x, c) in zip(cnames, c)]...), x::Union{TrackedArray,TrackedReal}, xs::Union{AbstractArray,Number}...) =
-            track($f, $(cnames...), x, xs...)
-    end
-end
-@grad function vcat(x::Real)
-    vcat(data(x)), (Δ) -> (Δ[1],)
-end
-@grad function vcat(x1::Real, x2::Real)
-    vcat(data(x1), data(x2)), (Δ) -> (Δ[1], Δ[2])
-end
-@grad function vcat(x1::AbstractVector, x2::Real)
-    vcat(data(x1), data(x2)), (Δ) -> (Δ[1:length(x1)], Δ[length(x1)+1])
-end
-
 # Zygote fill has issues with non-numbers
 
 @adjoint function fill(x::T, dims...) where {T}
@@ -162,4 +190,11 @@ end
         return reshape([x for i in 1:prod(dims)], dims)
     end
     pullback(zfill, x, dims...)
+end
+
+# isprobvec
+
+function Distributions.isprobvec(p::TrackedArray{<:Real})
+    pdata = Tracker.data(p)
+    all(x -> x ≥ zero(x), pdata) && isapprox(sum(pdata), one(eltype(pdata)), atol = 1e-6)
 end
