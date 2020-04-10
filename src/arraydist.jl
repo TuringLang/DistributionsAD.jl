@@ -9,13 +9,15 @@ end
 function maporbroadcastlogpdf(dists, x::AbstractMatrix)
     return map(x -> maporbroadcastlogpdf(dists, x), eachcol(x))
 end
-@require LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02" begin
+@init @require LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02" begin
     function maporbroadcastlogpdf(dists::LazyArrays.BroadcastArray, x::AbstractVector)
         return sum(copy(logpdf.(dists, x)))
     end
     function maporbroadcastlogpdf(dists::LazyArrays.BroadcastArray, x::AbstractMatrix)
         return vec(sum(copy(logpdf.(dists, x)), dims = 1))
     end
+    lazyarray(f, x...) = LazyArrays.LazyArray(Base.broadcasted(f, x...))
+    export lazyarray
 end
 
 # Univariate
