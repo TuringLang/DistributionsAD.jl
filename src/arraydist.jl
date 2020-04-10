@@ -1,20 +1,18 @@
 # Utils
 
-function maporbroadcastlogpdf(dists, x::AbstractVector)
+function maporbroadcast(f, dists::AbstractArray, x::AbstractArray)
     # Broadcasting here breaks Tracker for some reason
-    return sum(map(dists, x) do dist, x
-        logpdf(dist, x)
-    end)
+    return sum(map(f, dists, x))
 end
-function maporbroadcastlogpdf(dists, x::AbstractMatrix)
-    return map(x -> maporbroadcastlogpdf(dists, x), eachcol(x))
+function maporbroadcast(f, dists::AbstractVector, x::AbstractMatrix)
+    return map(x -> maporbroadcast(f, dists, x), eachcol(x))
 end
 @init @require LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02" begin
-    function maporbroadcastlogpdf(dists::LazyArrays.BroadcastArray, x::AbstractVector)
-        return sum(copy(logpdf.(dists, x)))
+    function maporbroadcast(f, dists::LazyArrays.BroadcastArray, x::AbstractArray)
+        return sum(copy(f.(dists, x)))
     end
-    function maporbroadcastlogpdf(dists::LazyArrays.BroadcastArray, x::AbstractMatrix)
-        return vec(sum(copy(logpdf.(dists, x)), dims = 1))
+    function maporbroadcast(f, dists::LazyArrays.BroadcastVector, x::AbstractMatrix)
+        return vec(sum(copy(f.(dists, x)), dims = 1))
     end
     lazyarray(f, x...) = LazyArrays.LazyArray(Base.broadcasted(f, x...))
     export lazyarray
@@ -29,11 +27,11 @@ function arraydist(dists::AbstractVector{<:UnivariateDistribution})
 end
 
 function Distributions.logpdf(dist::VectorOfUnivariate, x::AbstractVector{<:Real})
-    return maporbroadcastlogpdf(dist.v, x)
+    return maporbroadcast(logpdf, dist.v, x)
 end
 function Distributions.logpdf(dist::VectorOfUnivariate, x::AbstractMatrix{<:Real})
     # eachcol breaks Zygote, so we need an adjoint
-    return maporbroadcastlogpdf(dist.v, x)
+    return maporbroadcast(logpdf, dist.v, x)
 end
 @adjoint function Distributions.logpdf(dist::VectorOfUnivariate, x::AbstractMatrix{<:Real})
     # Any other more efficient implementation breaks Zygote
@@ -53,13 +51,13 @@ function arraydist(dists::AbstractMatrix{<:UnivariateDistribution})
     return MatrixOfUnivariate(dists)
 end
 function Distributions.logpdf(dist::MatrixOfUnivariate, x::AbstractMatrix{<:Real})
-    return maporbroadcastlogpdf(dist.dists, x)
+    return maporbroadcast(logpdf, dist.dists, x)
 end
 function Distributions.logpdf(dist::MatrixOfUnivariate, x::AbstractArray{<:AbstractMatrix{<:Real}})
-    return mapvcat(x -> logpdf(dist, x), x)
+    return map(x -> logpdf(dist, x), x)
 end
 function Distributions.logpdf(dist::MatrixOfUnivariate, x::AbstractArray{<:Matrix{<:Real}})
-    return mapvcat(x -> logpdf(dist, x), x)
+    return map(x -> logpdf(dist, x), x)
 end
 function Distributions.rand(rng::Random.AbstractRNG, dist::MatrixOfUnivariate)
     return rand.(Ref(rng), dist.dists)
@@ -84,13 +82,13 @@ function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractMatrix{<:Re
     return sum(map(logpdf, dist.dists, eachcol(x)))
 end
 function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractArray{<:AbstractMatrix{<:Real}})
-    return mapvcat(x -> logpdf(dist, x), x)
+    return map(x -> logpdf(dist, x), x)
 end
 function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractArray{<:Matrix{<:Real}})
-    return mapvcat(x -> logpdf(dist, x), x)
+    return map(x -> logpdf(dist, x), x)
 end
 @adjoint function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractMatrix{<:Real})
-    f(dist, x) = sum(mapvcat(i -> logpdf(dist.dists[i], view(x, :, i)), 1:size(x, 2)))
+    f(dist, x) = sum(map(i -> logpdf(dist.dists[i], view(x, :, i)), 1:size(x, 2)))
     return pullback(f, dist, x)
 end
 function Distributions.rand(rng::Random.AbstractRNG, dist::VectorOfMultivariate)
