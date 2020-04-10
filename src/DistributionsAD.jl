@@ -55,7 +55,7 @@ include("matrixvariate.jl")
 include("flatten.jl")
 include("arraydist.jl")
 include("filldist.jl")
-@require ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267" begin
+@init @require ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267" begin
     include("reversediff.jl")
 end
 
