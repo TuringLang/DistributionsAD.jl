@@ -50,7 +50,7 @@ function _flat_logpdf(dist, x)
         f, args = flatten(dist)
         return sum(f.(args..., x))
     else
-        return sum(mapvcat(x) do x
+        return sum(map(x) do x
             logpdf(dist, x)
         end)
     end
@@ -60,7 +60,7 @@ function _flat_logpdf_mat(dist, x)
         f, args = flatten(dist)
         return vec(sum(f.(args..., x), dims = 1))
     else
-        temp = mapvcat(x -> logpdf(dist, x), x)
+        temp = map(x -> logpdf(dist, x), x)
         return vec(sum(temp, dims = 1))
     end
 end

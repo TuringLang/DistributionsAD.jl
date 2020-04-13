@@ -1,156 +1,13 @@
-module ReverseDiffX
-
 # A lot of this module is adapted from Tracker.jl and ReverseDiff.jl
 # ReverseDiff.jl is not actively developed but it would be nice to move the code in this 
 # module to ReverseDiff at some point.
 
-export NotTracked
-
-using MacroTools, LinearAlgebra, ..ReverseDiff, StaticArrays
-using Base.Broadcast: BroadcastStyle, ArrayStyle, Broadcasted, broadcasted
-using ForwardDiff: ForwardDiff, Dual
-using ..ReverseDiff: SpecialInstruction, value, value!, deriv, track, record!, tape, unseed!
-using ..DistributionsAD: DistributionsAD, _turing_chol
-
-import SpecialFunctions, NaNMath, Zygote
-import ..DistributionsAD: turing_chol
-import Base.Broadcast: materialize
-
-const RTR = ReverseDiff.TrackedReal
-const RTV = ReverseDiff.TrackedVector
-const RTM = ReverseDiff.TrackedMatrix
-const RTA = ReverseDiff.TrackedArray
-const RDBroadcasted{F, T} = Broadcasted{<:Any, <:Any, F, T}
-
-"""
-    f(x) = dot(x, x)
-    f(x::ReverseDiff.TrackedVector) = ReverseDiff.track(f, x)
-    ReverseDiff.@grad function f(x)
-        xv = ReverseDiff.value(x)
-        return dot(xv, xv), Δ -> (Δ * 2 * xv,)
-    end
-The `@grad` macro provides a way for the users to define custom adjoints for single-output functions wrt to their input numbers or arrays.
-"""
-macro grad(expr)
-    d = MacroTools.splitdef(expr)
-    f = d[:name]
-    closure = gensym(f)
-    d[:name] = closure
-    closure_ex = MacroTools.combinedef(d)
-
-    tp = gensym(:tp)
-    output_value = gensym(:output_value)
-    output = gensym(:output)
-    back = gensym(:back)
-    args = gensym(:args)
-    kwargs = gensym(:kwargs)
-    args_ex = getargs_expr(d[:args])
-    kwargs_ex = getkwargs_expr(d[:kwargs])
-    return quote
-        function ReverseDiff.track(::typeof($f), $(d[:args]...); $(d[:kwargs]...)) where {$(d[:whereparams]...),}
-            $closure_ex
-            $args = $args_ex
-            $kwargs = $kwargs_ex
-            $tp = ReverseDiff.tape($args...)
-            $output_value, $back = $closure($args...; $kwargs...)
-            $output = ReverseDiff.track($output_value, $tp)
-            ReverseDiff.record!(
-                $tp,
-                ReverseDiff.SpecialInstruction,
-                $f,
-                $args,
-                $output,
-                ($back, $closure, $kwargs),
-            )
-            return $output
-        end
-
-        if !hasmethod(
-            ReverseDiff.special_reverse_exec!,
-            Tuple{ReverseDiff.SpecialInstruction{typeof($f)}},
-        )
-            @noinline function ReverseDiff.special_reverse_exec!(instruction::ReverseDiff.SpecialInstruction{typeof($f)})
-                output = instruction.output
-                input = instruction.input
-                back = instruction.cache[1]
-                input_derivs = back(ReverseDiff.deriv(output))
-                @assert input_derivs isa Tuple
-                DistributionsAD.ReverseDiffX.add_to_deriv!.(input, input_derivs)
-                ReverseDiff.unseed!(output)
-                return nothing
-            end
-        end
-
-        if !hasmethod(
-            ReverseDiff.special_forward_exec!,
-            Tuple{ReverseDiff.SpecialInstruction{typeof($f)}},
-        )
-            @noinline function ReverseDiff.special_forward_exec!(instruction::ReverseDiff.SpecialInstruction{typeof($f)})
-                output, input = instruction.output, instruction.input
-                ReverseDiff.pull_value!.(input)
-                pullback = instruction.cache[2]
-                kwargs = instruction.cache[3]
-                out_value = pullback(input...; kwargs...)[1]
-                ReverseDiff.value!(output, out_value)
-                return nothing
-            end
-        end
-    end |> esc
-end
-add_to_deriv!(d1, d2) = nothing
-function add_to_deriv!(d1::Union{RTR, RTA}, d2)
-    ReverseDiff.increment_deriv!(d1, d2)
-end
-function getargs_expr(args_with_types)
-    expr = Expr(:tuple)
-    for at in args_with_types
-        x, tosplat = remove_tp(at)
-        if tosplat
-            push!(expr.args, :($x...))
-        else
-            push!(expr.args, x)
-        end
-    end
-    return expr
-end
-function getkwargs_expr(kwargs_with_types)
-    syms = []
-    final = nothing
-    for at in kwargs_with_types
-        final isa Nothing || throw("Invalid kwargs.")
-        x, tosplat = remove_tp(at)
-        if tosplat
-            final = x
-        else
-            push!(syms, x)
-        end
-    end
-    expr = length(syms) == 0 ? :(NamedTuple()) : Expr(:tuple, [:($f = $f) for f in syms]...)
-    final = final == nothing ? :(NamedTuple()) : final
-    return :(Base.merge($expr, $final))
-end
-function remove_tp(t)
-    if @capture(t, X_::T_...)
-        return X, true
-    elseif @capture(t, X_::T_)
-        return X, false
-    elseif @capture(t, X_::T_ = V_)
-        return X, false
-    elseif @capture(t, ::typeof(T_)...)
-        return T, true
-    elseif @capture(t, ::typeof(T_))
-        return T, false
-    elseif @capture(t, X_...)
-        return X, true
-    elseif @capture(t, X_ = V_)
-        return X, false
-    else
-        return t, false
-    end
-end
+##########
+## fill ##
+##########
 
 function Base.fill(
-    value::RTR,
+    value::TrackedReal,
     dims::Vararg{Union{Integer, AbstractUnitRange}},
 )
     return track(fill, value, dims...)
@@ -162,17 +19,125 @@ end
     end
 end
 
-Base.:*(A::Adjoint{<:Real, <:RTV{<:Real}}, B::AbstractVector{<:Real}) = dot(A, B)
-Base.:*(A::Adjoint{<:Real, <:RTV{<:Real}}, B::RTV{<:Real}) = dot(A, B)
-Base.:*(A::AbstractVector{<:Real}, B::Adjoint{<:Real, <:RTV{<:Real}}) = dot(A, B)
-Base.:*(A::RTV{<:Real}, B::Adjoint{<:Real, <:RTV{<:Real}}) = dot(A, B)
+###############
+## any & all ##
+###############
 
-function LinearAlgebra.cholesky(A::RTM; check=true)
+Base.any(f::Function, x::TrackedArray; dims=:) = any(f, value(x), dims = dims)
+Base.all(f::Function, x::TrackedArray; dims=:) = all(f, value(x), dims = dims)
+
+#########
+## cat ##
+#########
+
+function combinations(xs, n)
+    n < 1 && return [[]]
+    cs = combinations(xs, n-1)
+    [[x, c...] for x in xs, c in cs]
+end
+
+for f in [:hcat, :vcat]
+    for i = 0:2, c = combinations([:AbstractArray, :TrackedArray, :Number, :TrackedReal], i)
+        cnames = map(_ -> gensym(), c)
+        @eval Base.$f($([:($x::$c) for (x, c) in zip(cnames, c)]...), x::Union{TrackedArray,TrackedReal}, xs::Union{AbstractArray,Number}...) = track($f, $(cnames...), x, xs...)
+    end
+    @eval begin
+        Base.$f(x::TrackedVecOrMat{T}, xs::AbstractVecOrMat{T}...) where T = track($f, x, xs...)
+        Base.$f(x1::TrackedVecOrMat{T}, x2::TrackedVecOrMat{T}, xs::AbstractVecOrMat{T}...) where T = track($f, x1, x2, xs...)
+        Base.$f(x::TrackedVector{T}, xs::AbstractVector{T}...) where T = track($f, x, xs...)
+        Base.$f(x1::TrackedVector{T}, x2::TrackedVector{T}, xs::AbstractVector{T}...) where T = track($f, x1, x2, xs...)
+
+        @grad function $f(x::Real)
+            $f(value(x)), (Δ) -> (Δ[1],)
+        end
+        @grad function $f(x1::Real, x2::Real)
+            $f(value(x1), value(x2)), (Δ) -> (Δ[1], Δ[2])
+        end
+        @grad function $f(x1::AbstractVector, x2::Real)
+            $f(value(x1), value(x2)), (Δ) -> (Δ[1:length(x1)], Δ[length(x1)+1])
+        end
+    end
+end
+
+@grad function vcat(xs::Union{TrackedVector, TrackedMatrix}...)
+    xs_value = value.(xs)
+    out_value = vcat(xs_value...)
+    function back(Δ)
+        start = 0
+        Δs = map(xs) do xsi
+          x = map(_ -> :, size(xsi))
+          i = isempty(x) ? x : Base.tail(x)
+          d = Δ[start+1:start+size(xsi,1), i...]
+          start += size(xsi, 1)
+          d
+        end
+        return (Δs...,)
+    end
+    return out_value, back
+end
+
+@grad function hcat(xs::Union{TrackedVector, TrackedMatrix}...)
+    xs_value = value.(xs)
+    out_value = hcat(xs_value...)
+    function back(Δ)
+        start = 0
+        Δs = map(xs) do xsi
+          d = if ndims(xsi) == 1
+            Δ[:, start+1]
+          else
+            i = map(_ -> :, size(xsi)) |> Base.tail |> Base.tail
+            Δ[:, start+1:start+size(xsi,2), i...]
+          end
+          start += size(xsi, 2)
+          d
+        end
+        return (Δs...,)
+    end        
+    return out_value, back
+end
+
+Base.cat(Xs::TrackedArray...; dims) = track(cat, Xs...; dims = dims)
+@grad function cat(Xs::TrackedArray{<:Any, D}...; dims) where {D}
+    Xs_value = value.(Xs)
+    return cat(Xs_value...; dims = dims), Δ -> begin
+        start = ntuple(i -> 0, Val(ndims(Δ)))
+        Δs = map(Xs) do xs
+          dim_xs = 1:ndims(xs)
+          till_xs = ntuple((i -> i in dims ? (i in dim_xs ? size(xs,i) : 1) : 0), Val(ndims(Δ)))
+          xs_in_Δ = ntuple(i -> till_xs[i] > 0 ? (start[i]+1:start[i]+till_xs[i]) : Colon(), Val(ndims(Δ)))
+          d = reshape(Δ[xs_in_Δ...],size(xs))
+          start = start .+ till_xs
+          d
+        end
+        return (Δs...,)
+    end
+end
+
+###############
+## logsumexp ##
+###############
+
+logsumexp(x::TrackedArray; dims=:) = track(logsumexp, x, dims = dims)
+@grad function logsumexp(x::TrackedArray; dims)
+    lse = logsumexp(value(x), dims = dims)
+    return lse, Δ -> (Δ .* exp.(x .- lse), nothing)
+end
+
+############
+## linalg ##
+############
+
+Base.:*(A::Adjoint{<:Real, <:TrackedVector{<:Real}}, B::AbstractVector{<:Real}) = dot(A, B)
+Base.:*(A::Adjoint{<:Real, <:TrackedVector{<:Real}}, B::TrackedVector{<:Real}) = dot(A, B)
+Base.:*(A::AbstractVector{<:Real}, B::Adjoint{<:Real, <:TrackedVector{<:Real}}) = dot(A, B)
+Base.:*(A::TrackedVector{<:Real}, B::Adjoint{<:Real, <:TrackedVector{<:Real}}) = dot(A, B)
+
+function LinearAlgebra.cholesky(A::TrackedMatrix; check=true)
     factors, info = turing_chol(A, check)
     return Cholesky{eltype(factors), typeof(factors)}(factors, 'U', info)
 end
 
-function turing_chol(x::RTA{V,D}, check) where {V,D}
+function turing_chol(x::TrackedArray{V,D}, check) where {V,D}
     tp = tape(x)
     x_value = value(x)
     check_value = value(check)
@@ -200,97 +165,9 @@ end
     return nothing
 end
 
-# Modified from Tracker.jl
-
-Base.vcat(xs::RTM...) = track(vcat, xs...)
-Base.vcat(xs::RTV...) = track(vcat, xs...)
-@grad function vcat(xs::Union{RTV, RTM}...)
-    xs_value = value.(xs)
-    out_value = vcat(xs_value...)
-    function back(Δ)
-        start = 0
-        Δs = map(xs) do xsi
-          x = map(_ -> :, size(xsi))
-          i = isempty(x) ? x : Base.tail(x)
-          d = Δ[start+1:start+size(xsi,1), i...]
-          start += size(xsi, 1)
-          d
-        end
-        return (Δs...,)
-    end
-    return out_value, back
-end
-
-Base.hcat(xs::RTM...) = track(hcat, xs...)
-Base.hcat(xs::RTV...) = track(hcat, xs...)
-@grad function hcat(xs::Union{RTV, RTM}...)
-    xs_value = value.(xs)
-    out_value = hcat(xs_value...)
-    function back(Δ)
-        start = 0
-        Δs = map(xs) do xsi
-          d = if ndims(xsi) == 1
-            Δ[:, start+1]
-          else
-            i = map(_ -> :, size(xsi)) |> Base.tail |> Base.tail
-            Δ[:, start+1:start+size(xsi,2), i...]
-          end
-          start += size(xsi, 2)
-          d
-        end
-        return (Δs...,)
-    end        
-    return out_value, back
-end
-
-Base.cat(Xs::RTA...; dims) = _cat(dims, Xs...)
-Base.cat(Xs::RTV...; dims) = _cat(dims, Xs...)
-function _cat(dims, Xs::Union{RTV{<:Any, D}, RTM{<:Any, D}}...) where {D}
-    tp = tape(dims, Xs...)
-    Xs_value = value.(Xs)
-    out_value = cat(Xs_value...; dims = dims)
-    function back(Δ)
-        start = ntuple(i -> 0, Val(ndims(Δ)))
-        Δs = map(Xs) do xs
-          dim_xs = 1:ndims(xs)
-          till_xs = ntuple((i -> i in dims ? (i in dim_xs ? size(xs,i) : 1) : 0), Val(ndims(Δ)))
-          xs_in_Δ = ntuple(i -> till_xs[i] > 0 ? (start[i]+1:start[i]+till_xs[i]) : Colon(), Val(ndims(Δ)))
-          d = reshape(Δ[xs_in_Δ...],size(xs))
-          start = start .+ till_xs
-          d
-        end
-        return (Δs...,)
-    end        
-    out = track(out_value, D, tp)
-    record!(tp, SpecialInstruction, cat, (dims, Xs...), out, (back,))
-    return out
-end
-
-@noinline function ReverseDiff.special_reverse_exec!(instruction::SpecialInstruction{typeof(cat)})
-    output = instruction.output
-    input = instruction.input
-    input_derivs = deriv.(Base.tail(input))
-    P = instruction.cache[1]
-    jtvs = P(deriv(output))
-    for i in 1:length(jtvs)
-        input_derivs[i] .+= jtvs[i]
-    end
-    unseed!(output)
-    return nothing
-end
-
-@noinline function ReverseDiff.special_forward_exec!(instruction::SpecialInstruction{typeof(cat)})
-    output, input = instruction.output, instruction.input
-    dims = input[1]
-    Xs = value.(Base.tail(input))
-    out_value = cat(Xs..., dims = dims)
-    value!(output, out_value)
-    return nothing
-end
-
-################
-# Broadcasting #
-################
+##################
+## Broadcasting ##
+##################
 
 """
     NotTracked(f::Function)
@@ -306,8 +183,8 @@ istypeorclosure(::F) where {F} = _istypeorclosure(F)
 istypeorclosure(::AbstractArray{F}) where {F} = _istypeorclosure(F)
 istypeorclosure(::Base.RefValue{F}) where {F} = _istypeorclosure(F)
 istypeorclosure(::AbstractArray{<:Real}) = false
-istypeorclosure(::RTA) = false
-istypeorclosure(::AbstractArray{<:RTR}) = true
+istypeorclosure(::TrackedArray) = false
+istypeorclosure(::AbstractArray{<:TrackedReal}) = true
 istypeorclosure(::Real) = false
 @generated _istypeorclosure(::Type{F}) where {F} = :($(fieldcount(F) > 0))
 
@@ -319,7 +196,7 @@ mayhavetracked(b::Broadcasted) = mayhavetracked(b.f) || any(mayhavetracked, b.ar
 
 struct TrackedStyle <: BroadcastStyle end
 
-Broadcast.BroadcastStyle(::Type{<:Union{RTA, RTR}}) = TrackedStyle()
+Broadcast.BroadcastStyle(::Type{<:Union{TrackedArray, TrackedReal}}) = TrackedStyle()
 Broadcast.BroadcastStyle(::TrackedStyle, b::BroadcastStyle) = TrackedStyle()
 
 # We have to re-build the original broadcast struct to get the appropriate array
@@ -412,8 +289,8 @@ if VERSION < v"1.1.0-DEV.548"
     end
 end
 
-getouttype(::RTR{<:Any, D}) where {D} = D
-getouttype(::RTA{<:Any, D}) where {D} = D
+getouttype(::TrackedReal{<:Any, D}) where {D} = D
+getouttype(::TrackedArray{<:Any, D}) where {D} = D
 getouttype(::Any) = Union{}
 
 deref(x) = x
@@ -491,7 +368,7 @@ end
     return Expr(:block, [:(_add_to_deriv!(xs[$i], o, r, Val($i))) for i in 1:N]...)
 end
 _add_to_deriv!(_, _, _, _) = nothing
-function _add_to_deriv!(x::Union{RTR, RTA}, out_deriv, results, ::Val{i}) where {i}
+function _add_to_deriv!(x::Union{TrackedReal, TrackedArray}, out_deriv, results, ::Val{i}) where {i}
     return ReverseDiff.istracked(x) && ReverseDiff.diffresult_increment_deriv!(x, out_deriv, results, i)
 end
 
@@ -500,8 +377,13 @@ end
     return Expr(:block, [:(_add_to_deriv!(xs[$i], o, r, Val($i), bounds[$i])) for i in 1:N]...)
 end
 _add_to_deriv!(_, _, _, _, _) = nothing
-function _add_to_deriv!(x::Union{RTR, RTA}, out_deriv, results, ::Val{i}, bound) where {i}
+function _add_to_deriv!(x::Union{TrackedReal,TrackedArray}, out_deriv, results, ::Val{i}, bound) where {i}
     return ReverseDiff.istracked(x) && ReverseDiff.diffresult_increment_deriv!(x, out_deriv, results, i, bound)
+end
+
+add_to_deriv!(d1, d2) = nothing
+function add_to_deriv!(d1::Union{TrackedReal,TrackedArray}, d2)
+    ReverseDiff.increment_deriv!(d1, d2)
 end
 
 @noinline function ReverseDiff.special_forward_exec!(instruction::SpecialInstruction{typeof(∇broadcast)})
@@ -575,28 +457,26 @@ end
 
 for (M, f, arity) in ReverseDiff.DiffRules.diffrules()
     if arity == 1
-        @eval @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{RTA}}) = _materialize(bc.f, bc.args)
+        @eval @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{TrackedArray}}) = _materialize(bc.f, bc.args)
     elseif arity == 2
         @eval begin
-            @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{RTA, RTA}}) = _materialize(bc.f, bc.args)
-            @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{RTA, RTR}}) = _materialize(bc.f, bc.args)
-            @noinline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{RTR, RTA}}) = _materialize(bc.f, bc.args)
+            @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{TrackedArray,TrackedArray}}) = _materialize(bc.f, bc.args)
+            @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{TrackedArray,TrackedReal}}) = _materialize(bc.f, bc.args)
+            @noinline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{TrackedReal,TrackedArray}}) = _materialize(bc.f, bc.args)
         end
         for A in ReverseDiff.ARRAY_TYPES
             @eval begin
-                @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{$A, RTA}}) = _materialize(bc.f, bc.args)
-                @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{RTA, $A}}) = _materialize(bc.f, bc.args)
-                @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{$A, RTR}}) = _materialize(bc.f, bc.args)
-                @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{RTR, $A}}) = _materialize(bc.f, bc.args)
+                @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{$A,TrackedArray}}) = _materialize(bc.f, bc.args)
+                @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{TrackedArray, $A}}) = _materialize(bc.f, bc.args)
+                @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{$A, TrackedReal}}) = _materialize(bc.f, bc.args)
+                @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{TrackedReal,$A}}) = _materialize(bc.f, bc.args)
             end
         end
         for R in ReverseDiff.REAL_TYPES
             @eval begin
-                @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{$R, RTA}}) = _materialize(bc.f, bc.args)
-                @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{RTA, $R}}) = _materialize(bc.f, bc.args)
+                @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{$R,TrackedArray}}) = _materialize(bc.f, bc.args)
+                @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{TrackedArray,$R}}) = _materialize(bc.f, bc.args)
             end
         end
     end
-end
-
 end

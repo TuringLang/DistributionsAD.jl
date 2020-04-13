@@ -1,7 +1,7 @@
 ## MatrixBeta
 
 function Distributions.logpdf(d::MatrixBeta, X::AbstractArray{<:TrackedMatrix{<:Real}})
-    return mapvcat(x -> logpdf(d, x), X)
+    return map(x -> logpdf(d, x), X)
 end
 @adjoint function Distributions.logpdf(d::MatrixBeta, X::AbstractArray{<:Matrix{<:Real}})
     f(d, X) = map(x -> logpdf(d, x), X)
@@ -112,10 +112,10 @@ function Distributions.logpdf(d::TuringWishart, X::AbstractMatrix{<:Real})
     return 0.5 * ((df - (p + 1)) * logdet(Xcf) - tr(d.chol \ X)) - d.c0
 end
 function Distributions.logpdf(d::TuringWishart, X::AbstractArray{<:AbstractMatrix{<:Real}})
-    return mapvcat(x -> logpdf(d, x), X)
+    return map(x -> logpdf(d, x), X)
 end
 function Distributions.logpdf(d::TuringWishart, X::AbstractArray{<:Matrix{<:Real}})
-    return mapvcat(x -> logpdf(d, x), X)
+    return map(x -> logpdf(d, x), X)
 end
 
 #### Sampling
@@ -233,10 +233,10 @@ function Distributions.logpdf(d::TuringInverseWishart, X::AbstractMatrix{<:Real}
     -0.5 * ((df + p + 1) * logdet(Xcf) + tr(Xcf \ Ψ)) - d.c0
 end
 function Distributions.logpdf(d::TuringInverseWishart, X::AbstractArray{<:AbstractMatrix{<:Real}})
-    return mapvcat(x -> logpdf(d, x), X)
+    return map(x -> logpdf(d, x), X)
 end
 function Distributions.logpdf(d::TuringInverseWishart, X::AbstractArray{<:Matrix{<:Real}})
-    return mapvcat(x -> logpdf(d, x), X)
+    return map(x -> logpdf(d, x), X)
 end
 
 #### Sampling
