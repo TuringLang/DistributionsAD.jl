@@ -57,23 +57,6 @@ Base.:*(A::AbstractTriangular{T}, B::TrackedMatrix) where {T} = track(*, A, B)
 Base.:*(A::Adjoint{T, <:AbstractTriangular{T}}, B::TrackedMatrix) where {T} = track(*, A, B)
 Base.:*(A::Adjoint{T, <:AbstractTriangular{T}}, B::TrackedVector) where {T} = track(*, A, B)
 
-_istracked(x) = false
-_istracked(x::TrackedArray) = false
-_istracked(x::AbstractArray{<:TrackedReal}) = true
-function mapvcat(f, args...)
-    out = map(f, args...)
-    if _istracked(out)
-        init = vcat(out[1])
-        return reshape(reduce(vcat, drop(out, 1); init = init), size(out))
-    else
-        return out
-    end
-end
-@adjoint function mapvcat(f, args...)
-    g(f, args...) = map(f, args...)
-    return pullback(g, f, args...)
-end
-
 function Base.fill(
     value::TrackedReal,
     dims::Vararg{Union{Integer, AbstractUnitRange}},

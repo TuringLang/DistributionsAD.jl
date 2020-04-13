@@ -216,7 +216,7 @@ Dirichlet(alpha::TrackedVector) = TuringDirichlet(alpha)
 Dirichlet(d::Integer, alpha::TrackedReal) = TuringDirichlet(d, alpha)
 
 function logpdf(d::MatrixBeta, X::AbstractArray{<:TrackedMatrix{<:Real}})
-    return mapvcat(x -> logpdf(d, x), X)
+    return map(x -> logpdf(d, x), X)
 end
 
 Wishart(df::TrackedReal, S::Matrix{<:Real}) = TuringWishart(df, S)
