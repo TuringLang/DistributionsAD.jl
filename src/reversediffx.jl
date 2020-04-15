@@ -120,12 +120,19 @@ end
 logsumexp(x::TrackedArray; dims=:) = track(logsumexp, x, dims = dims)
 @grad function logsumexp(x::TrackedArray; dims)
     lse = logsumexp(value(x), dims = dims)
-    return lse, Δ -> (Δ .* exp.(x .- lse), nothing)
+    return lse, Δ -> (Δ .* exp.(x .- lse),)
 end
 
 ############
 ## linalg ##
 ############
+
+Base.copy(A::Adjoint{<:TrackedReal, <:TrackedVecOrMat}) = copyadjoint(parent(A))
+copyadjoint(A) = copy(A')
+copyadjoint(A::TrackedVecOrMat) = track(copyadjoint, A)
+@grad function copyadjoint(A::TrackedVecOrMat)
+    return copy(value(A)'), ∇ -> (copy(∇'),)
+end
 
 Base.:*(A::Adjoint{<:Real, <:TrackedVector{<:Real}}, B::AbstractVector{<:Real}) = dot(A, B)
 Base.:*(A::Adjoint{<:Real, <:TrackedVector{<:Real}}, B::TrackedVector{<:Real}) = dot(A, B)
