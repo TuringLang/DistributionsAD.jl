@@ -11,7 +11,7 @@ using ..DistributionsAD: DistributionsAD, _turing_chol
 const TrackedVecOrMat{V,D} = Union{TrackedVector{V,D},TrackedMatrix{V,D}}
 
 import SpecialFunctions, NaNMath
-import ..DistributionsAD: turing_chol
+import ..DistributionsAD: turing_chol, _mv_categorical_logpdf
 import Base.Broadcast: materialize
 import StatsFuns: logsumexp
 import ZygoteRules
@@ -249,6 +249,22 @@ end
 function isprobvec(p::TrackedArray{<:Real})
     pdata = value(p)
     all(x -> x ≥ zero(x), pdata) && isapprox(sum(pdata), one(eltype(pdata)), atol = 1e-6)
+end
+function isprobvec(p::SubArray{<:TrackedReal, 1, <:TrackedArray{<:Real}})
+    pdata = value(p)
+    all(x -> x ≥ zero(x), pdata) && isapprox(sum(pdata), one(eltype(pdata)), atol = 1e-6)
+end
+
+_mv_categorical_logpdf(ps::TrackedMatrix, x) = track(_mv_categorical_logpdf, ps, x)
+@grad function _mv_categorical_logpdf(ps, x)
+    ps_data = value(ps)
+    probs = view(ps_data, x, :)
+    ps_grad = zero(ps_data)
+    sum(log, probs), Δ -> begin
+        ps_grad .= 0
+        ps_grad[x,:] .= Δ ./ probs
+        return (ps_grad, nothing)
+    end
 end
 
 end
