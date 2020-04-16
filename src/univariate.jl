@@ -380,3 +380,9 @@ function Distributions.DiscreteNonParametric{T,P,Ts,Ps}(
     cps = ps[:]
     return DiscreteNonParametric{T,P,Ts,typeof(cps)}(vs, cps; check_args = check_args)
 end
+
+## ForwardDiff broadcasting support ##
+
+function Distributions.logpdf(d::DiscreteUnivariateDistribution, k::ForwardDiff.Dual)
+    return logpdf(d, convert(Integer, ForwardDiff.value(k)))
+end
