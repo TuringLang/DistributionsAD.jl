@@ -2,7 +2,6 @@ module DistributionsAD
 
 using PDMats, 
       ForwardDiff, 
-      Zygote, 
       LinearAlgebra, 
       Distributions, 
       Random, 
@@ -15,7 +14,6 @@ using PDMats,
 using Tracker: Tracker, TrackedReal, TrackedVector, TrackedMatrix, TrackedArray,
                 TrackedVecOrMat, track, @grad, data
 using SpecialFunctions: logabsgamma, digamma
-using ZygoteRules: ZygoteRules, @adjoint, pullback
 using LinearAlgebra: copytri!, AbstractTriangular
 using Distributions: AbstractMvLogNormal, 
                      ContinuousMultivariateDistribution
@@ -37,6 +35,7 @@ import Distributions: MvNormal,
                       Binomial,
                       BetaBinomial,
                       Erlang
+import ZygoteRules
 
 export TuringScalMvNormal,
        TuringDiagMvNormal,

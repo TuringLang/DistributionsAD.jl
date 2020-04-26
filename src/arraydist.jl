@@ -33,10 +33,13 @@ function Distributions.logpdf(dist::VectorOfUnivariate, x::AbstractMatrix{<:Real
     # eachcol breaks Zygote, so we need an adjoint
     return maporbroadcast(logpdf, dist.v, x)
 end
-@adjoint function Distributions.logpdf(dist::VectorOfUnivariate, x::AbstractMatrix{<:Real})
+ZygoteRules.@adjoint function Distributions.logpdf(
+    dist::VectorOfUnivariate,
+    x::AbstractMatrix{<:Real}
+)
     # Any other more efficient implementation breaks Zygote
     f(dist, x) = [sum(logpdf.(dist.v, view(x, :, i))) for i in 1:size(x, 2)]
-    return pullback(f, dist, x)
+    return ZygoteRules.pullback(f, dist, x)
 end
 
 struct MatrixOfUnivariate{
@@ -87,9 +90,13 @@ end
 function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractArray{<:Matrix{<:Real}})
     return map(x -> logpdf(dist, x), x)
 end
-@adjoint function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractMatrix{<:Real})
-    f(dist, x) = sum(map(i -> logpdf(dist.dists[i], view(x, :, i)), 1:size(x, 2)))
-    return pullback(f, dist, x)
+ZygoteRules.@adjoint function Distributions.logpdf(
+    dist::VectorOfMultivariate,
+    x::AbstractMatrix{<:Real}
+)
+    return ZygoteRules.pullback(dist, x) do dist, x
+        sum(map(i -> logpdf(dist.dists[i], view(x, :, i)), 1:size(x, 2)))
+    end
 end
 function Distributions.rand(rng::Random.AbstractRNG, dist::VectorOfMultivariate)
     init = reshape(rand(rng, dist.dists[1]), :, 1)

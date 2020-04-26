@@ -141,7 +141,7 @@ function turing_chol(x::TrackedArray{V,D}, check) where {V,D}
     tp = tape(x)
     x_value = value(x)
     check_value = value(check)
-    C, back = Zygote.pullback(_turing_chol, x_value, check_value)
+    C, back = ZygoteRules.pullback(_turing_chol, x_value, check_value)
     out = track(C.factors, D, tp)
     record!(tp, SpecialInstruction, turing_chol, (x, check), out, (back, issuccess(C)))
     return out, C.info

@@ -20,7 +20,6 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 StatsFuns = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
 Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
-Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 ZygoteRules = "700de1a5-db45-46bc-99cf-38207098b444"
 
 [compat]
@@ -36,8 +35,8 @@ NaNMath = "0.3"
 PDMats = "0.9"
 Requires = "1"
 SpecialFunctions = "0.8, 0.9, 0.10"
-StatsBase = "0.32, 0.33"
 StaticArrays = "0.12"
+StatsBase = "0.32, 0.33"
 StatsFuns = "0.8, 0.9"
 Tracker = "0.2.5"
 Zygote = "0.4.10"
@@ -48,6 +47,7 @@ julia = "1"
 FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"
 ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["FiniteDifferences", "Test", "ReverseDiff"]
+test = ["FiniteDifferences", "Test", "ReverseDiff", "Zygote"]

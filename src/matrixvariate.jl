@@ -3,9 +3,13 @@
 function Distributions.logpdf(d::MatrixBeta, X::AbstractArray{<:TrackedMatrix{<:Real}})
     return map(x -> logpdf(d, x), X)
 end
-@adjoint function Distributions.logpdf(d::MatrixBeta, X::AbstractArray{<:Matrix{<:Real}})
-    f(d, X) = map(x -> logpdf(d, x), X)
-    return pullback(f, d, X)
+ZygoteRules.@adjoint function Distributions.logpdf(
+    d::MatrixBeta,
+    X::AbstractArray{<:Matrix{<:Real}}
+)
+    return ZygoteRules.pullback(d, X) do d, X
+        map(x -> logpdf(d, x), X)
+    end
 end
 
 # Adapted from Distributions.jl
@@ -248,11 +252,14 @@ end
 
 ## Adjoints
 
-@adjoint function Distributions.Wishart(df::Real, S::AbstractMatrix{<:Real})
-    return pullback(TuringWishart, df, S)
+ZygoteRules.@adjoint function Distributions.Wishart(df::Real, S::AbstractMatrix{<:Real})
+    return ZygoteRules.pullback(TuringWishart, df, S)
 end
-@adjoint function Distributions.InverseWishart(df::Real, S::AbstractMatrix{<:Real})
-    return pullback(TuringInverseWishart, df, S)
+ZygoteRules.@adjoint function Distributions.InverseWishart(
+    df::Real,
+    S::AbstractMatrix{<:Real}
+)
+    return ZygoteRules.pullback(TuringInverseWishart, df, S)
 end
 
 Distributions.Wishart(df::TrackedReal, S::Matrix{<:Real}) = TuringWishart(df, S)
