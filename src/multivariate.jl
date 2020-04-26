@@ -9,7 +9,9 @@ function check(alpha)
     all(ai -> ai > 0, alpha) || 
         throw(ArgumentError("Dirichlet: alpha must be a positive vector."))
 end
-Zygote.@nograd DistributionsAD.check
+ZygoteRules.@adjoint function check(alpha)
+    return check(alpha), _ -> nothing
+end
 
 function TuringDirichlet(alpha::AbstractVector)
     check(alpha)
@@ -49,10 +51,10 @@ function Distributions.logpdf(d::Dirichlet{T}, x::TrackedVecOrMat) where {T}
 end
 
 ZygoteRules.@adjoint function Distributions.Dirichlet(alpha)
-    return pullback(TuringDirichlet, alpha)
+    return ZygoteRules.pullback(TuringDirichlet, alpha)
 end
 ZygoteRules.@adjoint function Distributions.Dirichlet(d, alpha)
-    return pullback(TuringDirichlet, d, alpha)
+    return ZygoteRules.pullback(TuringDirichlet, d, alpha)
 end
 
 function simplex_logpdf(alpha, lmnB, x::AbstractVector)
@@ -378,55 +380,76 @@ MvLogNormal(d::Int, σ::TrackedReal{<:Real}) = TuringMvLogNormal(TuringMvNormal(
 
 ## Zygote adjoint
 
-@adjoint function Distributions.MvNormal(
+ZygoteRules.@adjoint function Distributions.MvNormal(
     A::Union{AbstractVector{<:Real}, AbstractMatrix{<:Real}},
 )
-    return pullback(TuringMvNormal, A)
+    return ZygoteRules.pullback(TuringMvNormal, A)
 end
-@adjoint function Distributions.MvNormal(
+ZygoteRules.@adjoint function Distributions.MvNormal(
     m::AbstractVector{<:Real},
     A::Union{Real, UniformScaling, AbstractVecOrMat{<:Real}},
 )
-    return pullback(TuringMvNormal, m, A)
+    return ZygoteRules.pullback(TuringMvNormal, m, A)
 end
-@adjoint function Distributions.MvNormal(
+ZygoteRules.@adjoint function Distributions.MvNormal(
     d::Int,
     A::Real,
 )
-    value, back = pullback(A -> TuringMvNormal(d, A), A)
+    value, back = ZygoteRules.pullback(A -> TuringMvNormal(d, A), A)
     return value, x -> (nothing, back(x)[1])
 end
 for T in (:AbstractVector, :AbstractMatrix)
     @eval begin
-        @adjoint function Distributions.logpdf(d::MvNormal{<:Any, <:PDMats.ScalMat}, x::$T)
-            return pullback(d, x) do d, x
+        ZygoteRules.@adjoint function Distributions.logpdf(
+            d::MvNormal{<:Any, <:PDMats.ScalMat},
+            x::$T
+        )
+            return ZygoteRules.pullback(d, x) do d, x
                 logpdf(TuringScalMvNormal(d.μ, d.Σ.value), x)
             end
         end
-        @adjoint function Distributions.logpdf(d::MvNormal{<:Any, <:PDMats.PDiagMat}, x::$T)
-            return pullback(d, x) do d, x
+        ZygoteRules.@adjoint function Distributions.logpdf(
+            d::MvNormal{<:Any, <:PDMats.PDiagMat},
+            x::$T
+        )
+            return ZygoteRules.pullback(d, x) do d, x
                 logpdf(TuringDiagMvNormal(d.μ, d.Σ.diag), x)
             end
         end
-        @adjoint function Distributions.logpdf(d::MvNormal{<:Any, <:PDMats.PDMat}, x::$T)
-            return pullback(d, x) do d, x
+        ZygoteRules.@adjoint function Distributions.logpdf(
+            d::MvNormal{<:Any, <:PDMats.PDMat},
+            x::$T
+        )
+            return ZygoteRules.pullback(d, x) do d, x
                 logpdf(TuringDenseMvNormal(d.μ, d.Σ.chol), x)
             end
         end
-        
-        @adjoint function Distributions.logpdf(d::MvLogNormal{<:Any, <:PDMats.ScalMat}, x::$T)
-            return pullback(d, x) do d, x
-                logpdf(TuringMvLogNormal(TuringScalMvNormal(d.normal.μ, d.normal.Σ.value)), x)
+
+        ZygoteRules.@adjoint function Distributions.logpdf(
+            d::MvLogNormal{<:Any, <:PDMats.ScalMat},
+            x::$T
+        )
+            return ZygoteRules.pullback(d, x) do d, x
+                dist = TuringMvLogNormal(TuringScalMvNormal(d.normal.μ, d.normal.Σ.value))
+                logpdf(dist, x)
             end
         end
-        @adjoint function Distributions.logpdf(d::MvLogNormal{<:Any, <:PDMats.PDiagMat}, x::$T)
-            return pullback(d, x) do d, x
-                logpdf(TuringMvLogNormal(TuringDiagMvNormal(d.normal.μ, d.normal.Σ.diag)), x)
+        ZygoteRules.@adjoint function Distributions.logpdf(
+            d::MvLogNormal{<:Any, <:PDMats.PDiagMat},
+            x::$T
+        )
+            return ZygoteRules.pullback(d, x) do d, x
+                dist = TuringMvLogNormal(TuringDiagMvNormal(d.normal.μ, d.normal.Σ.diag))
+                logpdf(dist, x)
             end
         end
-        @adjoint function Distributions.logpdf(d::MvLogNormal{<:Any, <:PDMats.PDMat}, x::$T)
-            return pullback(d, x) do d, x
-                logpdf(TuringMvLogNormal(TuringDenseMvNormal(d.normal.μ, d.normal.Σ.chol)), x)
+        ZygoteRules.@adjoint function Distributions.logpdf(
+            d::MvLogNormal{<:Any, <:PDMats.PDMat},
+            x::$T
+        )
+            return ZygoteRules.pullback(d, x) do d, x
+                dist = TuringMvLogNormal(TuringDenseMvNormal(d.normal.μ, d.normal.Σ.chol))
+                logpdf(dist, x)
             end
         end
     end

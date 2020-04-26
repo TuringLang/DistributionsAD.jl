@@ -10,10 +10,11 @@ using ..DistributionsAD: DistributionsAD, _turing_chol
 
 const TrackedVecOrMat{V,D} = Union{TrackedVector{V,D},TrackedMatrix{V,D}}
 
-import SpecialFunctions, NaNMath, Zygote
+import SpecialFunctions, NaNMath
 import ..DistributionsAD: turing_chol
 import Base.Broadcast: materialize
 import StatsFuns: logsumexp
+import ZygoteRules
 
 const RDBroadcasted{F, T} = Broadcasted{<:Any, <:Any, F, T}
 

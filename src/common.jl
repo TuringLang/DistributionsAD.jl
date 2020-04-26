@@ -120,7 +120,7 @@ function turing_chol(A::AbstractMatrix, check)
 end
 turing_chol(A::TrackedMatrix, check) = track(turing_chol, A, check)
 @grad function turing_chol(A::AbstractMatrix, check)
-    C, back = pullback(_turing_chol, data(A), data(check))
+    C, back = ZygoteRules.pullback(_turing_chol, data(A), data(check))
     return (C.factors, C.info), Δ->back((factors=data(Δ[1]),))
 end
 _turing_chol(x, check) = cholesky(x, check=check)
@@ -148,7 +148,7 @@ function zygote_ldiv(A::TrackedMatrix, B::AbstractVecOrMat)
 end
 zygote_ldiv(A::AbstractMatrix, B::TrackedVecOrMat) =  track(zygote_ldiv, A, B)
 @grad function zygote_ldiv(A, B)
-    Y, back = pullback(\, data(A), data(B))
+    Y, back = ZygoteRules.pullback(\, data(A), data(B))
     return Y, Δ->back(data(Δ))
 end
 
@@ -162,17 +162,16 @@ SpecialFunctions.logabsgamma(x::TrackedReal) = track(logabsgamma, x)
 @grad function SpecialFunctions.logabsgamma(x::Real)
     return logabsgamma(data(x)), Δ -> (digamma(data(x)) * Δ[1],)
 end
-@adjoint function SpecialFunctions.logabsgamma(x::Real)
+ZygoteRules.@adjoint function SpecialFunctions.logabsgamma(x::Real)
     return logabsgamma(x), Δ -> (digamma(x) * Δ[1],)
 end
 
 # Zygote fill has issues with non-numbers
 
-@adjoint function fill(x::T, dims...) where {T}
-    function zfill(x, dims...,)
+ZygoteRules.@adjoint function fill(x::T, dims...) where {T}
+    return ZygoteRules.pullback(x, dims...) do x, dims...
         return reshape([x for i in 1:prod(dims)], dims)
     end
-    pullback(zfill, x, dims...)
 end
 
 # isprobvec
