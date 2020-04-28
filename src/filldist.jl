@@ -65,6 +65,10 @@ function _flat_logpdf_mat(dist, x)
     end
 end
 
+function Distributions.rand(rng::Random.AbstractRNG, d::FillVectorOfUnivariate)
+    return rand(rng, d.v.value, length(d))
+end
+
 const FillMatrixOfUnivariate{
     S <: ValueSupport,
     T <: UnivariateDistribution{S},
