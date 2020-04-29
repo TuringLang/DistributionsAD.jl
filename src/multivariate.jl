@@ -10,6 +10,9 @@ function check(alpha)
     all(ai -> ai > 0, alpha) || 
         throw(ArgumentError("Dirichlet: alpha must be a positive vector."))
 end
+ZygoteRules.@adjoint function check(alpha)
+    return check(alpha), _ -> (nothing,)
+end
 function Distributions._rand!(rng::Random.AbstractRNG,
                 d::TuringDirichlet,
                 x::AbstractVector{<:Real})
@@ -21,8 +24,6 @@ function Distributions._rand!(rng::Random.AbstractRNG,
     end
     Distributions.multiply!(x, inv(s)) # this returns x
 end
-
-Zygote.@nograd DistributionsAD.check
 
 function TuringDirichlet(alpha::AbstractVector)
     check(alpha)
