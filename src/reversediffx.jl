@@ -2,6 +2,253 @@
 # ReverseDiff.jl is not actively developed but it would be nice to move the code in this 
 # module to ReverseDiff at some point.
 
+"""
+    f(x) = dot(x, x)
+    f(x::ReverseDiff.TrackedVector) = ReverseDiff.track(f, x)
+    ReverseDiff.@grad function f(x)
+        xv = ReverseDiff.value(x)
+        return dot(xv, xv), Δ -> (Δ * 2 * xv,)
+    end
+The `@grad` macro provides a way for the users to define custom adjoints for single-output functions wrt to their input numbers or arrays.
+"""
+macro grad(expr)
+    d = MacroTools.splitdef(expr)
+    f = d[:name]
+    closure = gensym(f)
+    d[:name] = closure
+    closure_ex = MacroTools.combinedef(d)
+
+    @gensym tp output_value output back args kwargs
+    args_ex = getargs_expr(d[:args])
+    kwargs_ex = getkwargs_expr(d[:kwargs])
+    return quote
+        function $ReverseDiff.track(::typeof($f), $(d[:args]...); $(d[:kwargs]...)) where {$(d[:whereparams]...),}
+            $closure_ex
+            $args = $args_ex
+            $kwargs = $kwargs_ex
+            $tp = $ReverseDiff.tape($args...)
+            $output_value, $back = $closure($args...; $kwargs...)
+            $output = $ReverseDiff.track($output_value, $tp)
+            $ReverseDiff.record!(
+                $tp,
+                $ReverseDiff.SpecialInstruction,
+                $f,
+                $args,
+                $output,
+                ($back, $closure, $kwargs),
+            )
+            return $output
+        end
+
+        if !hasmethod(
+            $ReverseDiff.special_reverse_exec!,
+            Tuple{$ReverseDiff.SpecialInstruction{typeof($f)}},
+        )
+            @noinline function $ReverseDiff.special_reverse_exec!(instruction::$ReverseDiff.SpecialInstruction{typeof($f)})
+                output = instruction.output
+                input = instruction.input
+                back = instruction.cache[1]
+                input_derivs = back($ReverseDiff.deriv(output))
+                @assert input_derivs isa Tuple
+                $(DistributionsAD.ReverseDiffX).add_to_deriv!.(input, input_derivs)
+                $ReverseDiff.unseed!(output)
+                return nothing
+            end
+        end
+
+        if !hasmethod(
+            $ReverseDiff.special_forward_exec!,
+            Tuple{$ReverseDiff.SpecialInstruction{typeof($f)}},
+        )
+            @noinline function $ReverseDiff.special_forward_exec!(instruction::$ReverseDiff.SpecialInstruction{typeof($f)})
+                output, input = instruction.output, instruction.input
+                $ReverseDiff.pull_value!.(input)
+                pullback = instruction.cache[2]
+                kwargs = instruction.cache[3]
+                out_value = pullback(input...; kwargs...)[1]
+                $ReverseDiff.value!(output, out_value)
+                return nothing
+            end
+        end
+    end |> esc
+end
+add_to_deriv!(d1, d2) = nothing
+function add_to_deriv!(d1::Union{TrackedReal, TrackedArray}, d2)
+    ReverseDiff.increment_deriv!(d1, d2)
+end
+function getargs_expr(args_with_types)
+    expr = Expr(:tuple)
+    for at in args_with_types
+        x, tosplat = remove_tp(at)
+        if tosplat
+            push!(expr.args, :($x...))
+        else
+            push!(expr.args, x)
+        end
+    end
+    return expr
+end
+function getkwargs_expr(kwargs_with_types)
+    syms = []
+    final = nothing
+    for at in kwargs_with_types
+        final isa Nothing || throw("Invalid kwargs.")
+        x, tosplat = remove_tp(at)
+        if tosplat
+            final = x
+        else
+            push!(syms, x)
+        end
+    end
+    expr = length(syms) == 0 ? :(NamedTuple()) : Expr(:tuple, [:($f = $f) for f in syms]...)
+    final = final == nothing ? :(NamedTuple()) : final
+    return :(Base.merge($expr, $final))
+end
+function remove_tp(t)
+    if @capture(t, X_::T_...)
+        return X, true
+    elseif @capture(t, X_::T_)
+        return X, false
+    elseif @capture(t, X_::T_ = V_)
+        return X, false
+    elseif @capture(t, ::typeof(T_)...)
+        return T, true
+    elseif @capture(t, ::typeof(T_))
+        return T, false
+    elseif @capture(t, X_...)
+        return X, true
+    elseif @capture(t, X_ = V_)
+        return X, false
+    else
+        return t, false
+    end
+end
+
+##########
+## fill ##
+##########
+
+function Base.fill(
+    value::TrackedReal,
+    dims::Vararg{Union{Integer, AbstractUnitRange}},
+)
+    return track(fill, value, dims...)
+end
+@grad function fill(v::Real, dims...)
+    return fill(value(v), dims...), function(Δ)
+        size(Δ) ≢  dims && error("Dimension mismatch")
+        return (sum(Δ), map(_->nothing, dims)...)
+    end
+end
+
+###############
+## any & all ##
+###############
+
+Base.any(f::Function, x::TrackedArray; dims=:) = any(f, value(x), dims = dims)
+Base.all(f::Function, x::TrackedArray; dims=:) = all(f, value(x), dims = dims)
+
+#################
+## vcat - hcat ##
+#################
+
+function combinations(xs, n)
+    n < 1 && return [[]]
+    cs = combinations(xs, n-1)
+    [[x, c...] for x in xs, c in cs]
+end
+
+for f in [:hcat, :vcat]
+    for i = 0:2, c = combinations([:AbstractArray, :TrackedArray, :Number, :TrackedReal], i)
+        cnames = map(_ -> gensym(), c)
+        @eval Base.$f($([:($x::$c) for (x, c) in zip(cnames, c)]...), x::Union{TrackedArray,TrackedReal}, xs::Union{AbstractArray,Number}...) = track($f, $(cnames...), x, xs...)
+    end
+    @eval begin
+        Base.$f(xs::TrackedVector{T}...) where T = track($f, xs...)
+        Base.$f(xs::TrackedMatrix{T}...) where T = track($f, xs...)
+        Base.$f(x::TrackedVecOrMat{T}, xs::AbstractVecOrMat{T}...) where T = track($f, x, xs...)
+        Base.$f(x1::TrackedVecOrMat{T}, x2::TrackedVecOrMat{T}, xs::AbstractVecOrMat{T}...) where T = track($f, x1, x2, xs...)
+        Base.$f(x::TrackedVector{T}, xs::AbstractVector{T}...) where T = track($f, x, xs...)
+        Base.$f(x1::TrackedVector{T}, x2::TrackedVector{T}, xs::AbstractVector{T}...) where T = track($f, x1, x2, xs...)
+
+        @grad function $f(x::Real)
+            $f(value(x)), (Δ) -> (Δ[1],)
+        end
+        @grad function $f(x1::Real, x2::Real)
+            $f(value(x1), value(x2)), (Δ) -> (Δ[1], Δ[2])
+        end
+        @grad function $f(x1::AbstractVector, x2::Real)
+            $f(value(x1), value(x2)), (Δ) -> (Δ[1:length(x1)], Δ[length(x1)+1])
+        end
+    end
+end
+
+@grad function vcat(xs::AbstractVecOrMat...)
+    xs_value = value.(xs)
+    out_value = reduce(vcat,xs_value)
+    function back(Δ)
+        start = 0
+        Δs = map(xs) do xsi
+          x = map(_ -> :, size(xsi))
+          i = isempty(x) ? x : Base.tail(x)
+          d = Δ[start+1:start+size(xsi,1), i...]
+          start += size(xsi, 1)
+          d
+        end
+        return (Δs...,)
+    end
+    return out_value, back
+end
+
+@grad function hcat(xs::AbstractVecOrMat...)
+    xs_value = value.(xs)
+    out_value = reduce(hcat,xs_value)
+    function back(Δ)
+        start = 0
+        Δs = map(xs) do xsi
+          d = if ndims(xsi) == 1
+            Δ[:, start+1]
+          else
+            i = map(_ -> :, size(xsi)) |> Base.tail |> Base.tail
+            Δ[:, start+1:start+size(xsi,2), i...]
+          end
+          start += size(xsi, 2)
+          d
+        end
+        return (Δs...,)
+    end        
+    return out_value, back
+end
+
+#########
+## cat ##
+#########
+
+for i = 0:2, c = combinations([:AbstractArray, :TrackedArray, :Number, :TrackedReal], i)
+    cnames = map(_ -> gensym(), c)
+    @eval Base.cat($([:($x::$c) for (x, c) in zip(cnames, c)]...), x::Union{TrackedArray,TrackedReal}, xs::Union{AbstractArray,Number}...; dims) = track(cat, $(cnames...), x, xs...; dims=dims)
+end
+Base.cat(xs::TrackedReal...; dims) = track(cat, xs...; dims=dims)
+Base.cat(xs::TrackedArray...; dims) = track(cat, xs...; dims=dims)
+Base.cat(x::TrackedArray{T}, xs::AbstractArray{T}...; dims) where T = track(cat, x, xs...; dims=dims)
+Base.cat(x1::TrackedArray{T}, x2::TrackedArray{T}, xs::AbstractArray{T}...; dims) where T = track(cat, x1, x2, xs...; dims=dims)
+
+@grad function cat(Xs::Union{Real, AbstractArray}...; dims)
+    Xs_value = value.(Xs)
+    return cat(Xs_value...; dims = dims), Δ -> begin
+        start = ntuple(i -> 0, Val(ndims(Δ)))
+        Δs = map(Xs) do xs
+          dim_xs = 1:ndims(xs)
+          till_xs = ntuple((i -> i in dims ? (i in dim_xs ? size(xs,i) : 1) : 0), Val(ndims(Δ)))
+          xs_in_Δ = ntuple(i -> till_xs[i] > 0 ? (start[i]+1:start[i]+till_xs[i]) : Colon(), Val(ndims(Δ)))
+          d = reshape(Δ[xs_in_Δ...],size(xs))
+          start = start .+ till_xs
+          d
+        end
+        return (Δs...,)
+    end
+end
+
 ###############
 ## logsumexp ##
 ###############
