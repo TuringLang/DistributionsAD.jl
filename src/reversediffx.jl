@@ -456,6 +456,7 @@ end
 @inline _materialize(f, args) = broadcast(f, args...)
 
 for (M, f, arity) in ReverseDiff.DiffRules.diffrules()
+    isdefined(ReverseDiffX, M) || continue
     if arity == 1
         @eval @inline materialize(bc::RDBroadcasted{typeof($M.$f), <:Tuple{TrackedArray}}) = _materialize(bc.f, bc.args)
     elseif arity == 2
