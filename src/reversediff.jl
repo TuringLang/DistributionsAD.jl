@@ -5,7 +5,7 @@ export NotTracked
 using MacroTools, LinearAlgebra, ..ReverseDiff, StaticArrays
 using Base.Broadcast: BroadcastStyle, ArrayStyle, Broadcasted, broadcasted
 using ForwardDiff: ForwardDiff, Dual
-using ..ReverseDiff: SpecialInstruction, value, value!, deriv, track, record!, tape, unseed!, TrackedReal, TrackedVector, TrackedMatrix, TrackedArray
+using ..ReverseDiff: SpecialInstruction, value, value!, deriv, track, record!, tape, unseed!, @grad, TrackedReal, TrackedVector, TrackedMatrix, TrackedArray
 using ..DistributionsAD: DistributionsAD, _turing_chol
 
 const TrackedVecOrMat{V,D} = Union{TrackedVector{V,D},TrackedMatrix{V,D}}
