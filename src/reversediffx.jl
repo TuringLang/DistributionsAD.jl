@@ -2,6 +2,7 @@
 # ReverseDiff.jl is not actively developed but it would be nice to move the code in this 
 # module to ReverseDiff at some point.
 
+
 ##########
 ## fill ##
 ##########
@@ -26,9 +27,9 @@ end
 Base.any(f::Function, x::TrackedArray; dims=:) = any(f, value(x), dims = dims)
 Base.all(f::Function, x::TrackedArray; dims=:) = all(f, value(x), dims = dims)
 
-#########
-## cat ##
-#########
+#################
+## vcat - hcat ##
+#################
 
 function combinations(xs, n)
     n < 1 && return [[]]
@@ -42,6 +43,8 @@ for f in [:hcat, :vcat]
         @eval Base.$f($([:($x::$c) for (x, c) in zip(cnames, c)]...), x::Union{TrackedArray,TrackedReal}, xs::Union{AbstractArray,Number}...) = track($f, $(cnames...), x, xs...)
     end
     @eval begin
+        Base.$f(xs::TrackedVector{T}...) where T = track($f, xs...)
+        Base.$f(xs::TrackedMatrix{T}...) where T = track($f, xs...)
         Base.$f(x::TrackedVecOrMat{T}, xs::AbstractVecOrMat{T}...) where T = track($f, x, xs...)
         Base.$f(x1::TrackedVecOrMat{T}, x2::TrackedVecOrMat{T}, xs::AbstractVecOrMat{T}...) where T = track($f, x1, x2, xs...)
         Base.$f(x::TrackedVector{T}, xs::AbstractVector{T}...) where T = track($f, x, xs...)
@@ -59,9 +62,9 @@ for f in [:hcat, :vcat]
     end
 end
 
-@grad function vcat(xs::Union{TrackedVector, TrackedMatrix}...)
+@grad function vcat(xs::AbstractVecOrMat...)
     xs_value = value.(xs)
-    out_value = vcat(xs_value...)
+    out_value = reduce(vcat,xs_value)
     function back(Δ)
         start = 0
         Δs = map(xs) do xsi
@@ -76,9 +79,9 @@ end
     return out_value, back
 end
 
-@grad function hcat(xs::Union{TrackedVector, TrackedMatrix}...)
+@grad function hcat(xs::AbstractVecOrMat...)
     xs_value = value.(xs)
-    out_value = hcat(xs_value...)
+    out_value = reduce(hcat,xs_value)
     function back(Δ)
         start = 0
         Δs = map(xs) do xsi
@@ -96,8 +99,20 @@ end
     return out_value, back
 end
 
-Base.cat(Xs::TrackedArray...; dims) = track(cat, Xs...; dims = dims)
-@grad function cat(Xs::TrackedArray{<:Any, D}...; dims) where {D}
+#########
+## cat ##
+#########
+
+for i = 0:2, c = combinations([:AbstractArray, :TrackedArray, :Number, :TrackedReal], i)
+    cnames = map(_ -> gensym(), c)
+    @eval Base.cat($([:($x::$c) for (x, c) in zip(cnames, c)]...), x::Union{TrackedArray,TrackedReal}, xs::Union{AbstractArray,Number}...; dims) = track(cat, $(cnames...), x, xs...; dims=dims)
+end
+Base.cat(xs::TrackedReal...; dims) = track(cat, xs...; dims=dims)
+Base.cat(xs::TrackedArray...; dims) = track(cat, xs...; dims=dims)
+Base.cat(x::TrackedArray{T}, xs::AbstractArray{T}...; dims) where T = track(cat, x, xs...; dims=dims)
+Base.cat(x1::TrackedArray{T}, x2::TrackedArray{T}, xs::AbstractArray{T}...; dims) where T = track(cat, x1, x2, xs...; dims=dims)
+
+@grad function cat(Xs::Union{Real, AbstractArray}...; dims)
     Xs_value = value.(Xs)
     return cat(Xs_value...; dims = dims), Δ -> begin
         start = ntuple(i -> 0, Val(ndims(Δ)))
@@ -120,12 +135,19 @@ end
 logsumexp(x::TrackedArray; dims=:) = track(logsumexp, x, dims = dims)
 @grad function logsumexp(x::TrackedArray; dims)
     lse = logsumexp(value(x), dims = dims)
-    return lse, Δ -> (Δ .* exp.(x .- lse), nothing)
+    return lse, Δ -> (Δ .* exp.(x .- lse),)
 end
 
 ############
 ## linalg ##
 ############
+
+Base.copy(A::Adjoint{<:TrackedReal, <:TrackedVecOrMat}) = copyadjoint(parent(A))
+copyadjoint(A) = copy(A')
+copyadjoint(A::TrackedVecOrMat) = track(copyadjoint, A)
+@grad function copyadjoint(A::TrackedVecOrMat)
+    return copy(value(A)'), ∇ -> (copy(∇'),)
+end
 
 Base.:*(A::Adjoint{<:Real, <:TrackedVector{<:Real}}, B::AbstractVector{<:Real}) = dot(A, B)
 Base.:*(A::Adjoint{<:Real, <:TrackedVector{<:Real}}, B::TrackedVector{<:Real}) = dot(A, B)

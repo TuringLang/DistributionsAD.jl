@@ -50,6 +50,7 @@ export TuringScalMvNormal,
 include("common.jl")
 include("univariate.jl")
 include("multivariate.jl")
+include("mvcategorical.jl")
 include("matrixvariate.jl")
 include("flatten.jl")
 include("arraydist.jl")

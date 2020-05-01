@@ -5,12 +5,24 @@ struct TuringDirichlet{T, TV <: AbstractVector} <: ContinuousMultivariateDistrib
     alpha0::T
     lmnB::T
 end
+Base.length(d::TuringDirichlet) = length(d.alpha)
 function check(alpha)
     all(ai -> ai > 0, alpha) || 
         throw(ArgumentError("Dirichlet: alpha must be a positive vector."))
 end
 ZygoteRules.@adjoint function check(alpha)
-    return check(alpha), _ -> nothing
+    return check(alpha), _ -> (nothing,)
+end
+function Distributions._rand!(rng::Random.AbstractRNG,
+                d::TuringDirichlet,
+                x::AbstractVector{<:Real})
+    s = 0.0
+    n = length(x)
+    α = d.alpha
+    for i in 1:n
+        @inbounds s += (x[i] = rand(rng, Gamma(α[i])))
+    end
+    Distributions.multiply!(x, inv(s)) # this returns x
 end
 
 function TuringDirichlet(alpha::AbstractVector)
@@ -31,11 +43,11 @@ function TuringDirichlet(d::Integer, alpha::Real)
     TuringDirichlet{T, TV}(_alpha, alpha0, lmnB)
 end
 function TuringDirichlet(alpha::AbstractVector{T}) where {T <: Integer}
-    Tf = float(T)
-    TuringDirichlet(convert(AbstractVector{Tf}, alpha))
+    TuringDirichlet(float.(alpha))
 end
 TuringDirichlet(d::Integer, alpha::Integer) = TuringDirichlet(d, Float64(alpha))
 
+Distributions.Dirichlet(alpha::AbstractVector) = TuringDirichlet(alpha)
 Distributions.Dirichlet(alpha::TrackedVector) = TuringDirichlet(alpha)
 Distributions.Dirichlet(d::Integer, alpha::TrackedReal) = TuringDirichlet(d, alpha)
 

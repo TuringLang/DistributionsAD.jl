@@ -180,3 +180,24 @@ function Distributions.isprobvec(p::TrackedArray{<:Real})
     pdata = Tracker.data(p)
     all(x -> x ≥ zero(x), pdata) && isapprox(sum(pdata), one(eltype(pdata)), atol = 1e-6)
 end
+
+# Some array functions - workaround https://github.com/FluxML/Tracker.jl/issues/4
+
+import Base: +, -, *, /, \
+import LinearAlgebra: dot
+
+for f in (:+, :-, :*, :/, :\, :dot), (T1, T2) in [
+    (:TrackedArray, :AbstractArray),
+    (:TrackedMatrix, :AbstractMatrix),
+    (:TrackedMatrix, :AbstractVector),
+    (:TrackedVector, :AbstractMatrix),
+]
+    @eval begin
+        function $f(a::$T1{T}, b::$T2{<:TrackedReal}) where {T <: Real}
+            return $f(convert(AbstractArray{TrackedReal{T}}, a), b)
+        end
+        function $f(a::$T2{<:TrackedReal}, b::$T1{T}) where {T <: Real}
+            return $f(a, convert(AbstractArray{TrackedReal{T}}, b))
+        end
+    end
+end

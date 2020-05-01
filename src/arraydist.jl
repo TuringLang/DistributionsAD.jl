@@ -1,17 +1,17 @@
 # Utils
 
-function maporbroadcast(f, dists::AbstractArray, x::AbstractArray)
+function summaporbroadcast(f, dists::AbstractArray, x::AbstractArray)
     # Broadcasting here breaks Tracker for some reason
     return sum(map(f, dists, x))
 end
-function maporbroadcast(f, dists::AbstractVector, x::AbstractMatrix)
-    return map(x -> maporbroadcast(f, dists, x), eachcol(x))
+function summaporbroadcast(f, dists::AbstractVector, x::AbstractMatrix)
+    return map(x -> summaporbroadcast(f, dists, x), eachcol(x))
 end
 @init @require LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02" begin
-    function maporbroadcast(f, dists::LazyArrays.BroadcastArray, x::AbstractArray)
+    function summaporbroadcast(f, dists::LazyArrays.BroadcastArray, x::AbstractArray)
         return sum(copy(f.(dists, x)))
     end
-    function maporbroadcast(f, dists::LazyArrays.BroadcastVector, x::AbstractMatrix)
+    function summaporbroadcast(f, dists::LazyArrays.BroadcastVector, x::AbstractMatrix)
         return vec(sum(copy(f.(dists, x)), dims = 1))
     end
     lazyarray(f, x...) = LazyArrays.LazyArray(Base.broadcasted(f, x...))
@@ -27,11 +27,11 @@ function arraydist(dists::AbstractVector{<:UnivariateDistribution})
 end
 
 function Distributions.logpdf(dist::VectorOfUnivariate, x::AbstractVector{<:Real})
-    return maporbroadcast(logpdf, dist.v, x)
+    return summaporbroadcast(logpdf, dist.v, x)
 end
 function Distributions.logpdf(dist::VectorOfUnivariate, x::AbstractMatrix{<:Real})
     # eachcol breaks Zygote, so we need an adjoint
-    return maporbroadcast(logpdf, dist.v, x)
+    return summaporbroadcast(logpdf, dist.v, x)
 end
 ZygoteRules.@adjoint function Distributions.logpdf(
     dist::VectorOfUnivariate,
@@ -54,7 +54,7 @@ function arraydist(dists::AbstractMatrix{<:UnivariateDistribution})
     return MatrixOfUnivariate(dists)
 end
 function Distributions.logpdf(dist::MatrixOfUnivariate, x::AbstractMatrix{<:Real})
-    return maporbroadcast(logpdf, dist.dists, x)
+    return summaporbroadcast(logpdf, dist.dists, x)
 end
 function Distributions.logpdf(dist::MatrixOfUnivariate, x::AbstractArray{<:AbstractMatrix{<:Real}})
     return map(x -> logpdf(dist, x), x)
