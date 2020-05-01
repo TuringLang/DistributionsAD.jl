@@ -68,6 +68,9 @@ end
 function Distributions.rand(rng::Random.AbstractRNG, d::FillVectorOfUnivariate)
     return rand(rng, d.v.value, length(d))
 end
+function Distributions.rand(rng::Random.AbstractRNG, d::FillVectorOfUnivariate, n::Int)
+    return rand(rng, d.v.value, length(d), n)
+end
 
 const FillMatrixOfUnivariate{
     S <: ValueSupport,
