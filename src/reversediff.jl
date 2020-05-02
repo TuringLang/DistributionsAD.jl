@@ -258,11 +258,12 @@ end
 _mv_categorical_logpdf(ps::TrackedMatrix, x) = track(_mv_categorical_logpdf, ps, x)
 @grad function _mv_categorical_logpdf(ps, x)
     ps_data = value(ps)
+    T = eltype(ps_data)
     probs = view(ps_data, x, :)
     ps_grad = zero(ps_data)
     sum(log, probs), Δ -> begin
         ps_grad .= 0
-        ps_grad[x,:] .= Δ ./ probs
+        ps_grad[x,:] .= Δ ./ (probs .+ eps(T))
         return (ps_grad, nothing)
     end
 end
