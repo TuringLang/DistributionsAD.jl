@@ -1,8 +1,3 @@
-const RTR = ReverseDiff.TrackedReal
-const RTV = ReverseDiff.TrackedVector
-const RTM = ReverseDiff.TrackedMatrix
-const RTA = ReverseDiff.TrackedArray
-using DistributionsAD.ReverseDiffX: @grad
 using StatsBase: entropy
 
 if get_stage() in ("Others", "all")
@@ -129,6 +124,99 @@ if get_stage() in ("Others", "all")
         @test DistributionsAD.zygote_ldiv(A, B) == A \ B
     end
 
+    function test_reverse_mode_ad( f, ȳ, x...; rtol=1e-6, atol=1e-6)
+        # Perform a regular forwards-pass.
+        y = f(x...)
+    
+        # Use Tracker to compute reverse-mode sensitivities.
+        y_tracker, back_tracker = Tracker.forward(f, x...)
+        x̄s_tracker = back_tracker(ȳ)
+    
+        # Use Zygote to compute reverse-mode sensitivities.
+        y_zygote, back_zygote = Zygote.pullback(f, x...)
+        x̄s_zygote = back_zygote(ȳ)
+    
+        test_rd = length(x) == 1 && y isa Number
+        if test_rd
+            # Use ReverseDiff to compute reverse-mode sensitivities.
+            if x[1] isa Array
+                x̄s_rd = similar(x[1])
+                tp = ReverseDiff.GradientTape(x -> f(x), x[1])
+                ReverseDiff.gradient!(x̄s_rd, tp, x[1])
+                x̄s_rd .*= ȳ
+                y_rd = ReverseDiff.value(tp.output)
+                @assert y_rd isa Number
+            else
+                x̄s_rd = [x[1]]
+                tp = ReverseDiff.GradientTape(x -> f(x[1]), [x[1]])
+                ReverseDiff.gradient!(x̄s_rd, tp, [x[1]])
+                y_rd = ReverseDiff.value(tp.output)[1]
+                x̄s_rd = x̄s_rd[1] * ȳ
+                @assert y_rd isa Number
+            end
+        end
+    
+        # Use finite differencing to compute reverse-mode sensitivities.
+        x̄s_fdm = FDM.j′vp(central_fdm(5, 1), f, ȳ, x...)
+    
+        # Check that Tracker forwards-pass produces the correct answer.
+        @test isapprox(y, Tracker.data(y_tracker), atol=atol, rtol=rtol)
+    
+        # Check that Zygpte forwards-pass produces the correct answer.
+        @test isapprox(y, y_zygote, atol=atol, rtol=rtol)
+    
+        if test_rd
+            # Check that ReverseDiff forwards-pass produces the correct answer.
+            @test isapprox(y, y_rd, atol=atol, rtol=rtol)
+        end
+    
+        # Check that Tracker reverse-mode sensitivities are correct.
+        @test all(zip(x̄s_tracker, x̄s_fdm)) do (x̄_tracker, x̄_fdm)
+            isapprox(Tracker.data(x̄_tracker), x̄_fdm; atol=atol, rtol=rtol)
+        end
+    
+        # Check that Zygote reverse-mode sensitivities are correct.
+        @test all(zip(x̄s_zygote, x̄s_fdm)) do (x̄_zygote, x̄_fdm)
+            isapprox(x̄_zygote, x̄_fdm; atol=atol, rtol=rtol)
+        end
+    
+        if test_rd
+            # Check that ReverseDiff reverse-mode sensitivities are correct.
+            @test isapprox(x̄s_rd, x̄s_zygote[1]; atol=atol, rtol=rtol)
+        end
+    end
+    _to_cov(B) = B + B' + 2 * size(B, 1) * Matrix(I, size(B)...)    
+
+    @testset "Tracker, Zygote and ReverseDiff + logdet" begin
+        rng, N = MersenneTwister(123456), 7
+        y, B = randn(rng), randn(rng, N, N)
+        test_reverse_mode_ad(B->logdet(cholesky(_to_cov(B))), y, B; rtol=1e-8, atol=1e-6)
+        test_reverse_mode_ad(B->logdet(cholesky(Symmetric(_to_cov(B)))), y, B; rtol=1e-8, atol=1e-6)
+    end
+    @testset "Tracker & Zygote + fill" begin
+        rng = MersenneTwister(123456)
+        test_reverse_mode_ad(x->fill(x, 7), randn(rng, 7), randn(rng))
+        test_reverse_mode_ad(x->fill(x, 7, 11), randn(rng, 7, 11), randn(rng))
+        test_reverse_mode_ad(x->fill(x, 7, 11, 13), rand(rng, 7, 11, 13), randn(rng))
+    end
+    @testset "Tracker, Zygote and ReverseDiff + MvNormal" begin
+        rng, N = MersenneTwister(123456), 11
+        B = randn(rng, N, N)
+        m, A = randn(rng, N), B' * B + I
+
+        # Generate from the TuringDenseMvNormal
+        d, back = Tracker.forward(TuringDenseMvNormal, m, A)
+        x = Tracker.data(rand(d))
+
+        # Check that the logpdf agrees with MvNormal.
+        d_ref = MvNormal(m, PDMat(A))
+        @test logpdf(d, x) ≈ logpdf(d_ref, x)
+
+        test_reverse_mode_ad((m, B, x)->logpdf(MvNormal(m, _to_cov(B)), x), randn(rng), m, B, x)
+        test_reverse_mode_ad((m, B, x)->logpdf(TuringMvNormal(m, _to_cov(B)), x), randn(rng), m, B, x)
+        test_reverse_mode_ad((m, B, x)->logpdf(TuringMvNormal(m, Symmetric(_to_cov(B))), x), randn(rng), m, B, x)
+    end
+
     @testset "Entropy" begin
         sigmas = exp.(randn(10))
         d1 = TuringDiagMvNormal(zeros(10), sigmas)
@@ -146,143 +234,5 @@ if get_stage() in ("Others", "all")
 
         d = TuringScalMvNormal(m, sigmas[1])
         @test params(d) == (m, sigmas[1])
-    end
-
-    @testset "ReverseDiff @grad macro" begin
-        x = rand(3);
-        A = rand(3, 3);
-        A_x = [vec(A); x];
-        global custom_grad_called
-        
-        f1(x) = dot(x, x)
-        f1(x::RTV) = ReverseDiff.track(f1, x)
-        @grad function f1(x::AbstractVector)
-            global custom_grad_called = true
-            xv = ReverseDiff.value(x)
-            dot(xv, xv), Δ -> (Δ * 2 * xv,)
-        end
-        
-        custom_grad_called = false
-        g1 = ReverseDiff.gradient(f1, x)
-        g2 = ReverseDiff.gradient(x -> dot(x, x), x)
-        @test g1 == g2
-        @test custom_grad_called
-        
-        f2(A, x) = A * x
-        f2(A, x::RTV) = ReverseDiff.track(f2, A, x)
-        f2(A::RTM, x) = ReverseDiff.track(f2, A, x)
-        f2(A::RTM, x::RTV) = ReverseDiff.track(f2, A, x)
-        @grad function f2(A::AbstractMatrix, x::AbstractVector)
-            global custom_grad_called = true
-            Av = ReverseDiff.value(A)
-            xv = ReverseDiff.value(x)
-            Av * xv, Δ -> (Δ * xv', Av' * Δ)
-        end
-        
-        custom_grad_called = false
-        g1 = ReverseDiff.gradient(x -> sum(f2(A, x)), x)
-        g2 = ReverseDiff.gradient(x -> sum(A * x), x)
-        @test g1 == g2
-        @test custom_grad_called
-        
-        custom_grad_called = false
-        g1 = ReverseDiff.gradient(A -> sum(f2(A, x)), A)
-        g2 = ReverseDiff.gradient(A -> sum(A * x), A)
-        @test g1 == g2
-        @test custom_grad_called
-        
-        custom_grad_called = false
-        g1 = ReverseDiff.gradient(A_x -> sum(f2(reshape(A_x[1:9], 3, 3), A_x[10:end])), A_x)
-        g2 = ReverseDiff.gradient(A_x -> sum(reshape(A_x[1:9], 3, 3) * A_x[10:end]), A_x)
-        @test g1 == g2
-        @test custom_grad_called
-    
-        f3(A; dims) = sum(A, dims = dims)
-        f3(A::RTM; dims) = ReverseDiff.track(f3, A; dims = dims)
-        @grad function f3(A::AbstractMatrix; dims)
-            global custom_grad_called = true
-            Av = ReverseDiff.value(A)
-            sum(Av, dims = dims), Δ -> (zero(Av) .+ Δ,)
-        end
-        custom_grad_called = false
-        g1 = ReverseDiff.gradient(A -> sum(f3(A, dims = 1)), A)
-        g2 = ReverseDiff.gradient(A -> sum(sum(A, dims = 1)), A)
-        @test g1 == g2
-        @test custom_grad_called
-    
-        f4(::typeof(log), A; dims) = sum(log, A, dims = dims)
-        f4(::typeof(log), A::RTM; dims) = ReverseDiff.track(f4, log, A; dims = dims)
-        @grad function f4(::typeof(log), A::AbstractMatrix; dims)
-            global custom_grad_called = true
-            Av = ReverseDiff.value(A)
-            sum(log, Av, dims = dims), Δ -> (nothing, 1 ./ Av .* Δ)
-        end
-        custom_grad_called = false
-        g1 = ReverseDiff.gradient(A -> sum(f4(log, A, dims = 1)), A)
-        g2 = ReverseDiff.gradient(A -> sum(sum(log, A, dims = 1)), A)
-        @test g1 == g2
-        @test custom_grad_called
-    
-        f5(x) = log(x)
-        f5(x::RTR) = ReverseDiff.track(f5, x)
-        @grad function f5(x::Real)
-            global custom_grad_called = true
-            xv = ReverseDiff.value(x)
-            log(xv), Δ -> (1 / xv * Δ,)
-        end
-        custom_grad_called = false
-        g1 = ReverseDiff.gradient(x -> f5(x[1]) * f5(x[2]) + exp(x[3]), x)
-        g2 = ReverseDiff.gradient(x -> log(x[1]) * log(x[2]) + exp(x[3]), x)
-        @test g1 == g2
-        @test custom_grad_called
-    
-        f6(x) = sum(x)
-        f6(x::RTA{<:AbstractFloat}) = ReverseDiff.track(f6, x)
-        @grad function f6(x::RTA{T}) where {T <: AbstractFloat}
-            global custom_grad_called = true
-            xv = ReverseDiff.value(x)
-            sum(xv), Δ -> (one.(xv) .* Δ,)
-        end
-    
-        custom_grad_called = false
-        g1 = ReverseDiff.gradient(f6, x)
-        g2 = ReverseDiff.gradient(sum, x)
-        @test g1 == g2
-        @test custom_grad_called
-        
-        x2 = round.(Int, x)
-        custom_grad_called = false
-        g1 = ReverseDiff.gradient(f6, x2)
-        g2 = ReverseDiff.gradient(sum, x2)
-        @test g1 == g2
-        @test !custom_grad_called
-        f6(x::RTA) = ReverseDiff.track(f6, x)
-        @test_throws MethodError ReverseDiff.gradient(f6, x2)
-
-        f7(x...) = +(x...)
-        f7(x::RTR{<:AbstractFloat}...) = ReverseDiff.track(f7, x...)
-        @grad function f7(x::RTR{T}...) where {T <: AbstractFloat}
-            global custom_grad_called = true
-            xv = ReverseDiff.value.(x)
-            +(xv...), Δ -> one.(xv) .* Δ
-        end
-        custom_grad_called = false
-        g1 = ReverseDiff.gradient(x -> f7(x...), x)
-        g2 = ReverseDiff.gradient(sum, x)
-        @test g1 == g2
-        @test custom_grad_called
-
-        f8(A; kwargs...) = sum(A, kwargs...)
-        f8(A::RTM; kwargs...) = ReverseDiff.track(f8, A; kwargs...)
-        @grad function f8(A::AbstractMatrix; kwargs...)
-            global custom_grad_called = true
-            Av = ReverseDiff.value(A)
-            sum(Av; kwargs...), Δ -> (zero(Av) .+ Δ,)
-        end
-        custom_grad_called = false
-        g1 = ReverseDiff.gradient(A -> sum(f8(A, dims = 1)), A)
-        g2 = ReverseDiff.gradient(A -> sum(sum(A, dims = 1)), A)
-        @test g1 == g2
-        @test custom_grad_called
     end
 end
