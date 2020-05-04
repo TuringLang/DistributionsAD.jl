@@ -6,12 +6,12 @@ using MacroTools, LinearAlgebra, ..ReverseDiff, StaticArrays
 using Base.Broadcast: BroadcastStyle, ArrayStyle, Broadcasted, broadcasted
 using ForwardDiff: ForwardDiff, Dual
 using ..ReverseDiff: SpecialInstruction, value, value!, deriv, track, record!, tape, unseed!, @grad, TrackedReal, TrackedVector, TrackedMatrix, TrackedArray
-using ..DistributionsAD: DistributionsAD, _turing_chol
+using ..DistributionsAD: DistributionsAD
 
 const TrackedVecOrMat{V,D} = Union{TrackedVector{V,D},TrackedMatrix{V,D}}
 
 import SpecialFunctions, NaNMath
-import ..DistributionsAD: turing_chol, _mv_categorical_logpdf
+import ..DistributionsAD: turing_chol, symm_turing_chol, _mv_categorical_logpdf
 import Base.Broadcast: materialize
 import StatsFuns: logsumexp
 import ZygoteRules

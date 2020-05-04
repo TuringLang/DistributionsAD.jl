@@ -114,16 +114,38 @@ function LinearAlgebra.cholesky(A::TrackedMatrix; check=true)
     info = data(factors_info[2])
     return Cholesky{eltype(factors), typeof(factors)}(factors, 'U', info)
 end
+function LinearAlgebra.cholesky(A::Symmetric{<:Any, <:TrackedMatrix}; check=true)
+    uplo = A.uplo == 'U' ? (:U) : (:L)
+    factors_info = symm_turing_chol(parent(A), check, uplo)
+    factors = factors_info[1]
+    info = data(factors_info[2])
+    return Cholesky{eltype(factors), typeof(factors)}(factors, 'U', info)
+end
+
 function turing_chol(A::AbstractMatrix, check)
     chol = cholesky(A, check=check)
     (chol.factors, chol.info)
 end
+function symm_turing_chol(A::AbstractMatrix, check, uplo)
+    chol = cholesky(Symmetric(A, uplo), check=check)
+    (chol.factors, chol.info)
+end
+
 turing_chol(A::TrackedMatrix, check) = track(turing_chol, A, check)
 @grad function turing_chol(A::AbstractMatrix, check)
-    C, back = ZygoteRules.pullback(_turing_chol, data(A), data(check))
+    C, back = ZygoteRules.pullback(data(A), check) do A, check
+        cholesky(A, check=check)
+    end
     return (C.factors, C.info), Δ->back((factors=data(Δ[1]),))
 end
-_turing_chol(x, check) = cholesky(x, check=check)
+
+symm_turing_chol(A::TrackedMatrix, check, uplo) = track(symm_turing_chol, A, check, uplo)
+@grad function symm_turing_chol(A::AbstractMatrix, check, uplo)
+    C, back = ZygoteRules.pullback(data(A), check, uplo) do A, check, uplo
+        cholesky(Symmetric(A, uplo), check=check)
+    end
+    return (C.factors, C.info), Δ->back((factors=data(Δ[1]),))
+end
 
 # Specialised logdet for cholesky to target the triangle directly.
 logdet_chol_tri(U::AbstractMatrix) = 2 * sum(log, U[diagind(U)])
