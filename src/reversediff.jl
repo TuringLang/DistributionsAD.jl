@@ -215,6 +215,35 @@ MvLogNormal(d::Int, σ::TrackedReal) = TuringMvLogNormal(TuringMvNormal(d, σ))
 
 Dirichlet(alpha::TrackedVector) = TuringDirichlet(alpha)
 Dirichlet(d::Integer, alpha::TrackedReal) = TuringDirichlet(d, alpha)
+for func_header in [
+    :(simplex_logpdf(alpha::TrackedVector, lmnB::Real, x::AbstractVector)),
+    :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::AbstractVector)),
+    :(simplex_logpdf(alpha::AbstractVector, lmnB::Real, x::TrackedVector)),
+    :(simplex_logpdf(alpha::TrackedVector, lmnB::TrackedReal, x::AbstractVector)),
+    :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::TrackedVector)),
+    :(simplex_logpdf(alpha::TrackedVector, lmnB::Real, x::TrackedVector)),
+    :(simplex_logpdf(alpha::TrackedVector, lmnB::TrackedReal, x::TrackedVector)),
+
+    :(simplex_logpdf(alpha::TrackedVector, lmnB::Real, x::AbstractMatrix)),
+    :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::AbstractMatrix)),
+    :(simplex_logpdf(alpha::AbstractVector, lmnB::Real, x::TrackedMatrix)),
+    :(simplex_logpdf(alpha::TrackedVector, lmnB::TrackedReal, x::AbstractMatrix)),
+    :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::TrackedMatrix)),
+    :(simplex_logpdf(alpha::TrackedVector, lmnB::Real, x::TrackedMatrix)),
+    :(simplex_logpdf(alpha::TrackedVector, lmnB::TrackedReal, x::TrackedMatrix)),
+]
+    @eval $func_header = track(simplex_logpdf, alpha, lmnB, x)
+end
+@grad function simplex_logpdf(alpha, lmnB, x::AbstractVector)
+    simplex_logpdf(value(alpha), value(lmnB), value(x)), Δ -> begin
+        (Δ .* log.(value(x)), -Δ, Δ .* (value(alpha) .- 1))
+    end
+end
+@grad function simplex_logpdf(alpha, lmnB, x::AbstractMatrix)
+    simplex_logpdf(value(alpha), value(lmnB), value(x)), Δ -> begin
+        (log.(value(x)) * Δ, -sum(Δ), repeat(value(alpha) .- 1, 1, size(x, 2)) * Diagonal(Δ))
+    end
+end
 
 function logpdf(d::MatrixBeta, X::AbstractArray{<:TrackedMatrix{<:Real}})
     return map(x -> logpdf(d, x), X)
