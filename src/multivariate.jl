@@ -79,36 +79,6 @@ function simplex_logpdf(alpha, lmnB, x::AbstractMatrix)
     end
 end
 
-for func_header in [
-    :(simplex_logpdf(alpha::TrackedVector, lmnB::Real, x::AbstractVector)),
-    :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::AbstractVector)),
-    :(simplex_logpdf(alpha::AbstractVector, lmnB::Real, x::TrackedVector)),
-    :(simplex_logpdf(alpha::TrackedVector, lmnB::TrackedReal, x::AbstractVector)),
-    :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::TrackedVector)),
-    :(simplex_logpdf(alpha::TrackedVector, lmnB::Real, x::TrackedVector)),
-    :(simplex_logpdf(alpha::TrackedVector, lmnB::TrackedReal, x::TrackedVector)),
-
-    :(simplex_logpdf(alpha::TrackedVector, lmnB::Real, x::AbstractMatrix)),
-    :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::AbstractMatrix)),
-    :(simplex_logpdf(alpha::AbstractVector, lmnB::Real, x::TrackedMatrix)),
-    :(simplex_logpdf(alpha::TrackedVector, lmnB::TrackedReal, x::AbstractMatrix)),
-    :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::TrackedMatrix)),
-    :(simplex_logpdf(alpha::TrackedVector, lmnB::Real, x::TrackedMatrix)),
-    :(simplex_logpdf(alpha::TrackedVector, lmnB::TrackedReal, x::TrackedMatrix)),
-]
-    @eval $func_header = Tracker.track(simplex_logpdf, alpha, lmnB, x)
-end
-Tracker.@grad function simplex_logpdf(alpha, lmnB, x::AbstractVector)
-    simplex_logpdf(data(alpha), data(lmnB), data(x)), Δ -> begin
-        (Δ .* log.(data(x)), -Δ, Δ .* (data(alpha) .- 1))
-    end
-end
-Tracker.@grad function simplex_logpdf(alpha, lmnB, x::AbstractMatrix)
-    simplex_logpdf(data(alpha), data(lmnB), data(x)), Δ -> begin
-        (log.(data(x)) * Δ, -sum(Δ), repeat(data(alpha) .- 1, 1, size(x, 2)) * Diagonal(Δ))
-    end
-end
-
 ZygoteRules.@adjoint function simplex_logpdf(alpha, lmnB, x::AbstractVector)
     simplex_logpdf(alpha, lmnB, x), Δ -> (Δ .* log.(x), -Δ, Δ .* (alpha .- 1))
 end
