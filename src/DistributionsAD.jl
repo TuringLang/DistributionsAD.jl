@@ -36,6 +36,7 @@ import Distributions: MvNormal,
                       BetaBinomial,
                       Erlang
 import ZygoteRules
+import Zygote
 
 export TuringScalMvNormal,
        TuringDiagMvNormal,
@@ -50,6 +51,7 @@ export TuringScalMvNormal,
 include("common.jl")
 include("univariate.jl")
 include("multivariate.jl")
+include("mixturemodels.jl")
 include("mvcategorical.jl")
 include("matrixvariate.jl")
 include("flatten.jl")
