@@ -36,7 +36,6 @@ import Distributions: MvNormal,
                       BetaBinomial,
                       Erlang
 import ZygoteRules
-import Zygote
 
 export TuringScalMvNormal,
        TuringDiagMvNormal,
