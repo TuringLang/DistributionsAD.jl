@@ -5,13 +5,10 @@ function _mixlogpdf1(d::AbstractMixtureModel, x)
     #              = log(sum_i pri[i] * exp(logpdf(cs[i], x)))
     #              = log(sum_i exp(logpri[i] + logpdf(cs[i], x)))
 
-    K = ncomponents(d)
     pri = probs(d)
-
-    lp = map(eachindex(pri)) do i
-            if pri[i] > 0.0
-                return logpdf(component(d, i), x) + log(pri[i])
-            end
+    indices = findall(!iszero, pri)
+    lp = map(indices) do i
+            return logpdf(component(d, i), x) + log(pri[i])
         end
 
     return logsumexp(lp)
