@@ -62,7 +62,7 @@ for f in [:hcat, :vcat]
     end
 end
 
-@grad function vcat(xs::Union{TrackedVector, TrackedMatrix}...)
+@grad function vcat(xs::AbstractVecOrMat...)
     xs_value = value.(xs)
     out_value = reduce(vcat,xs_value)
     function back(Δ)
@@ -79,7 +79,7 @@ end
     return out_value, back
 end
 
-@grad function hcat(xs::Union{TrackedVector, TrackedMatrix}...)
+@grad function hcat(xs::AbstractVecOrMat...)
     xs_value = value.(xs)
     out_value = reduce(hcat,xs_value)
     function back(Δ)
@@ -100,7 +100,7 @@ end
 end
 
 Base.cat(Xs::TrackedArray...; dims) = track(cat, Xs...; dims = dims)
-@grad function cat(Xs::TrackedArray{<:Any, D}...; dims) where {D}
+@grad function cat(Xs::AbstractArray...; dims)
     Xs_value = value.(Xs)
     return cat(Xs_value...; dims = dims), Δ -> begin
         start = ntuple(i -> 0, Val(ndims(Δ)))
@@ -121,7 +121,7 @@ end
 ###############
 
 logsumexp(x::TrackedArray; dims=:) = track(logsumexp, x, dims = dims)
-@grad function logsumexp(x::TrackedArray; dims)
+@grad function logsumexp(x::AbstractArray; dims)
     lse = logsumexp(value(x), dims = dims)
     return lse, Δ -> (Δ .* exp.(x .- lse),)
 end
@@ -133,7 +133,7 @@ end
 Base.copy(A::Adjoint{<:TrackedReal, <:TrackedVecOrMat}) = copyadjoint(parent(A))
 copyadjoint(A) = copy(A')
 copyadjoint(A::TrackedVecOrMat) = track(copyadjoint, A)
-@grad function copyadjoint(A::TrackedVecOrMat)
+@grad function copyadjoint(A::AbstractVecOrMat)
     return copy(value(A)'), ∇ -> (copy(∇'),)
 end
 
