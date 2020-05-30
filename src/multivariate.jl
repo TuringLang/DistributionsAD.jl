@@ -254,7 +254,7 @@ end
 MvNormal(d::Int, σ::TrackedReal{<:Real}) = TuringMvNormal(d, σ)
 
 TuringMvNormal(d::Int, σ::Real) = TuringMvNormal(zeros(d), σ)
-TuringMvNormal(m::AbstractVector{<:Real}, σ::Real) = TuringScalMvNormal(m, σ)
+TuringMvNormal(m::AbstractVector, σ::Real) = TuringScalMvNormal(m, σ)
 TuringMvNormal(σ::AbstractVector) = TuringMvNormal(zeros(length(σ)), σ)
 TuringMvNormal(A::AbstractMatrix) = TuringMvNormal(zeros(size(A, 1)), A)
 function TuringMvNormal(m::AbstractVector{<:Real}, σ::AbstractVector{<:Real})
