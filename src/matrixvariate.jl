@@ -124,26 +124,9 @@ end
 
 #### Sampling
 function Distributions._rand!(rng::AbstractRNG, d::TuringWishart, A::AbstractMatrix)
-    _wishart_genA!(rng, Distributions.dim(d), d.df, A)
+    Distributions._wishart_genA!(rng, Distributions.dim(d), d.df, A)
     unwhiten!(d.chol, A)
     A .= A * A'
-end
-
-function _wishart_genA!(rng::AbstractRNG, p::Int, df::Real, A::AbstractMatrix)
-    # Generate the matrix A in the Bartlett decomposition
-    #
-    #   A is a lower triangular matrix, with
-    #
-    #       A(i, j) ~ sqrt of Chisq(df - i + 1) when i == j
-    #               ~ Normal()                  when i > j
-    #
-    A .= zero(eltype(A))
-    for i = 1:p
-        @inbounds A[i,i] = rand(rng, Chi(df - i + 1.0))
-    end
-    for j in 1:p-1, i in j+1:p
-        @inbounds A[i,j] = randn(rng)
-    end
 end
 
 function unwhiten!(C::Cholesky, x::StridedVecOrMat)
