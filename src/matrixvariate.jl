@@ -113,7 +113,7 @@ function Distributions.logpdf(d::TuringWishart, X::AbstractMatrix{<:Real})
     df = d.df
     p = Distributions.dim(d)
     Xcf = cholesky(X)
-    return 0.5 * ((df - (p + 1)) * logdet(Xcf) - tr(d.chol \ X)) - d.logc0
+    return 0.5 * ((df - (p + 1)) * logdet(Xcf) - tr(d.chol \ X)) + d.logc0
 end
 function Distributions.logpdf(d::TuringWishart, X::AbstractArray{<:AbstractMatrix{<:Real}})
     return map(x -> logpdf(d, x), X)
