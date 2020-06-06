@@ -156,13 +156,13 @@ end
 struct TuringInverseWishart{T<:Real, ST<:AbstractMatrix} <: ContinuousMatrixDistribution
     df::T     # degree of freedom
     S::ST     # Scale matrix
-    c0::T     # log of normalizing constant
+    logc0::T  # log of normalizing constant
 end
 
 #### Constructors
 
 function TuringInverseWishart(d::InverseWishart)
-    d = TuringInverseWishart(d.df, getmatrix(d.Ψ), d.c0)
+    d = TuringInverseWishart(d.df, getmatrix(d.Ψ), d.logc0)
 end
 getmatrix(p::PDMat) = p.mat
 getmatrix(p::PDiagMat) = Diagonal(p.diag)
@@ -172,11 +172,11 @@ function TuringInverseWishart(df::T, Ψ::AbstractMatrix) where T<:Real
     p = size(Ψ, 1)
     df > p - 1 || error("df should be greater than dim - 1.")
     C = cholesky(Ψ)
-    c0 = _invwishart_c0(df, C)
-    R = Base.promote_eltype(T, c0)
-    return TuringInverseWishart(R(df), Ψ, R(c0))
+    logc0 = _invwishart_logc0(df, C)
+    R = Base.promote_eltype(T, logc0)
+    return TuringInverseWishart(R(df), Ψ, R(logc0))
 end
-function _invwishart_c0(df::Real, C::Cholesky)
+function _invwishart_logc0(df::Real, C::Cholesky)
     h_df = df / 2
     p = size(C, 1)
     h_df * (p * float(typeof(df))(logtwo) - logdet(C)) + logmvgamma(p, h_df)
@@ -234,7 +234,7 @@ function Distributions.logpdf(d::TuringInverseWishart, X::AbstractMatrix{<:Real}
     Xcf = cholesky(X)
     # we use the fact: tr(Ψ * inv(X)) = tr(inv(X) * Ψ) = tr(X \ Ψ)
     Ψ = d.S
-    -0.5 * ((df + p + 1) * logdet(Xcf) + tr(Xcf \ Ψ)) - d.c0
+    -0.5 * ((df + p + 1) * logdet(Xcf) + tr(Xcf \ Ψ)) - d.logc0
 end
 function Distributions.logpdf(d::TuringInverseWishart, X::AbstractArray{<:AbstractMatrix{<:Real}})
     return map(x -> logpdf(d, x), X)
