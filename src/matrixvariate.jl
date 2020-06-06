@@ -48,7 +48,7 @@ end
 function _wishart_logc0(df::Real, C::Cholesky)
     h_df = df / 2
     p = size(C, 1)
-    h_df * (logdet(C) + p * float(typeof(df))(logtwo)) + logmvgamma(p, h_df)
+    -h_df * (logdet(C) + p * float(typeof(df))(logtwo)) - logmvgamma(p, h_df)
 end
 
 #### Properties
