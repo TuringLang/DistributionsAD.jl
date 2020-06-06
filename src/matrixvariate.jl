@@ -21,13 +21,13 @@ using StatsFuns: logtwo, logmvgamma
 struct TuringWishart{T<:Real, ST <: Cholesky} <: ContinuousMatrixDistribution
     df::T     # degree of freedom
     chol::ST  # the Cholesky of scale matrix
-    c0::T     # the logarithm of normalizing constant in pdf
+    logc0::T  # the logarithm of normalizing constant in pdf
 end
 
 #### Constructors
 
 function TuringWishart(d::Wishart)
-    return TuringWishart(d.df, getchol(d.S), d.c0)
+    return TuringWishart(d.df, getchol(d.S), d.logc0)
 end
 getchol(p::PDMat) = p.chol
 getchol(p::PDiagMat) = Diagonal(map(sqrt, p.diag))
@@ -40,12 +40,12 @@ function TuringWishart(df::T, S::AbstractMatrix) where {T <: Real}
     return TuringWishart(df, C)
 end
 function TuringWishart(df::T, C::Cholesky) where {T <: Real}
-    c0 = _wishart_c0(df, C)
-    R = Base.promote_eltype(T, c0)
-    return TuringWishart(R(df), C, R(c0))
+    logc0 = _wishart_logc0(df, C)
+    R = Base.promote_eltype(T, logc0)
+    return TuringWishart(R(df), C, R(logc0))
 end
 
-function _wishart_c0(df::Real, C::Cholesky)
+function _wishart_logc0(df::Real, C::Cholesky)
     h_df = df / 2
     p = size(C, 1)
     h_df * (logdet(C) + p * float(typeof(df))(logtwo)) + logmvgamma(p, h_df)
@@ -87,7 +87,7 @@ end
 function Distributions.entropy(d::TuringWishart)
     p = Distributions.dim(d)
     df = d.df
-    d.c0 - 0.5 * (df - p - 1) * Distributions.meanlogdet(d) + 0.5 * df * p
+    d.logc0 - 0.5 * (df - p - 1) * Distributions.meanlogdet(d) + 0.5 * df * p
 end
 
 #  Gupta/Nagar (1999) Theorem 3.3.15.i
@@ -113,7 +113,7 @@ function Distributions.logpdf(d::TuringWishart, X::AbstractMatrix{<:Real})
     df = d.df
     p = Distributions.dim(d)
     Xcf = cholesky(X)
-    return 0.5 * ((df - (p + 1)) * logdet(Xcf) - tr(d.chol \ X)) - d.c0
+    return 0.5 * ((df - (p + 1)) * logdet(Xcf) - tr(d.chol \ X)) - d.logc0
 end
 function Distributions.logpdf(d::TuringWishart, X::AbstractArray{<:AbstractMatrix{<:Real}})
     return map(x -> logpdf(d, x), X)
