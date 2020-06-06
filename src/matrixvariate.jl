@@ -217,7 +217,7 @@ end
 function Distributions.var(d::TuringInverseWishart, i::Integer, j::Integer)
     p, ν, Ψ = (Distributions.dim(d), d.df, d.S)
     ν > p + 3 || throw(ArgumentError("var only defined for df > dim + 3"))
-    inv((ν - p)*(ν - p - 3)*(ν - p - 1)^2)*(ν - p + 1)*Ψ[i,j]^2 + (ν - p - 1)*Ψ[i,i]*Ψ[j,j]
+    inv((ν - p)*(ν - p - 3)*(ν - p - 1)^2)*((ν - p + 1)*Ψ[i,j]^2 + (ν - p - 1)*Ψ[i,i]*Ψ[j,j])
 end
 
 #### Evaluation
