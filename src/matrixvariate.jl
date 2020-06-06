@@ -87,7 +87,7 @@ end
 function Distributions.entropy(d::TuringWishart)
     p = Distributions.dim(d)
     df = d.df
-    d.logc0 - 0.5 * (df - p - 1) * Distributions.meanlogdet(d) + 0.5 * df * p
+    return -d.logc0 - 0.5 * (df - p - 1) * Distributions.meanlogdet(d) + 0.5 * df * p
 end
 
 #  Gupta/Nagar (1999) Theorem 3.3.15.i
