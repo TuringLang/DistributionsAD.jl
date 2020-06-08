@@ -135,7 +135,7 @@ function unwhiten!(C::Cholesky, x::StridedVecOrMat)
 end
 
 ## Custom adjoint since Zygote can't differentiate through `@warn`
-
+# TODO: Remove when fixed upstream in Distributions
 ZygoteRules.@adjoint function Wishart(df::T, S::AbstractPDMat{T}, warn::Bool = true) where T
     return ZygoteRules.pullback(_Wishart, df, S, warn)
 end
@@ -157,10 +157,7 @@ function _Wishart(df::T, S::AbstractPDMat{T}, warn::Bool = true) where T
 end
 
 _warn(msg) = @warn(msg)
-
-ZygoteRules.@adjoint function _warn(msg)
-    return _warn(msg), _ -> nothing
-end
+ZygoteRules.@adjoint _warn(msg) = _warn(msg), _ -> nothing
 
 ## InverseWishart
 
