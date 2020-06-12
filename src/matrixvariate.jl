@@ -137,23 +137,22 @@ end
 ## Custom adjoint since Zygote can't differentiate through `@warn`
 # TODO: Remove when fixed upstream in Distributions
 ZygoteRules.@adjoint function Wishart(df::T, S::AbstractPDMat{T}, warn::Bool = true) where T
-    return ZygoteRules.pullback(_Wishart, df, S, warn)
-end
-
-function _Wishart(df::T, S::AbstractPDMat{T}, warn::Bool = true) where T
-    df > 0 || throw(ArgumentError("df must be positive. got $(df)."))
-    p = dim(S)
-    rnk = p
-    singular = df <= p - 1
-    if singular
-        isinteger(df) || throw(ArgumentError("singular df must be an integer. got $(df)."))
-        rnk = convert(Integer, df)
-        warn && _warn("got df <= dim - 1; returning a singular Wishart")
+    function _Wishart(df::T, S::AbstractPDMat{T}, warn::Bool = true) where T
+        df > 0 || throw(ArgumentError("df must be positive. got $(df)."))
+        p = dim(S)
+        rnk = p
+        singular = df <= p - 1
+        if singular
+            isinteger(df) || throw(ArgumentError("singular df must be an integer. got $(df)."))
+            rnk = convert(Integer, df)
+            warn && _warn("got df <= dim - 1; returning a singular Wishart")
+        end
+        logc0 = Distributions.wishart_logc0(df, S, rnk)
+        R = Base.promote_eltype(T, logc0)
+        prom_S = convert(AbstractArray{T}, S)
+        Wishart{R, typeof(prom_S), typeof(rnk)}(R(df), prom_S, R(logc0), rnk, singular)
     end
-    logc0 = Distributions.wishart_logc0(df, S, rnk)
-    R = Base.promote_eltype(T, logc0)
-    prom_S = convert(AbstractArray{T}, S)
-    Wishart{R, typeof(prom_S), typeof(rnk)}(R(df), prom_S, R(logc0), rnk, singular)
+    return ZygoteRules.pullback(_Wishart, df, S, warn)
 end
 
 _warn(msg) = @warn(msg)
