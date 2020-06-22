@@ -1,3 +1,5 @@
+Random.seed!(1234)
+
 dim = 3
 mean = zeros(dim)
 cov_mat = Matrix{Float64}(I, dim, dim)
@@ -5,9 +7,9 @@ cov_vec = ones(dim)
 cov_num = 1.0
 norm_val_vec = ones(dim)
 norm_val_mat = ones(dim, 2)
-alpha = ones(4)
-dir_val_vec = fill(0.25, 4)
-dir_val_mat = fill(0.25, 4, 2)
+alpha = rand(dim)
+dir_val_vec = [0.25, 0.4, 0.35]
+dir_val_mat = [0.25 0.1; 0.4 0.5; 0.35 0.4]
 beta_mat = rand(MatrixBeta(dim, dim, dim))
 tested = []
 function test_info(name)
