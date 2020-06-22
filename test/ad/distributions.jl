@@ -28,10 +28,9 @@
         return S, pullback
     end
 
-    # Create matrix `X` such that `X` and `I - X` are positive definite.
-    # Works even if `A = 0`.
+    # Create matrix `X` such that `X` and `I - X` are positive definite if `A ≠ 0`.
     function to_beta_mat(A)
-        S = A * A' + 2 * I
+        S = A * A' + I
         invL = inv(cholesky(S).L)
         return invL * invL'
     end
