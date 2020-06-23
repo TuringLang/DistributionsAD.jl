@@ -156,15 +156,16 @@ function Distributions.logpdf(d::MvCategorical{T}, x::AbstractVector{<:Integer})
         return zero(eltype(ps))
     end
 end
-_mv_categorical_logpdf(ps, x) = sum(log, view(ps, x, :))
+_mv_categorical_logpdf(ps, x) = sum(x -> log(x + eps(x)), view(ps, x, :))
 _mv_categorical_logpdf(ps::Tracker.TrackedMatrix, x) = Tracker.track(_mv_categorical_logpdf, ps, x)
 Tracker.@grad function _mv_categorical_logpdf(ps, x)
     ps_data = Tracker.data(ps)
+    T = eltype(ps_data)
     probs = view(ps_data, x, :)
     ps_grad = zero(ps_data)
     sum(log, probs), Δ -> begin
         ps_grad .= 0
-        ps_grad[x,:] .= Δ ./ probs
+        ps_grad[x,:] .= Δ ./ (probs .+ eps(T))
         return (ps_grad, nothing)
     end
 end
