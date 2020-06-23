@@ -1,6 +1,4 @@
-using StatsBase: entropy
-
-if get_stage() in ("Others", "all")
+@testset "others" begin
     @testset "TuringWishart" begin
         dim = 3
         A = Matrix{Float64}(I, dim, dim)
