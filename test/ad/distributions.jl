@@ -316,6 +316,9 @@
     matrixvariate_distributions = DistSpec[
         # Matrix x
         DistSpec((n1, n2) -> MatrixBeta(dim, n1, n2), (3.0, 3.0), A, to_beta_mat),
+        DistSpec(() -> MatrixNormal(dim, dim), (), A, to_posdef,
+            broken=(:Tracker, :Zygote)
+        ),
         DistSpec((df, A) -> Wishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
         DistSpec((df, A) -> InverseWishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
         DistSpec((df, A) -> TuringWishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
@@ -356,19 +359,21 @@
 
     broken_matrixvariate_distributions = DistSpec[
         # Other
+        # TODO different tests are broken on different combinations of backends
         DistSpec(
             (A, B, C) -> MatrixNormal(A, to_posdef(B), to_posdef(C)),
             (A, B, B),
             C,
             to_posdef,
         ),
-        DistSpec(() -> MatrixNormal(dim, dim), (), A, to_posdef),
+        # TODO different tests are broken on different combinations of backends
         DistSpec(
             (df, A, B, C) -> MatrixTDist(df, A, to_posdef(B), to_posdef(C)),
             (1.0, A, B, B),
             C,
             to_posdef,
         ),
+        # TODO different tests are broken on different combinations of backends
         DistSpec(
             (n1, n2, A) -> MatrixFDist(n1, n2, to_posdef(A)),
             (3.0, 3.0, A),
