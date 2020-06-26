@@ -103,6 +103,8 @@
         DistSpec(Cauchy, (1.0,), 0.5),
         DistSpec(Cauchy, (1.0, 2.0), 0.5),
 
+        DistSpec(Chernoff, (), 0.5, broken=(:Zygote)),
+
         DistSpec(Chi, (1.0,), 0.5),
 
         DistSpec(Chisq, (1.0,), 0.5),
@@ -167,6 +169,12 @@
         DistSpec(LogNormal, (1.0,), 0.5),
         DistSpec(LogNormal, (1.0, 2.0), 0.5),
 
+        # Dispatch error caused by ccall
+        DistSpec(NoncentralBeta, (1.0, 2.0, 1.0), 0.5, broken=(:Tracker, :ForwardDiff, :Zygote, :ReverseDiff)),
+        DistSpec(NoncentralChisq, (1.0, 2.0), 0.5, broken=(:Tracker, :ForwardDiff, :Zygote, :ReverseDiff)),
+        DistSpec(NoncentralF, (1, 2, 1), 0.5, broken=(:Tracker, :ForwardDiff, :Zygote, :ReverseDiff)),
+        DistSpec(NoncentralT, (1, 2), 0.5, broken=(:Tracker, :ForwardDiff, :Zygote, :ReverseDiff)),
+
         DistSpec(Normal, (), 0.5),
         DistSpec(Normal, (1.0,), 0.5),
         DistSpec(Normal, (1.0, 2.0), 0.5),
@@ -215,20 +223,12 @@
         DistSpec(Weibull, (1.0, 1.0), 1.0),
     ]
 
+    # These methods are so broken that they cannot be tested with `@test_broken`
     broken_univariate_distributions = DistSpec[
-        # Zygote
-        DistSpec(Chernoff, (), 0.5),
-
         # Broken in Distributions even without autodiff
-        DistSpec(() -> KSDist(1), (), 0.5),
-        DistSpec(() -> KSOneSided(1), (), 0.5),
-        DistSpec(StudentizedRange, (1.0, 2.0), 0.5),
-
-        # Dispatch error caused by ccall
-        DistSpec(NoncentralBeta, (1.0, 2.0, 1.0), 0.5),
-        DistSpec(NoncentralChisq, (1.0, 2.0), 0.5),
-        DistSpec(NoncentralF, (1, 2, 1), 0.5),
-        DistSpec(NoncentralT, (1, 2), 0.5),
+        DistSpec(() -> KSDist(1), (), 0.5), # `pdf` method not defined
+        DistSpec(() -> KSOneSided(1), (), 0.5), # `pdf` method not defined
+        DistSpec(StudentizedRange, (1.0, 2.0), 0.5), # `srdistlogpdf` method not defined
 
         # Stackoverflow caused by SpecialFunctions.besselix
         DistSpec(VonMises, (1.0,), 1.0),
