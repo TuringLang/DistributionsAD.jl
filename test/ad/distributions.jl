@@ -240,6 +240,9 @@
 
         # Vector x
         DistSpec(p -> Multinomial(2, p ./ sum(p)), (fill(0.5, 2),), [2, 0]),
+        DistSpec(p -> Multinomial(2, p ./ sum(p)), (fill(0.5, 2),), [2 1; 0 1],
+            broken=(:Tracker, :Zygote),
+        )
 
         # Vector x
         DistSpec((m, A) -> MvNormal(m, to_posdef(A)), (a, A), b),
@@ -293,8 +296,8 @@
         DistSpec(alpha -> Dirichlet(to_positive(alpha)), (a,), A, to_simplex),
     ]
 
+    # These methods are so broken that they cannot be tested with `@test_broken`
     broken_multivariate_distributions = DistSpec[
-        DistSpec(p -> Multinomial(2, p ./ sum(p)), (fill(0.5, 2),), [2 1; 0 1]),
         # Dispatch error
         DistSpec((m, A) -> MvNormalCanon(m, to_posdef(A)), (a, A), b),
         DistSpec(MvNormalCanon, (a, b), c),
