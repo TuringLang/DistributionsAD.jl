@@ -2,7 +2,7 @@
 const AD = get(ENV, "AD", "All")
 
 # Struct of distribution, corresponding parameters, and a sample.
-struct DistSpec{VF<:VariateForm,VS<:ValueSupport,F,T,X,G}
+struct DistSpec{VF<:VariateForm,VS<:ValueSupport,F,T,X,G,B<:Tuple}
     name::Symbol
     f::F
     "Distribution parameters."
@@ -12,7 +12,7 @@ struct DistSpec{VF<:VariateForm,VS<:ValueSupport,F,T,X,G}
     "Transformation of sample `x`."
     xtrans::G
     "Broken backends"
-    broken::Tuple{Vararg{String}}
+    broken::B
 end
 
 function DistSpec(f, θ, x, xtrans=nothing; broken=())
@@ -24,7 +24,7 @@ function DistSpec(name::Symbol, f, θ, x, xtrans=nothing; broken=())
     F = f isa Distribution ? typeof(f) : typeof(f(θ...))
     VF = Distributions.variate_form(F)
     VS = Distributions.value_support(F)
-    return DistSpec{VF,VS,typeof(f),typeof(θ),typeof(x),typeof(xtrans)}(
+    return DistSpec{VF,VS,typeof(f),typeof(θ),typeof(x),typeof(xtrans),typeof(broken)}(
         name, f, θ, x, xtrans, broken,
     )
 end
@@ -145,13 +145,13 @@ function test_ad(f, x, broken; rtol = 1e-6, atol = 1e-6)
     finitediff = FDM.grad(central_fdm(5, 1), f, x)[1]
 
     if AD == "All" || AD == "ForwardDiff_Tracker"
-        if "Tracker" in broken
+        if :Tracker in broken
             @test_broken Tracker.data(Tracker.gradient(f, x)[1]) ≈ finitediff rtol=rtol atol=atol
         else
             @test Tracker.data(Tracker.gradient(f, x)[1]) ≈ finitediff rtol=rtol atol=atol
         end
 
-        if "ForwardDiff" in broken
+        if :ForwardDiff in broken
             @test_broken ForwardDiff.gradient(f, x) ≈ finitediff rtol=rtol atol=atol
         else
             @test ForwardDiff.gradient(f, x) ≈ finitediff rtol=rtol atol=atol
@@ -159,7 +159,7 @@ function test_ad(f, x, broken; rtol = 1e-6, atol = 1e-6)
     end
 
     if AD == "All" || AD == "Zygote"
-        if "Zygote" in broken
+        if :Zygote in broken
             @test_broken Zygote.gradient(f, x)[1] ≈ finitediff rtol=rtol atol=atol
         else
             @test Zygote.gradient(f, x)[1] ≈ finitediff rtol=rtol atol=atol
@@ -167,7 +167,7 @@ function test_ad(f, x, broken; rtol = 1e-6, atol = 1e-6)
     end
 
     if AD == "All" || AD == "ReverseDiff"
-        if "ReverseDiff" in broken
+        if :ReverseDiff in broken
             @test_broken ReverseDiff.gradient(f, x) ≈ finitediff rtol=rtol atol=atol
         else
             @test ReverseDiff.gradient(f, x) ≈ finitediff rtol=rtol atol=atol
