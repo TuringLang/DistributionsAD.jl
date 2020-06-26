@@ -103,7 +103,7 @@
         DistSpec(Cauchy, (1.0,), 0.5),
         DistSpec(Cauchy, (1.0, 2.0), 0.5),
 
-        DistSpec(Chernoff, (), 0.5, broken=(:Zygote)),
+        DistSpec(Chernoff, (), 0.5, broken=(:Zygote,)),
 
         DistSpec(Chi, (1.0,), 0.5),
 
