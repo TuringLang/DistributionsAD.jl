@@ -172,8 +172,8 @@
         # Dispatch error caused by ccall
         DistSpec(NoncentralBeta, (1.0, 2.0, 1.0), 0.5, broken=(:Tracker, :ForwardDiff, :Zygote, :ReverseDiff)),
         DistSpec(NoncentralChisq, (1.0, 2.0), 0.5, broken=(:Tracker, :ForwardDiff, :Zygote, :ReverseDiff)),
-        DistSpec(NoncentralF, (1, 2, 1), 0.5, broken=(:Tracker, :ForwardDiff, :Zygote, :ReverseDiff)),
-        DistSpec(NoncentralT, (1, 2), 0.5, broken=(:Tracker, :ForwardDiff, :Zygote, :ReverseDiff)),
+        DistSpec(NoncentralF, (1.0, 2.0, 1.0), 0.5, broken=(:Tracker, :ForwardDiff, :Zygote, :ReverseDiff)),
+        DistSpec(NoncentralT, (1.0, 2.0), 0.5, broken=(:Tracker, :ForwardDiff, :Zygote, :ReverseDiff)),
 
         DistSpec(Normal, (), 0.5),
         DistSpec(Normal, (1.0,), 0.5),
