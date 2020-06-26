@@ -279,12 +279,16 @@
         DistSpec(MvNormal, (a,), A),
         DistSpec(s -> MvNormal(to_posdef_diagonal(s)), (a,), A),
         DistSpec(s -> MvNormal(dim, s), (alpha,), A),
+        DistSpec((m, A) -> MvNormal(m, to_posdef(A)), (a, A), B),
+        DistSpec(A -> MvNormal(to_posdef(A)), (A,), B),
         DistSpec(MvLogNormal, (a, b), A, to_positive),
         DistSpec((m, s) -> MvLogNormal(m, to_posdef_diagonal(s)), (a, b), A, to_positive),
         DistSpec(MvLogNormal, (a, alpha), A, to_positive),
         DistSpec(MvLogNormal, (a,), A, to_positive),
         DistSpec(s -> MvLogNormal(to_posdef_diagonal(s)), (a,), A, to_positive),
         DistSpec(s -> MvLogNormal(dim, s), (alpha,), A, to_positive),
+        DistSpec((m, A) -> MvLogNormal(m, to_posdef(A)), (a, A), B, to_positive),
+        DistSpec(A -> MvLogNormal(to_posdef(A)), (A,), B, to_positive),
 
         DistSpec(alpha -> Dirichlet(to_positive(alpha)), (a,), A, to_simplex),
     ]
@@ -304,11 +308,6 @@
         DistSpec(A -> MvNormalCanon(to_posdef(A)), (A,), B),
         DistSpec(MvNormalCanon, (a,), A),
         DistSpec(s -> MvNormalCanon(dim, s), (alpha,), A),
-        # Test failure
-        DistSpec((m, A) -> MvNormal(m, to_posdef(A)), (a, A), B),
-        DistSpec(A -> MvNormal(to_posdef(A)), (A,), B),
-        DistSpec((m, A) -> MvLogNormal(m, to_posdef(A)), (a, A), B, to_positive),
-        DistSpec(A -> MvLogNormal(to_posdef(A)), (A,), B, to_positive),
     ]
 
     matrixvariate_distributions = DistSpec[
