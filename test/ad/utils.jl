@@ -2,7 +2,7 @@
 const AD = get(ENV, "AD", "All")
 
 # Struct of distribution, corresponding parameters, and a sample.
-struct DistSpec{VF <: VariateForm,VS <: ValueSupport,F,T,X,G}
+struct DistSpec{VF<:VariateForm,VS<:ValueSupport,F,T,X,G}
     name::Symbol
     f::F
     "Distribution parameters."
@@ -92,7 +92,7 @@ function test_ad(dist::DistSpec; kwargs...)
     g = dist.xtrans
 
     # Create function with all possible arguments
-    f_allargs = let f = f, g = g
+    f_allargs = let f=f, g=g
         function (x, θ...)
             dist = f(θ...)
             xtilde = g === nothing ? x : g(x)
@@ -112,8 +112,8 @@ function test_ad(dist::DistSpec; kwargs...)
             xtest = mapreduce(vcat, inds) do i
                 vectorize(θ[i - 1])
             end
-            ftest = let xorig = x, θorig = θ, inds = inds
-                x->f_allargs(unpack(x, inds, xorig, θorig...)...)
+            ftest = let xorig=x, θorig=θ, inds=inds
+                x -> f_allargs(unpack(x, inds, xorig, θorig...)...)
             end
             test_ad(ftest, xtest; kwargs...)
         end
@@ -123,33 +123,33 @@ function test_ad(dist::DistSpec; kwargs...)
         if Distributions.value_support(typeof(dist)) === Continuous
             xtest = isempty(inds) ? vectorize(x) : vcat(vectorize(x), xtest)
             push!(inds, 1)
-            ftest = let xorig = x, θorig = θ, inds = inds
-                x->f_allargs(unpack(x, inds, xorig, θorig...)...)
+            ftest = let xorig=x, θorig=θ, inds=inds
+                x -> f_allargs(unpack(x, inds, xorig, θorig...)...)
             end
             test_ad(ftest, xtest; kwargs...)
         end
     end
 end
 
-function test_ad(f, x; rtol=1e-6, atol=1e-6)
+function test_ad(f, x; rtol = 1e-6, atol = 1e-6)
     finitediff = FDM.grad(central_fdm(5, 1), f, x)[1]
 
     if AD == "All" || AD == "ForwardDiff_Tracker"
         tracker = Tracker.data(Tracker.gradient(f, x)[1])
-        @test tracker ≈ finitediff rtol = rtol atol = atol
+        @test tracker ≈ finitediff rtol=rtol atol=atol
 
         forward = ForwardDiff.gradient(f, x)
-        @test forward ≈ finitediff rtol = rtol atol = atol
+        @test forward ≈ finitediff rtol=rtol atol=atol
     end
 
     if AD == "All" || AD == "Zygote"
         zygote = Zygote.gradient(f, x)[1]
-        @test zygote ≈ finitediff rtol = rtol atol = atol
+        @test zygote ≈ finitediff rtol=rtol atol=atol
     end
 
     if AD == "All" || AD == "ReverseDiff"
         reversediff = ReverseDiff.gradient(f, x)
-        @test reversediff ≈ finitediff rtol = rtol atol = atol
+        @test reversediff ≈ finitediff rtol=rtol atol=atol
     end
 
     return
