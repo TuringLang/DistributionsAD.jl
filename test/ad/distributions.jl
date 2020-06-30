@@ -46,6 +46,8 @@
         return y ./ sum(y, dims=dims)
     end
 
+    # Tests that have a `broken` field can be executed but, according to FiniteDifferences,
+    # fail to produce the correct result. These tests can be checked with `@test_broken`.
     univariate_distributions = DistSpec[
         ## Univariate discrete distributions
 
@@ -223,7 +225,7 @@
         DistSpec(Weibull, (1.0, 1.0), 1.0),
     ]
 
-    # These methods are so broken that they cannot be tested with `@test_broken`
+    # Tests cannot be executed, so cannot be checked with `@test_broken`.
     broken_univariate_distributions = DistSpec[
         # Broken in Distributions even without autodiff
         DistSpec(() -> KSDist(1), (), 0.5), # `pdf` method not defined
@@ -235,6 +237,8 @@
         DistSpec(VonMises, (1, 1), 1),
     ]
 
+    # Tests that have a `broken` field can be executed but, according to FiniteDifferences,
+    # fail to produce the correct result. These tests can be checked with `@test_broken`.
     multivariate_distributions = DistSpec[
         ## Multivariate discrete distributions
 
@@ -296,7 +300,7 @@
         DistSpec(alpha -> Dirichlet(to_positive(alpha)), (a,), A, to_simplex),
     ]
 
-    # These methods are so broken that they cannot be tested with `@test_broken`
+    # Tests cannot be executed, so cannot be checked with `@test_broken`.
     broken_multivariate_distributions = DistSpec[
         # Dispatch error
         DistSpec((m, A) -> MvNormalCanon(m, to_posdef(A)), (a, A), b),
@@ -313,6 +317,8 @@
         DistSpec(s -> MvNormalCanon(dim, s), (alpha,), A),
     ]
 
+    # Tests that have a `broken` field can be executed but, according to FiniteDifferences,
+    # fail to produce the correct result. These tests can be checked with `@test_broken`.
     matrixvariate_distributions = DistSpec[
         # Matrix x
         DistSpec((n1, n2) -> MatrixBeta(dim, n1, n2), (3.0, 3.0), A, to_beta_mat),
@@ -357,6 +363,7 @@
         ),
     ]
 
+    # Tests cannot be executed, so cannot be checked with `@test_broken`.
     broken_matrixvariate_distributions = DistSpec[
         # Other
         # TODO different tests are broken on different combinations of backends
