@@ -235,6 +235,7 @@
         DistSpec(VonMises, (1, 1), 1),
     ]
 
+    #=
     multivariate_distributions = DistSpec[
         ## Multivariate discrete distributions
 
@@ -373,6 +374,7 @@
             to_posdef,
         ),
     ]
+    =#
 
     @testset "Univariate distributions" begin
         println("\nTesting: Univariate distributions\n")
@@ -382,6 +384,7 @@
         end
     end
 
+    #=
     @testset "Multivariate distributions" begin
         println("\nTesting: Multivariate distributions\n")
 
@@ -538,4 +541,5 @@
             )
         end
     end
+    =#
 end

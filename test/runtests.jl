@@ -12,8 +12,8 @@ using Zygote
 using Random, LinearAlgebra, Test
 
 using Distributions: meanlogdet
-using DistributionsAD: TuringUniform, TuringMvNormal, TuringMvLogNormal,
-    TuringPoissonBinomial
+using DistributionsAD: TuringUniform, #TuringMvNormal, TuringMvLogNormal,
+                       TuringPoissonBinomial
 using ForwardDiff: Dual
 using StatsBase: entropy
 using StatsFuns: binomlogpdf, logsumexp

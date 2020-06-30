@@ -1,4 +1,5 @@
 @testset "others" begin
+    #=
     @testset "TuringWishart" begin
         dim = 3
         A = Matrix{Float64}(I, dim, dim)
@@ -88,6 +89,7 @@
             @test isinf(logpdf(d2, x2)[1])
         end
     end
+    =#
 
     @testset "TuringUniform" begin
         @test logpdf(TuringUniform(), param(0.5)) == 0
@@ -197,6 +199,7 @@
         test_reverse_mode_ad(x->fill(x, 7, 11), randn(rng, 7, 11), randn(rng))
         test_reverse_mode_ad(x->fill(x, 7, 11, 13), rand(rng, 7, 11, 13), randn(rng))
     end
+    #=
     @testset "Tracker, Zygote and ReverseDiff + MvNormal" begin
         rng, N = MersenneTwister(123456), 11
         B = randn(rng, N, N)
@@ -233,4 +236,5 @@
         d = TuringScalMvNormal(m, sigmas[1])
         @test params(d) == (m, sigmas[1])
     end
+    =#
 end
