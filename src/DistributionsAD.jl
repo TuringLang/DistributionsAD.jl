@@ -6,7 +6,7 @@ using PDMats,
       Random, 
       SpecialFunctions,
       StatsFuns,
-      #Compat,
+      Compat,
       Requires
 
 using SpecialFunctions: logabsgamma, digamma

@@ -3,6 +3,7 @@ uuid = "ced4e74d-a319-5a8a-b0ac-84af2272839c"
 version = "0.6.2"
 
 [deps]
+Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
 DiffRules = "b552c78f-8df3-52c6-915a-8e097449b14b"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 FillArrays = "1a297f60-69ca-5386-bcde-b61e274b549b"
@@ -20,6 +21,7 @@ Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
 ZygoteRules = "700de1a5-db45-46bc-99cf-38207098b444"
 
 [compat]
+Compat = "3.6"
 DiffRules = "0.1, 1.0"
 Distributions = "0.23.3"
 FillArrays = "0.8"
