@@ -108,35 +108,28 @@ function test_ad(dist::DistSpec; kwargs...)
         end
     end
 
-    if isempty(θ)
-        # In this case we can only test the gradient with respect to `x`
-        xtest = vectorize(x)
-        ftest = let xorig=x
-            x -> f_allargs(unpack(x, (1,), xorig)...)
-        end
-        test_ad(ftest, xtest, broken; kwargs...)
-    else
-        # For all combinations of distribution parameters `θ`
-        for inds in combinations(2:(length(θ) + 1))
-            # Test only distribution parameters
+    # For all combinations of distribution parameters `θ`
+    for inds in powerset(2:(length(θ) + 1))
+        # Test only distribution parameters
+        if !isempty(inds)
             xtest = mapreduce(vcat, inds) do i
                 vectorize(θ[i - 1])
             end
             ftest = let xorig=x, θorig=θ, inds=inds
                 x -> f_allargs(unpack(x, inds, xorig, θorig...)...)
             end
-            test_ad(ftest, xtest, broken; kwargs...)
+            test_ad(ftest, xtest; kwargs...)
+        end
 
-            # Test derivative with respect to location `x` as well
-            # if the distribution is continuous
-            if Distributions.value_support(typeof(dist)) === Continuous
-                xtest = vcat(vectorize(x), xtest)
-                push!(inds, 1)
-                ftest = let xorig=x, θorig=θ, inds=inds
-                    x -> f_allargs(unpack(x, inds, xorig, θorig...)...)
-                end
-                test_ad(ftest, xtest, broken; kwargs...)
+        # Test derivative with respect to location `x` as well
+        # if the distribution is continuous
+        if Distributions.value_support(typeof(dist)) === Continuous
+            xtest = isempty(inds) ? vectorize(x) : vcat(vectorize(x), xtest)
+            push!(inds, 1)
+            ftest = let xorig=x, θorig=θ, inds=inds
+                x -> f_allargs(unpack(x, inds, xorig, θorig...)...)
             end
+            test_ad(ftest, xtest; kwargs...)
         end
     end
 end

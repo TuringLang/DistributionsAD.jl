@@ -170,20 +170,20 @@ end
 for T in (:TrackedVector, :TrackedMatrix)
     @eval begin
         function Distributions.logpdf(d::MvNormal{<:Any, <:PDMats.ScalMat}, x::$T)
-            logpdf(TuringScalMvNormal(d.μ, d.Σ.value), x)
+            logpdf(TuringScalMvNormal(d.μ, sqrt(d.Σ.value)), x)
         end
         function Distributions.logpdf(d::MvNormal{<:Any, <:PDMats.PDiagMat}, x::$T)
-            logpdf(TuringDiagMvNormal(d.μ, d.Σ.diag), x)
+            logpdf(TuringDiagMvNormal(d.μ, sqrt.(d.Σ.diag)), x)
         end
         function Distributions.logpdf(d::MvNormal{<:Any, <:PDMats.PDMat}, x::$T)
             logpdf(TuringDenseMvNormal(d.μ, d.Σ.chol), x)
         end
         
         function Distributions.logpdf(d::MvLogNormal{<:Any, <:PDMats.ScalMat}, x::$T)
-            logpdf(TuringMvLogNormal(TuringScalMvNormal(d.normal.μ, d.normal.Σ.value)), x)
+            logpdf(TuringMvLogNormal(TuringScalMvNormal(d.normal.μ, sqrt(d.normal.Σ.value))), x)
         end
         function Distributions.logpdf(d::MvLogNormal{<:Any, <:PDMats.PDiagMat}, x::$T)
-            logpdf(TuringMvLogNormal(TuringDiagMvNormal(d.normal.μ, d.normal.Σ.diag)), x)
+            logpdf(TuringMvLogNormal(TuringDiagMvNormal(d.normal.μ, sqrt.(d.normal.Σ.diag))), x)
         end
         function Distributions.logpdf(d::MvLogNormal{<:Any, <:PDMats.PDMat}, x::$T)
             logpdf(TuringMvLogNormal(TuringDenseMvNormal(d.normal.μ, d.normal.Σ.chol)), x)
@@ -406,7 +406,7 @@ for T in (:AbstractVector, :AbstractMatrix)
             x::$T
         )
             return ZygoteRules.pullback(d, x) do d, x
-                logpdf(TuringScalMvNormal(d.μ, d.Σ.value), x)
+                logpdf(TuringScalMvNormal(d.μ, sqrt(d.Σ.value)), x)
             end
         end
         ZygoteRules.@adjoint function Distributions.logpdf(
@@ -414,7 +414,7 @@ for T in (:AbstractVector, :AbstractMatrix)
             x::$T
         )
             return ZygoteRules.pullback(d, x) do d, x
-                logpdf(TuringDiagMvNormal(d.μ, d.Σ.diag), x)
+                logpdf(TuringDiagMvNormal(d.μ, sqrt.(d.Σ.diag)), x)
             end
         end
         ZygoteRules.@adjoint function Distributions.logpdf(
@@ -431,7 +431,9 @@ for T in (:AbstractVector, :AbstractMatrix)
             x::$T
         )
             return ZygoteRules.pullback(d, x) do d, x
-                dist = TuringMvLogNormal(TuringScalMvNormal(d.normal.μ, d.normal.Σ.value))
+                dist = TuringMvLogNormal(
+                    TuringScalMvNormal(d.normal.μ, sqrt(d.normal.Σ.value)),
+                )
                 logpdf(dist, x)
             end
         end
@@ -440,7 +442,9 @@ for T in (:AbstractVector, :AbstractMatrix)
             x::$T
         )
             return ZygoteRules.pullback(d, x) do d, x
-                dist = TuringMvLogNormal(TuringDiagMvNormal(d.normal.μ, d.normal.Σ.diag))
+                dist = TuringMvLogNormal(
+                    TuringDiagMvNormal(d.normal.μ, sqrt.(d.normal.Σ.diag)),
+                )
                 logpdf(dist, x)
             end
         end
