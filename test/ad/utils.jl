@@ -118,7 +118,7 @@ function test_ad(dist::DistSpec; kwargs...)
             ftest = let xorig=x, θorig=θ, inds=inds
                 x -> f_allargs(unpack(x, inds, xorig, θorig...)...)
             end
-            test_ad(ftest, xtest; kwargs...)
+            test_ad(ftest, xtest, broken; kwargs...)
         end
 
         # Test derivative with respect to location `x` as well
@@ -129,7 +129,7 @@ function test_ad(dist::DistSpec; kwargs...)
             ftest = let xorig=x, θorig=θ, inds=inds
                 x -> f_allargs(unpack(x, inds, xorig, θorig...)...)
             end
-            test_ad(ftest, xtest; kwargs...)
+            test_ad(ftest, xtest, broken; kwargs...)
         end
     end
 end
