@@ -1,24 +1,19 @@
 module DistributionsAD
 
 using PDMats, 
-      ForwardDiff, 
       LinearAlgebra, 
       Distributions, 
       Random, 
-      Combinatorics,
       SpecialFunctions,
       StatsFuns,
-      Compat,
+      #Compat,
       Requires
 
-using Tracker: Tracker, TrackedReal, TrackedVector, TrackedMatrix, TrackedArray,
-                TrackedVecOrMat, track, @grad, data
 using SpecialFunctions: logabsgamma, digamma
 using LinearAlgebra: copytri!, AbstractTriangular
 using Distributions: AbstractMvLogNormal, 
                      ContinuousMultivariateDistribution
 using DiffRules, SpecialFunctions, FillArrays
-using ForwardDiff: @define_binary_dual_op # Needed for `eval`ing diffrules here
 using Base.Iterators: drop
 
 import StatsFuns: logsumexp, 
@@ -35,7 +30,6 @@ import Distributions: MvNormal,
                       Binomial,
                       BetaBinomial,
                       Erlang
-import ZygoteRules
 
 export TuringScalMvNormal,
        TuringDiagMvNormal,
@@ -49,14 +43,39 @@ export TuringScalMvNormal,
 
 include("common.jl")
 include("univariate.jl")
+#=
 include("multivariate.jl")
 include("mvcategorical.jl")
 include("matrixvariate.jl")
 include("flatten.jl")
 include("arraydist.jl")
 include("filldist.jl")
-@init @require ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267" begin
-    include("reversediff.jl")
+=#
+function __init__()
+    @require ForwardDiff="f6369f11-7733-5829-9624-2563aa707210" begin
+        using ForwardDiff: @define_binary_dual_op # Needed for `eval`ing diffrules here
+        include("forwarddiff.jl")
+    end
+
+    @require ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267" begin
+        include("reversediff.jl")
+    end
+
+    @require Tracker="9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c" begin
+        using DiffRules
+        using ZygoteRules
+        using SpecialFunctions
+        using LinearAlgebra: AbstractTriangular
+        using Tracker: Tracker, TrackedReal, TrackedVector, TrackedMatrix,
+                       TrackedArray, TrackedVecOrMat, track, @grad, data
+        include("tracker.jl")
+    end
+
+    @require Zygote="e88e6eb3-aa80-5325-afca-941959d7151f" begin
+        using ForwardDiff
+        using Zygote: @adjoint, pullback
+        include("zygote.jl")
+    end
 end
 
 end
