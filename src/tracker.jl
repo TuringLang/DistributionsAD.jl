@@ -173,9 +173,6 @@ SpecialFunctions.logabsgamma(x::TrackedReal) = track(logabsgamma, x)
 @grad function SpecialFunctions.logabsgamma(x::Real)
     return logabsgamma(data(x)), Δ -> (digamma(data(x)) * Δ[1],)
 end
-ZygoteRules.@adjoint function SpecialFunctions.logabsgamma(x::Real)
-    return logabsgamma(x), Δ -> (digamma(x) * Δ[1],)
-end
 
 # isprobvec
 function Distributions.isprobvec(p::TrackedArray{<:Real})
