@@ -3,11 +3,23 @@ using DistributionsAD
 using Combinatorics
 using Distributions
 using FiniteDifferences
-using ForwardDiff
 using PDMats
-using ReverseDiff
-using Tracker
-using Zygote
+
+# Figure out which AD backend to test
+const AD = get(ENV, "AD", "All")
+if AD == "All"
+    @eval using ForwardDiff
+    @eval using ReverseDiff
+    @eval using Tracker
+    @eval using Zygote
+elseif AD == "Zygote"
+    @eval using Zygote
+elseif AD == "ReverseDiff"
+    @eval using ReverseDiff
+elseif AD == "ForwarDiff_Tracker"
+    @eval using ForwardDiff
+    @eval using Tracker
+end
 
 using Random, LinearAlgebra, Test
 

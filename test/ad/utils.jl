@@ -1,6 +1,3 @@
-# Figure out which AD backend to test
-const AD = get(ENV, "AD", "All")
-
 # Struct of distribution, corresponding parameters, and a sample.
 struct DistSpec{VF<:VariateForm,VS<:ValueSupport,F,T,X,G}
     name::Symbol
