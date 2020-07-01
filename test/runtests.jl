@@ -16,9 +16,11 @@ elseif AD == "Zygote"
     @eval using Zygote
 elseif AD == "ReverseDiff"
     @eval using ReverseDiff
-elseif AD == "ForwarDiff_Tracker"
+elseif AD == "ForwardDiff_Tracker"
     @eval using ForwardDiff
     @eval using Tracker
+else
+    error("Unknown AD backend: $AD")
 end
 
 using Random, LinearAlgebra, Test
@@ -26,7 +28,6 @@ using Random, LinearAlgebra, Test
 using Distributions: meanlogdet
 using DistributionsAD: TuringUniform, #TuringMvNormal, TuringMvLogNormal,
                        TuringPoissonBinomial
-using ForwardDiff: Dual
 using StatsBase: entropy
 using StatsFuns: binomlogpdf, logsumexp
 

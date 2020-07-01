@@ -9,7 +9,7 @@ using Distributions
 using PDMats
 
 using Base.Broadcast: BroadcastStyle, ArrayStyle, Broadcasted, broadcasted
-using ForwardDiff: ForwardDiff, Dual
+using ForwardDiff: Dual
 using ..ReverseDiff: SpecialInstruction, value, value!, deriv, track, record!,
                      tape, unseed!, @grad, TrackedReal, TrackedVector,
                      TrackedMatrix, TrackedArray
