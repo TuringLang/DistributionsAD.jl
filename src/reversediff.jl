@@ -5,7 +5,6 @@ export NotTracked
 using LinearAlgebra
 using ..ReverseDiff
 using StaticArrays
-using ZygoteRules
 using Distributions
 using PDMats
 
