@@ -7,7 +7,8 @@ using PDMats,
       SpecialFunctions,
       StatsFuns,
       Compat,
-      Requires
+      Requires,
+      ChainRules
 
 using SpecialFunctions: logabsgamma, digamma
 using LinearAlgebra: copytri!, AbstractTriangular
@@ -63,7 +64,6 @@ function __init__()
 
     @require Tracker="9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c" begin
         using DiffRules
-        using ZygoteRules
         using SpecialFunctions
         using LinearAlgebra: AbstractTriangular
         using .Tracker: Tracker, TrackedReal, TrackedVector, TrackedMatrix,

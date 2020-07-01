@@ -125,18 +125,24 @@ end
 
 turing_chol(A::TrackedMatrix, check) = track(turing_chol, A, check)
 @grad function turing_chol(A::AbstractMatrix, check)
-    C, back = ZygoteRules.pullback(data(A), check) do A, check
-        cholesky(A, check=check)
+    C, dC_pullback = rrule(turing_chol, data(A), check)
+    function back(Δ)
+        _, dC = dC_pullback(Δ)
+        dC = unthunk(dC)
+        (dC, nothing)
     end
-    return (C.factors, C.info), Δ->back((factors=data(Δ[1]),))
+    C, back
 end
 
 symm_turing_chol(A::TrackedMatrix, check, uplo) = track(symm_turing_chol, A, check, uplo)
 @grad function symm_turing_chol(A::AbstractMatrix, check, uplo)
-    C, back = ZygoteRules.pullback(data(A), check, uplo) do A, check, uplo
-        cholesky(Symmetric(A, uplo), check=check)
+    C, dC_pullback = rrule(symm_turing_chol, data(A), check, uplo)
+    function back(Δ)
+        _, dC = dC_pullback(Δ)
+        dC = unthunk(dC)
+        (dC, nothing, nothing)
     end
-    return (C.factors, C.info), Δ->back((factors=data(Δ[1]),))
+    C, back
 end
 
 # Specialised logdet for cholesky to target the triangle directly.
@@ -159,8 +165,12 @@ function zygote_ldiv(A::TrackedMatrix, B::AbstractVecOrMat)
 end
 zygote_ldiv(A::AbstractMatrix, B::TrackedVecOrMat) =  track(zygote_ldiv, A, B)
 @grad function zygote_ldiv(A, B)
-    Y, back = ZygoteRules.pullback(\, data(A), data(B))
-    return Y, Δ->back(data(Δ))
+    Y, dY_pullback = rrule(\, data(A), data(B))
+    function back(Δ)
+        _, dA, dB = dY_pullback(Δ)
+        (unthunk(dA), unthunk(dB))
+    end
+    Y, back
 end
 
 function Base.:\(a::Cholesky{<:TrackedReal, <:TrackedArray}, b::AbstractVecOrMat)
