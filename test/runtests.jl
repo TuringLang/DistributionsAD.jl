@@ -7,20 +7,17 @@ using PDMats
 
 # Figure out which AD backend to test
 const AD = get(ENV, "AD", "All")
-if AD == "All"
+if AD == "All" || AD == "ForwardDiff"
     @eval using ForwardDiff
-    @eval using ReverseDiff
-    @eval using Tracker
+end
+if AD == "All" || AD == "Zygote"
     @eval using Zygote
-elseif AD == "Zygote"
-    @eval using Zygote
-elseif AD == "ReverseDiff"
+end
+if AD == "All" || AD == "ReverseDiff"
     @eval using ReverseDiff
-elseif AD == "ForwardDiff_Tracker"
-    @eval using ForwardDiff
+end
+if AD == "All" || AD == "Tracker"
     @eval using Tracker
-else
-    error("Unknown AD backend: $AD")
 end
 
 using Random, LinearAlgebra, Test
