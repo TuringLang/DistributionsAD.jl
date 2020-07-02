@@ -115,7 +115,7 @@
         @test 1/pi == inv(pi)
     end
 
-    @testset "Others" begin
+    @testset "Cholesky" begin
         A = rand(3, 3)'; A = A + A' + 3I;
         C = cholesky(A; check = true)
         factors, info = DistributionsAD.turing_chol(A, true)
@@ -172,7 +172,7 @@
             end
         end
 
-        if AD == "All" || AD == "ForwardDiff_Tracker"
+        if AD == "All" || AD == "Tracker"
             # Use Tracker to compute reverse-mode sensitivities.
             y_tracker, back_tracker = Tracker.forward(f, x...)
             x̄s_tracker = back_tracker(ȳ)
