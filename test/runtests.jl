@@ -34,6 +34,8 @@ using StatsFuns: binomlogpdf, logsumexp
 const FDM = FiniteDifferences
 const GROUP = get(ENV, "GROUP", "All")
 
+include("PosDef.jl")
+
 if GROUP == "All" || GROUP == "Others"
     include("others.jl")
 end

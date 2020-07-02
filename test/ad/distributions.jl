@@ -13,25 +13,6 @@
     # Create a random number
     alpha = rand()
 
-    # Create positive definite matrix
-    to_posdef(A::AbstractMatrix) = A * A' + I
-    to_posdef_diagonal(a::AbstractVector) = Diagonal(a.^2 .+ 1)
-
-    # Define adjoints for Tracker
-    if AD == "All" || AD == "ForwardDiff_Tracker"
-        @eval begin
-            to_posdef(A::TrackedMatrix) = Tracker.track(to_posdef, A)
-            Tracker.@grad function to_posdef(A::TrackedMatrix)
-                data_A = Tracker.data(A)
-                S = data_A * data_A' + I
-                function pullback(∇)
-                    return ((∇ + ∇') * data_A,)
-                end
-                return S, pullback
-            end
-        end
-    end
-
     # Create matrix `X` such that `X` and `I - X` are positive definite if `A ≠ 0`.
     function to_beta_mat(A)
         S = A * A' + I
@@ -246,53 +227,53 @@
         DistSpec(p -> Multinomial(2, p ./ sum(p)), (fill(0.5, 2),), [2, 0]),
 
         # Vector x
-        DistSpec((m, A) -> MvNormal(m, to_posdef(A)), (a, A), b),
+        DistSpec((m, A) -> MvNormal(m, PosDef.to_posdef(A)), (a, A), b),
         DistSpec(MvNormal, (a, b), c),
-        DistSpec((m, s) -> MvNormal(m, to_posdef_diagonal(s)), (a, b), c),
+        DistSpec((m, s) -> MvNormal(m, PosDef.to_posdef_diagonal(s)), (a, b), c),
         DistSpec(MvNormal, (a, alpha), b),
         DistSpec((m, s) -> MvNormal(m, s^2 * I), (a, alpha), b),
-        DistSpec(A -> MvNormal(to_posdef(A)), (A,), a),
+        DistSpec(A -> MvNormal(PosDef.to_posdef(A)), (A,), a),
         DistSpec(MvNormal, (a,), b),
-        DistSpec(s -> MvNormal(to_posdef_diagonal(s)), (a,), b),
+        DistSpec(s -> MvNormal(PosDef.to_posdef_diagonal(s)), (a,), b),
         DistSpec(s -> MvNormal(dim, s), (alpha,), a),
-        DistSpec((m, A) -> TuringMvNormal(m, to_posdef(A)), (a, A), b),
+        DistSpec((m, A) -> TuringMvNormal(m, PosDef.to_posdef(A)), (a, A), b),
         DistSpec(TuringMvNormal, (a, b), c),
-        DistSpec((m, s) -> TuringMvNormal(m, to_posdef_diagonal(s)), (a, b), c),
+        DistSpec((m, s) -> TuringMvNormal(m, PosDef.to_posdef_diagonal(s)), (a, b), c),
         DistSpec(TuringMvNormal, (a, alpha), b),
         DistSpec((m, s) -> TuringMvNormal(m, s^2 * I), (a, alpha), b),
-        DistSpec(A -> TuringMvNormal(to_posdef(A)), (A,), a),
+        DistSpec(A -> TuringMvNormal(PosDef.to_posdef(A)), (A,), a),
         DistSpec(TuringMvNormal, (a,), b),
-        DistSpec(s -> TuringMvNormal(to_posdef_diagonal(s)), (a,), b),
+        DistSpec(s -> TuringMvNormal(PosDef.to_posdef_diagonal(s)), (a,), b),
         DistSpec(s -> TuringMvNormal(dim, s), (alpha,), a),
-        DistSpec((m, A) -> MvLogNormal(m, to_posdef(A)), (a, A), b, to_positive),
+        DistSpec((m, A) -> MvLogNormal(m, PosDef.to_posdef(A)), (a, A), b, to_positive),
         DistSpec(MvLogNormal, (a, b), c, to_positive),
-        DistSpec((m, s) -> MvLogNormal(m, to_posdef_diagonal(s)), (a, b), c, to_positive),
+        DistSpec((m, s) -> MvLogNormal(m, PosDef.to_posdef_diagonal(s)), (a, b), c, to_positive),
         DistSpec(MvLogNormal, (a, alpha), b, to_positive),
-        DistSpec(A -> MvLogNormal(to_posdef(A)), (A,), a, to_positive),
+        DistSpec(A -> MvLogNormal(PosDef.to_posdef(A)), (A,), a, to_positive),
         DistSpec(MvLogNormal, (a,), b, to_positive),
-        DistSpec(s -> MvLogNormal(to_posdef_diagonal(s)), (a,), b, to_positive),
+        DistSpec(s -> MvLogNormal(PosDef.to_posdef_diagonal(s)), (a,), b, to_positive),
         DistSpec(s -> MvLogNormal(dim, s), (alpha,), a, to_positive),
 
         DistSpec(alpha -> Dirichlet(to_positive(alpha)), (a,), b, to_simplex),
 
         # Matrix case
         DistSpec(MvNormal, (a, b), A),
-        DistSpec((m, s) -> MvNormal(m, to_posdef_diagonal(s)), (a, b), A),
+        DistSpec((m, s) -> MvNormal(m, PosDef.to_posdef_diagonal(s)), (a, b), A),
         DistSpec(MvNormal, (a, alpha), A),
         DistSpec((m, s) -> MvNormal(m, s^2 * I), (a, alpha), A),
         DistSpec(MvNormal, (a,), A),
-        DistSpec(s -> MvNormal(to_posdef_diagonal(s)), (a,), A),
+        DistSpec(s -> MvNormal(PosDef.to_posdef_diagonal(s)), (a,), A),
         DistSpec(s -> MvNormal(dim, s), (alpha,), A),
-        DistSpec((m, A) -> MvNormal(m, to_posdef(A)), (a, A), B),
-        DistSpec(A -> MvNormal(to_posdef(A)), (A,), B),
+        DistSpec((m, A) -> MvNormal(m, PosDef.to_posdef(A)), (a, A), B),
+        DistSpec(A -> MvNormal(PosDef.to_posdef(A)), (A,), B),
         DistSpec(MvLogNormal, (a, b), A, to_positive),
-        DistSpec((m, s) -> MvLogNormal(m, to_posdef_diagonal(s)), (a, b), A, to_positive),
+        DistSpec((m, s) -> MvLogNormal(m, PosDef.to_posdef_diagonal(s)), (a, b), A, to_positive),
         DistSpec(MvLogNormal, (a, alpha), A, to_positive),
         DistSpec(MvLogNormal, (a,), A, to_positive),
-        DistSpec(s -> MvLogNormal(to_posdef_diagonal(s)), (a,), A, to_positive),
+        DistSpec(s -> MvLogNormal(PosDef.to_posdef_diagonal(s)), (a,), A, to_positive),
         DistSpec(s -> MvLogNormal(dim, s), (alpha,), A, to_positive),
-        DistSpec((m, A) -> MvLogNormal(m, to_posdef(A)), (a, A), B, to_positive),
-        DistSpec(A -> MvLogNormal(to_posdef(A)), (A,), B, to_positive),
+        DistSpec((m, A) -> MvLogNormal(m, PosDef.to_posdef(A)), (a, A), B, to_positive),
+        DistSpec(A -> MvLogNormal(PosDef.to_posdef(A)), (A,), B, to_positive),
 
         DistSpec(alpha -> Dirichlet(to_positive(alpha)), (a,), A, to_simplex),
     ]
@@ -300,16 +281,16 @@
     broken_multivariate_distributions = DistSpec[
         DistSpec(p -> Multinomial(2, p ./ sum(p)), (fill(0.5, 2),), [2 1; 0 1]),
         # Dispatch error
-        DistSpec((m, A) -> MvNormalCanon(m, to_posdef(A)), (a, A), b),
+        DistSpec((m, A) -> MvNormalCanon(m, PosDef.to_posdef(A)), (a, A), b),
         DistSpec(MvNormalCanon, (a, b), c),
         DistSpec(MvNormalCanon, (a, alpha), b),
-        DistSpec(A -> MvNormalCanon(to_posdef(A)), (A,), a),
+        DistSpec(A -> MvNormalCanon(PosDef.to_posdef(A)), (A,), a),
         DistSpec(MvNormalCanon, (a,), b),
         DistSpec(s -> MvNormalCanon(dim, s), (alpha,), a),
-        DistSpec((m, A) -> MvNormalCanon(m, to_posdef(A)), (a, A), B),
+        DistSpec((m, A) -> MvNormalCanon(m, PosDef.to_posdef(A)), (a, A), B),
         DistSpec(MvNormalCanon, (a, b), A),
         DistSpec(MvNormalCanon, (a, alpha), A),
-        DistSpec(A -> MvNormalCanon(to_posdef(A)), (A,), B),
+        DistSpec(A -> MvNormalCanon(PosDef.to_posdef(A)), (A,), B),
         DistSpec(MvNormalCanon, (a,), A),
         DistSpec(s -> MvNormalCanon(dim, s), (alpha,), A),
     ]
