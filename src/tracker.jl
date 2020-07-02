@@ -151,7 +151,7 @@ zygote_ldiv(A::AbstractMatrix, B::TrackedVecOrMat) =  track(zygote_ldiv, A, B)
 @grad function zygote_ldiv(A, B)
     Y, dY_pullback = rrule(\, data(A), data(B))
     function back(Δ)
-        _, dA, dB = dY_pullback(Δ)
+        _, dA, dB = dY_pullback(data(Δ))
         (unthunk(dA), unthunk(dB))
     end
     Y, back
@@ -317,4 +317,179 @@ function Distributions.DiscreteNonParametric{T,P,Ts,Ps}(
 ) where {T<:Real,P<:Real,Ts<:AbstractVector{T},Ps<:TrackedArray{P, 1, <:SubArray{P, 1}}}
     cps = ps[:]
     return DiscreteNonParametric{T,P,Ts,typeof(cps)}(vs, cps; check_args = check_args)
+end
+
+
+## Dirichlet ##
+
+Distributions.Dirichlet(alpha::TrackedVector) = TuringDirichlet(alpha)
+Distributions.Dirichlet(d::Integer, alpha::TrackedReal) = TuringDirichlet(d, alpha)
+
+function Distributions.logpdf(d::Dirichlet{T}, x::TrackedVecOrMat) where {T}
+    TV = typeof(d.alpha)
+    logpdf(TuringDirichlet{T, TV}(d.alpha, d.alpha0, d.lmnB), x)
+end
+
+for T in (:TrackedVector, :TrackedMatrix)
+    @eval begin
+        function Distributions.logpdf(d::MvNormal{<:Any, <:PDMats.ScalMat}, x::$T)
+            logpdf(TuringScalMvNormal(d.μ, sqrt(d.Σ.value)), x)
+        end
+        function Distributions.logpdf(d::MvNormal{<:Any, <:PDMats.PDiagMat}, x::$T)
+            logpdf(TuringDiagMvNormal(d.μ, sqrt.(d.Σ.diag)), x)
+        end
+        function Distributions.logpdf(d::MvNormal{<:Any, <:PDMats.PDMat}, x::$T)
+            logpdf(TuringDenseMvNormal(d.μ, d.Σ.chol), x)
+        end
+        
+        function Distributions.logpdf(d::MvLogNormal{<:Any, <:PDMats.ScalMat}, x::$T)
+            logpdf(TuringMvLogNormal(TuringScalMvNormal(d.normal.μ, sqrt(d.normal.Σ.value))), x)
+        end
+        function Distributions.logpdf(d::MvLogNormal{<:Any, <:PDMats.PDiagMat}, x::$T)
+            logpdf(TuringMvLogNormal(TuringDiagMvNormal(d.normal.μ, sqrt.(d.normal.Σ.diag))), x)
+        end
+        function Distributions.logpdf(d::MvLogNormal{<:Any, <:PDMats.PDMat}, x::$T)
+            logpdf(TuringMvLogNormal(TuringDenseMvNormal(d.normal.μ, d.normal.Σ.chol)), x)
+        end
+    end
+end
+
+# zero mean, dense covariance
+MvNormal(A::TrackedMatrix) = TuringMvNormal(A)
+
+# zero mean, diagonal covariance
+MvNormal(σ::TrackedVector) = TuringMvNormal(σ)
+
+# dense mean, dense covariance
+MvNormal(m::TrackedVector{<:Real}, A::TrackedMatrix{<:Real}) = TuringMvNormal(m, A)
+MvNormal(m::TrackedVector{<:Real}, A::Matrix{<:Real}) = TuringMvNormal(m, A)
+MvNormal(m::AbstractVector{<:Real}, A::TrackedMatrix{<:Real}) = TuringMvNormal(m, A)
+
+# dense mean, diagonal covariance
+function MvNormal(
+    m::TrackedVector{<:Real},
+    D::Diagonal{T, <:TrackedVector{T}} where {T<:Real},
+)
+    return TuringMvNormal(m, D)
+end
+function MvNormal(
+    m::AbstractVector{<:Real},
+    D::Diagonal{T, <:TrackedVector{T}} where {T<:Real},
+)
+    return TuringMvNormal(m, D)
+end
+function MvNormal(
+    m::TrackedVector{<:Real},
+    D::Diagonal{T, <:AbstractVector{T}} where {T<:Real},
+)
+    return TuringMvNormal(m, D)
+end
+
+# dense mean, diagonal covariance
+MvNormal(m::TrackedVector{<:Real}, σ::TrackedVector{<:Real}) = TuringMvNormal(m, σ)
+MvNormal(m::TrackedVector{<:Real}, σ::AbstractVector{<:Real}) = TuringMvNormal(m, σ)
+MvNormal(m::TrackedVector{<:Real}, σ::Vector{<:Real}) = TuringMvNormal(m, σ)
+MvNormal(m::AbstractVector{<:Real}, σ::TrackedVector{<:Real}) = TuringMvNormal(m, σ)
+
+# dense mean, constant variance
+MvNormal(m::TrackedVector{<:Real}, σ::TrackedReal) = TuringMvNormal(m, σ)
+MvNormal(m::TrackedVector{<:Real}, σ::Real) = TuringMvNormal(m, σ)
+MvNormal(m::AbstractVector{<:Real}, σ::TrackedReal) = TuringMvNormal(m, σ)
+
+# dense mean, constant variance
+function MvNormal(m::TrackedVector{<:Real}, A::UniformScaling{<:TrackedReal})
+    return TuringMvNormal(m, A)
+end
+function MvNormal(m::AbstractVector{<:Real}, A::UniformScaling{<:TrackedReal})
+    return TuringMvNormal(m, A)
+end
+function MvNormal(m::TrackedVector{<:Real}, A::UniformScaling{<:Real})
+    return TuringMvNormal(m, A)
+end
+
+# zero mean,, constant variance
+MvNormal(d::Int, σ::TrackedReal{<:Real}) = TuringMvNormal(d, σ)
+
+for T in (:TrackedVector, :TrackedMatrix)
+    @eval Distributions.logpdf(d::TuringMvLogNormal, x::$T) = _logpdf(d, x)
+end
+
+# zero mean, dense covariance
+MvLogNormal(A::TrackedMatrix) = TuringMvLogNormal(TuringMvNormal(A))
+
+# zero mean, diagonal covariance
+MvLogNormal(σ::TrackedVector) = TuringMvLogNormal(TuringMvNormal(σ))
+
+# dense mean, dense covariance
+MvLogNormal(m::TrackedVector{<:Real}, A::TrackedMatrix{<:Real}) = TuringMvLogNormal(TuringMvNormal(m, A))
+MvLogNormal(m::TrackedVector{<:Real}, A::Matrix{<:Real}) = TuringMvLogNormal(TuringMvNormal(m, A))
+MvLogNormal(m::AbstractVector{<:Real}, A::TrackedMatrix{<:Real}) = TuringMvLogNormal(TuringMvNormal(m, A))
+
+
+## MvLogNormal ##
+
+# dense mean, diagonal covariance
+function MvLogNormal(
+    m::TrackedVector{<:Real},
+    D::Diagonal{T, <:TrackedVector{T}} where {T<:Real},
+)
+    return TuringMvLogNormal(TuringMvNormal(m, D))
+end
+function MvLogNormal(
+    m::AbstractVector{<:Real},
+    D::Diagonal{T, <:TrackedVector{T}} where {T<:Real},
+)
+    return TuringMvLogNormal(TuringMvNormal(m, D))
+end
+function MvLogNormal(
+    m::TrackedVector{<:Real},
+    D::Diagonal{T, <:AbstractVector{T}} where {T<:Real},
+)
+    return TuringMvLogNormal(TuringMvNormal(m, D))
+end
+
+# dense mean, diagonal covariance
+MvLogNormal(m::TrackedVector{<:Real}, σ::TrackedVector{<:Real}) = TuringMvLogNormal(TuringMvNormal(m, σ))
+MvLogNormal(m::TrackedVector{<:Real}, σ::AbstractVector{<:Real}) = TuringMvLogNormal(TuringMvNormal(m, σ))
+MvLogNormal(m::TrackedVector{<:Real}, σ::Vector{<:Real}) = TuringMvLogNormal(TuringMvNormal(m, σ))
+MvLogNormal(m::AbstractVector{<:Real}, σ::TrackedVector{<:Real}) = TuringMvLogNormal(TuringMvNormal(m, σ))
+
+# dense mean, constant variance
+function MvLogNormal(m::TrackedVector{<:Real}, σ::TrackedReal)
+    return TuringMvLogNormal(TuringMvNormal(m, σ))
+end
+function MvLogNormal(m::TrackedVector{<:Real}, σ::Real)
+    return TuringMvLogNormal(TuringMvNormal(m, σ))
+end
+function MvLogNormal(m::AbstractVector{<:Real}, σ::TrackedReal)
+    return TuringMvLogNormal(TuringMvNormal(m, σ))
+end
+
+# dense mean, constant variance
+function MvLogNormal(m::TrackedVector{<:Real}, A::UniformScaling{<:TrackedReal})
+    return TuringMvLogNormal(TuringMvNormal(m, A))
+end
+function MvLogNormal(m::AbstractVector{<:Real}, A::UniformScaling{<:TrackedReal})
+    return TuringMvLogNormal(TuringMvNormal(m, A))
+end
+function MvLogNormal(m::TrackedVector{<:Real}, A::UniformScaling{<:Real})
+    return TuringMvLogNormal(TuringMvNormal(m, A))
+end
+
+# zero mean,, constant variance
+MvLogNormal(d::Int, σ::TrackedReal{<:Real}) = TuringMvLogNormal(TuringMvNormal(d, σ))
+
+
+## MvCategorical ##
+
+_mv_categorical_logpdf(ps::Tracker.TrackedMatrix, x) = Tracker.track(_mv_categorical_logpdf, ps, x)
+Tracker.@grad function _mv_categorical_logpdf(ps, x)
+    ps_data = Tracker.data(ps)
+    probs = view(ps_data, x, :)
+    ps_grad = zero(ps_data)
+    sum(log, probs), Δ -> begin
+        ps_grad .= 0
+        ps_grad[x,:] .= Δ ./ probs
+        return (ps_grad, nothing)
+    end
 end

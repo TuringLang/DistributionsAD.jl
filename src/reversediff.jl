@@ -7,6 +7,7 @@ using ..ReverseDiff
 using StaticArrays
 using Distributions
 using PDMats
+using ForwardDiff
 
 using Base.Broadcast: BroadcastStyle, ArrayStyle, Broadcasted, broadcasted
 using ForwardDiff: Dual
@@ -34,15 +35,15 @@ import Distributions: logpdf,
                       PoissonBinomial,
                       isprobvec
 
-using ..DistributionsAD: TuringPoissonBinomial
-#                                      TuringMvNormal,
-#                                      TuringMvLogNormal,
-#                                      TuringWishart,
-#                                      TuringInverseWishart,
-#                                      TuringDirichlet,
-#                                      TuringScalMvNormal,
-#                                      TuringDiagMvNormal,
-#                                      TuringDenseMvNormal
+using ..DistributionsAD: TuringPoissonBinomial,
+                         TuringMvNormal,
+                         TuringMvLogNormal,
+                         #TuringWishart,
+                         #TuringInverseWishart,
+                         TuringDirichlet,
+                         TuringScalMvNormal,
+                         TuringDiagMvNormal,
+                         TuringDenseMvNormal
 
 include("reversediffx.jl")
 
@@ -76,7 +77,6 @@ function Base.maximum(d::LocationScale{T}) where {T <: TrackedReal}
     end
 end
 
-#=
 for T in (:TrackedVector, :TrackedMatrix)
     @eval begin
         function logpdf(d::MvNormal{<:Any, <:PDMats.ScalMat}, x::$T)
@@ -255,6 +255,7 @@ function logpdf(d::MatrixBeta, X::AbstractArray{<:TrackedMatrix{<:Real}})
     return map(x -> logpdf(d, x), X)
 end
 
+#=
 Wishart(df::TrackedReal, S::Matrix{<:Real}) = TuringWishart(df, S)
 Wishart(df::TrackedReal, S::AbstractMatrix{<:Real}) = TuringWishart(df, S)
 Wishart(df::Real, S::TrackedMatrix) = TuringWishart(df, S)
@@ -278,6 +279,7 @@ end
 function logpdf(d::InverseWishart, X::AbstractArray{<:TrackedMatrix})
     return logpdf(TuringInverseWishart(d), X)
 end
+=#
 
 # isprobvec
 
@@ -301,6 +303,5 @@ _mv_categorical_logpdf(ps::TrackedMatrix, x) = track(_mv_categorical_logpdf, ps,
         return (ps_grad, nothing)
     end
 end
-=#
 
 end

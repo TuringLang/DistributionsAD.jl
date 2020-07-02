@@ -37,17 +37,17 @@ export TuringScalMvNormal,
        TuringDiagMvNormal,
        TuringDenseMvNormal,
        TuringMvLogNormal,
-       TuringPoissonBinomial,
-       TuringWishart,
-       TuringInverseWishart,
-       arraydist,
-       filldist
+       TuringPoissonBinomial
+       #TuringWishart,
+       #TuringInverseWishart,
+       #arraydist,
+       #filldist
 
 include("common.jl")
 include("univariate.jl")
-#=
 include("multivariate.jl")
 include("mvcategorical.jl")
+#=
 include("matrixvariate.jl")
 include("flatten.jl")
 include("arraydist.jl")
