@@ -1,6 +1,6 @@
 # Zygote fill has issues with non-numbers
-@adjoint function fill(x::T, dims...) where {T}
-    return pullback(x, dims...) do x, dims...
+ZygoteRules.@adjoint function fill(x::T, dims...) where {T}
+    return ZygoteRules.pullback(x, dims...) do x, dims...
         return reshape([x for i in 1:prod(dims)], dims)
     end
 end
@@ -8,7 +8,7 @@ end
 
 ## Uniform ##
 
-@adjoint function uniformlogpdf(a, b, x)
+ZygoteRules.@adjoint function uniformlogpdf(a, b, x)
     diff = b - a
     T = typeof(diff)
     if a <= x <= b && a < b
@@ -21,8 +21,8 @@ end
     end
 end
 
-@adjoint function Distributions.Uniform(args...)
-    return pullback(TuringUniform, args...)
+ZygoteRules.@adjoint function Distributions.Uniform(args...)
+    return ZygoteRules.pullback(TuringUniform, args...)
 end
 
 
@@ -35,7 +35,7 @@ function _betalogpdfgrad(α, β, x)
     dx = (α - 1)/x + (1 - β)/(1 - x)
     return (dα, dβ, dx)
 end
-@adjoint function betalogpdf(α::Real, β::Real, x::Number)
+ZygoteRules.@adjoint function betalogpdf(α::Real, β::Real, x::Number)
     return betalogpdf(α, β, x), Δ -> (Δ .* _betalogpdfgrad(α, β, x))
 end
 
@@ -48,7 +48,7 @@ function _gammalogpdfgrad(k, θ, x)
     dx = (k - 1)/x - 1/θ
     return (dk, dθ, dx)
 end
-@adjoint function gammalogpdf(k::Real, θ::Real, x::Number)
+ZygoteRules.@adjoint function gammalogpdf(k::Real, θ::Real, x::Number)
     return gammalogpdf(k, θ, x), Δ -> (Δ .* _gammalogpdfgrad(k, θ, x))
 end    
 
@@ -62,7 +62,7 @@ function _chisqlogpdfgrad(k, x)
     dx = (hk - 1)/x - one(hk)/2
     return (dk, dx)
 end
-@adjoint function chisqlogpdf(k::Real, x::Number)
+ZygoteRules.@adjoint function chisqlogpdf(k::Real, x::Number)
     return chisqlogpdf(k, x), Δ -> (Δ .* _chisqlogpdfgrad(k, x))
 end    
 
@@ -79,7 +79,7 @@ function _fdistlogpdfgrad(v1, v2, x)
     dx = v1 / 2 * (1 / x - temp3) - 1 / x
     return (dv1, dv2, dx)
 end
-@adjoint function fdistlogpdf(v1::Real, v2::Real, x::Number)
+ZygoteRules.@adjoint function fdistlogpdf(v1::Real, v2::Real, x::Number)
     return fdistlogpdf(v1, v2, x), Δ -> (Δ .* _fdistlogpdfgrad(v1, v2, x))
 end
 
@@ -90,21 +90,21 @@ function _tdistlogpdfgrad(v, x)
     dx = -x * (v + 1) / (v + x^2)
     return (dv, dx)
 end
-@adjoint function tdistlogpdf(v::Real, x::Number)
+ZygoteRules.@adjoint function tdistlogpdf(v::Real, x::Number)
     return tdistlogpdf(v, x), Δ -> (Δ .* _tdistlogpdfgrad(v, x))
 end
 
 
 ## Binomial ##
 
-@adjoint function binomlogpdf(n::Int, p::Real, x::Int)
+ZygoteRules.@adjoint function binomlogpdf(n::Int, p::Real, x::Int)
     return binomlogpdf(n, p, x),
         Δ->(nothing, Δ * (x / p - (n - x) / (1 - p)), nothing)
 end
 
 ## Poisson ##
 
-@adjoint function poislogpdf(v::Real, x::Int)
+ZygoteRules.@adjoint function poislogpdf(v::Real, x::Int)
     return poislogpdf(v, x),
         Δ->(Δ * (x/v - 1), nothing)
 end
@@ -113,6 +113,6 @@ end
 ## PoissonBinomial ##
 
 # FIXME: This is inefficient, replace with the commented code below once Zygote supports it.
-@adjoint function poissonbinomial_pdf_fft(x::AbstractArray{T}) where T<:Real
+ZygoteRules.@adjoint function poissonbinomial_pdf_fft(x::AbstractArray{T}) where T<:Real
     error("The adjoint of poissonbinomial_pdf_fft needs ForwardDiff. `using ForwardDiff` should fix this error.")
 end

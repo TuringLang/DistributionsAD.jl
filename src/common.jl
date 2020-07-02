@@ -7,8 +7,8 @@ end
 function ChainRules.rrule(::typeof(turing_chol), A::AbstractMatrix, check)
     factors, info = turing_chol(A, check)
     function pullback(Ȳ)
-        #f̄, _ = Ȳ
         f̄ = Ȳ[1]
+        #f̄ = data(Ȳ[1])
         ∂X = @thunk(ChainRules.chol_blocked_rev(f̄, factors, 25, true))
         return (ChainRules.NO_FIELDS, ∂X, ChainRules.DoesNotExist)
     end
@@ -31,8 +31,8 @@ end
 function ChainRules.rrule(::typeof(symm_turing_chol), A::AbstractMatrix, check, uplo)
     factors, info = symm_turing_chol(A, check, uplo)
     function pullback(Ȳ)
-        #f̄, _ = Ȳ
         f̄ = Ȳ[1]
+        #f̄ = data(Ȳ[1])
         ∂X = @thunk(ChainRules.chol_blocked_rev(f̄, factors, 25, true))
         return (ChainRules.NO_FIELDS, ∂X, ChainRules.DoesNotExist)
     end

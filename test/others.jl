@@ -35,6 +35,7 @@
         @test insupport(dIW3, xiw)
         @test logpdf(dIW1, xiw) == logpdf(dIW2, xiw) == logpdf(dIW3, xiw)
     end
+    =#
 
     @testset "TuringMvNormal" begin
         @testset "$TD" for TD in [TuringDenseMvNormal, TuringDiagMvNormal, TuringScalMvNormal]
@@ -89,7 +90,6 @@
             @test isinf(logpdf(d2, x2)[1])
         end
     end
-    =#
 
     @testset "TuringUniform" begin
         @test logpdf(TuringUniform(), 0.5) == 0
@@ -217,15 +217,14 @@
         test_reverse_mode_ad(x->fill(x, 7, 11), randn(rng, 7, 11), randn(rng))
         test_reverse_mode_ad(x->fill(x, 7, 11, 13), rand(rng, 7, 11, 13), randn(rng))
     end
-    #=
     @testset "Tracker, Zygote and ReverseDiff + MvNormal" begin
         rng, N = MersenneTwister(123456), 11
         B = randn(rng, N, N)
         m, A = randn(rng, N), B' * B + I
 
         # Generate from the TuringDenseMvNormal
-        d, back = Tracker.forward(TuringDenseMvNormal, m, A)
-        x = Tracker.data(rand(d))
+        d = TuringDenseMvNormal(m, A)
+        x = rand(d)
 
         # Check that the logpdf agrees with MvNormal.
         d_ref = MvNormal(m, PDMat(A))
@@ -254,5 +253,4 @@
         d = TuringScalMvNormal(m, sigmas[1])
         @test params(d) == (m, sigmas[1])
     end
-    =#
 end

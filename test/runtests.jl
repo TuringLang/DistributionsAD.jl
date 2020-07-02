@@ -26,7 +26,7 @@ end
 using Random, LinearAlgebra, Test
 
 using Distributions: meanlogdet
-using DistributionsAD: TuringUniform, #TuringMvNormal, TuringMvLogNormal,
+using DistributionsAD: TuringUniform, TuringMvNormal, TuringMvLogNormal,
                        TuringPoissonBinomial
 using StatsBase: entropy
 using StatsFuns: binomlogpdf, logsumexp

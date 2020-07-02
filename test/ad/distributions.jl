@@ -239,7 +239,6 @@
         DistSpec(VonMises, (1, 1), 1),
     ]
 
-    #=
     multivariate_distributions = DistSpec[
         ## Multivariate discrete distributions
 
@@ -315,6 +314,7 @@
         DistSpec(s -> MvNormalCanon(dim, s), (alpha,), A),
     ]
 
+    #=
     matrixvariate_distributions = DistSpec[
         # Matrix x
         DistSpec((n1, n2) -> MatrixBeta(dim, n1, n2), (3.0, 3.0), A, to_beta_mat),
@@ -388,7 +388,6 @@
         end
     end
 
-    #=
     @testset "Multivariate distributions" begin
         println("\nTesting: Multivariate distributions\n")
 
@@ -396,6 +395,7 @@
             test_ad(d)
         end
 
+        #=
         # Test `filldist` and `arraydist` distributions of univariate distributions
         n = 2 # always use two distributions
         for d in univariate_distributions
@@ -431,8 +431,10 @@
                 )
             end
         end
+        =#
     end
 
+    #=
     @testset "Matrixvariate distributions" begin
         println("\nTesting: Matrixvariate distributions\n")
 

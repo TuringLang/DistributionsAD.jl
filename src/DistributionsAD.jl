@@ -8,6 +8,7 @@ using PDMats,
       StatsFuns,
       Compat,
       Requires,
+      ZygoteRules,
       ChainRules
 
 using SpecialFunctions: logabsgamma, digamma
@@ -16,7 +17,6 @@ using Distributions: AbstractMvLogNormal,
                      ContinuousMultivariateDistribution
 using DiffRules, SpecialFunctions, FillArrays
 using Base.Iterators: drop
-using ZygoteRules: @adjoint, pullback
 
 import StatsFuns: logsumexp, 
                   binomlogpdf, 
