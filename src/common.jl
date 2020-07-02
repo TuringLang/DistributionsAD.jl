@@ -1,3 +1,14 @@
+if VERSION < v"1.2"
+    Base.inv(::Irrational{:π}) = 1/π
+end
+
+# Zygote fill has issues with non-numbers
+ZygoteRules.@adjoint function fill(x::T, dims...) where {T}
+    return ZygoteRules.pullback(x, dims...) do x, dims...
+        return reshape([x for i in 1:prod(dims)], dims)
+    end
+end
+
 ## Linear Algebra ##
 
 function turing_chol(A::AbstractMatrix, check)
