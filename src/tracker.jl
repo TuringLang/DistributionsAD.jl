@@ -124,10 +124,16 @@ function LinearAlgebra.cholesky(A::Symmetric{<:Any, <:TrackedMatrix}; check=true
 end
 
 turing_chol(A::TrackedMatrix, check) = track(turing_chol, A, check)
-@grad turing_chol(A::AbstractMatrix, check) = DistributionsAD.turing_chol_back(data(A),check)
+@grad function turing_chol(A::AbstractMatrix, check)
+    Y, back = DistributionsAD.turing_chol_back(data(A),check)
+    Y, Δ->back(data.(Δ))
+end
 
 symm_turing_chol(A::TrackedMatrix, check, uplo) = track(symm_turing_chol, A, check, uplo)
-@grad symm_turing_chol(A::AbstractMatrix, check, uplo) = DistributionsAD.symm_turing_chol_back(data(A),check,uplo)
+@grad function symm_turing_chol(A::AbstractMatrix, check, uplo)
+    Y, back = DistributionsAD.symm_turing_chol_back(data(A),check,uplo)
+    Y, Δ->back(data.(Δ))
+end
 
 # Specialised logdet for cholesky to target the triangle directly.
 logdet_chol_tri(U::AbstractMatrix) = 2 * sum(log, U[diagind(U)])
