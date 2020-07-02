@@ -39,24 +39,22 @@ export TuringScalMvNormal,
        TuringMvLogNormal,
        TuringPoissonBinomial,
        TuringWishart,
-       TuringInverseWishart
-       #arraydist,
-       #filldist
+       TuringInverseWishart,
+       arraydist,
+       filldist
 
 include("common.jl")
 include("univariate.jl")
 include("multivariate.jl")
 include("mvcategorical.jl")
 include("matrixvariate.jl")
-#=
 include("flatten.jl")
 include("arraydist.jl")
 include("filldist.jl")
-=#
 
 include("zygote.jl")
 
-function __init__()
+@init begin
     @require ForwardDiff="f6369f11-7733-5829-9624-2563aa707210" begin
         using .ForwardDiff: @define_binary_dual_op # Needed for `eval`ing diffrules here
         include("forwarddiff.jl")

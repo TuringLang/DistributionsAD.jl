@@ -388,7 +388,6 @@
         for d in multivariate_distributions
             test_ad(d)
         end
-        #=
 
         # Test `filldist` and `arraydist` distributions of univariate distributions
         n = 2 # always use two distributions
@@ -437,7 +436,6 @@
                 )
             end
         end
-        =#
     end
 
     @testset "Matrixvariate distributions" begin
@@ -447,7 +445,6 @@
             test_ad(d)
         end
 
-    #=
         # Test `filldist` and `arraydist` distributions of univariate distributions
         n = (2, 2) # always use 2 x 2 distributions
         for d in univariate_distributions
@@ -580,6 +577,5 @@
                 )
             )
         end
-    =#
     end
 end

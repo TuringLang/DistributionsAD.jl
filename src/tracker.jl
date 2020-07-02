@@ -1,6 +1,8 @@
 ## Generic ##
 
 Tracker.dual(x::Bool, p) = x
+Tracker.dual(x::Int, p) = x
+
 Base.prevfloat(r::TrackedReal) = track(prevfloat, r)
 @grad function prevfloat(r::Real)
     prevfloat(data(r)), Δ -> Δ
