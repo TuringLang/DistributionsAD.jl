@@ -52,6 +52,8 @@ include("flatten.jl")
 include("arraydist.jl")
 include("filldist.jl")
 
+include("zygote.jl")
+
 @init begin
     @require ForwardDiff="f6369f11-7733-5829-9624-2563aa707210" begin
         using .ForwardDiff: @define_binary_dual_op # Needed for `eval`ing diffrules here

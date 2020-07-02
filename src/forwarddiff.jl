@@ -54,9 +54,3 @@ function nbinomlogpdf(r::ForwardDiff.Dual{T}, p::Real, k::Int) where {T}
     Δ_r = ForwardDiff.partials(r) * _nbinomlogpdf_grad_1(val_r, p, k)
     return FD(nbinomlogpdf(val_r, p, k),  Δ_r)
 end
-
-## ForwardDiff broadcasting support ##
-
-function Distributions.logpdf(d::DiscreteUnivariateDistribution, k::ForwardDiff.Dual)
-    return logpdf(d, convert(Integer, ForwardDiff.value(k)))
-end
