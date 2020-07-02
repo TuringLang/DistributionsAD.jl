@@ -1,5 +1,4 @@
 @testset "others" begin
-    #=
     @testset "TuringWishart" begin
         dim = 3
         A = Matrix{Float64}(I, dim, dim)
@@ -35,7 +34,6 @@
         @test insupport(dIW3, xiw)
         @test logpdf(dIW1, xiw) == logpdf(dIW2, xiw) == logpdf(dIW3, xiw)
     end
-    =#
 
     @testset "TuringMvNormal" begin
         @testset "$TD" for TD in [TuringDenseMvNormal, TuringDiagMvNormal, TuringScalMvNormal]

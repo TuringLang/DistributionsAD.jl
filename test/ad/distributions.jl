@@ -302,7 +302,6 @@
         DistSpec(s -> MvNormalCanon(dim, s), (alpha,), A),
     ]
 
-    #=
     # Tests that have a `broken` field can be executed but, according to FiniteDifferences,
     # fail to produce the correct result. These tests can be checked with `@test_broken`.
     matrixvariate_distributions = DistSpec[
@@ -374,7 +373,6 @@
             to_posdef,
         ),
     ]
-    =#
 
     @testset "Univariate distributions" begin
         println("\nTesting: Univariate distributions\n")
@@ -390,8 +388,8 @@
         for d in multivariate_distributions
             test_ad(d)
         end
-
         #=
+
         # Test `filldist` and `arraydist` distributions of univariate distributions
         n = 2 # always use two distributions
         for d in univariate_distributions
@@ -442,7 +440,6 @@
         =#
     end
 
-    #=
     @testset "Matrixvariate distributions" begin
         println("\nTesting: Matrixvariate distributions\n")
 
@@ -450,6 +447,7 @@
             test_ad(d)
         end
 
+    #=
         # Test `filldist` and `arraydist` distributions of univariate distributions
         n = (2, 2) # always use 2 x 2 distributions
         for d in univariate_distributions
@@ -582,6 +580,6 @@
                 )
             )
         end
-    end
     =#
+    end
 end

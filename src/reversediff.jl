@@ -38,8 +38,8 @@ import Distributions: logpdf,
 using ..DistributionsAD: TuringPoissonBinomial,
                          TuringMvNormal,
                          TuringMvLogNormal,
-                         #TuringWishart,
-                         #TuringInverseWishart,
+                         TuringWishart,
+                         TuringInverseWishart,
                          TuringDirichlet,
                          TuringScalMvNormal,
                          TuringDiagMvNormal,
@@ -255,7 +255,6 @@ function logpdf(d::MatrixBeta, X::AbstractArray{<:TrackedMatrix{<:Real}})
     return map(x -> logpdf(d, x), X)
 end
 
-#=
 Wishart(df::TrackedReal, S::Matrix{<:Real}) = TuringWishart(df, S)
 Wishart(df::TrackedReal, S::AbstractMatrix{<:Real}) = TuringWishart(df, S)
 Wishart(df::Real, S::TrackedMatrix) = TuringWishart(df, S)
@@ -279,7 +278,6 @@ end
 function logpdf(d::InverseWishart, X::AbstractArray{<:TrackedMatrix})
     return logpdf(TuringInverseWishart(d), X)
 end
-=#
 
 # isprobvec
 
