@@ -112,7 +112,8 @@ end
 
 ## PoissonBinomial ##
 
-# FIXME: This is inefficient, replace with the commented code below once Zygote supports it.
-ZygoteRules.@adjoint function poissonbinomial_pdf_fft(x::AbstractArray{T}) where T<:Real
-    error("The adjoint of poissonbinomial_pdf_fft needs ForwardDiff. `using ForwardDiff` should fix this error.")
-end
+# Zygote loads ForwardDiff, so this dummy adjoint should never be needed.
+# The adjoint that is used for `poissonbinomial_pdf_fft` is defined in `src/zygote_forwarddiff.jl`
+# ZygoteRules.@adjoint function poissonbinomial_pdf_fft(x::AbstractArray{T}) where T<:Real
+#     error("This needs ForwardDiff. `using ForwardDiff` should fix this error.")
+# end

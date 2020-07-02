@@ -58,6 +58,8 @@ include("zygote.jl")
     @require ForwardDiff="f6369f11-7733-5829-9624-2563aa707210" begin
         using .ForwardDiff: @define_binary_dual_op # Needed for `eval`ing diffrules here
         include("forwarddiff.jl")
+
+        # loads adjoint for `poissonbinomial_pdf_fft`
         include("zygote_forwarddiff.jl")
     end
 

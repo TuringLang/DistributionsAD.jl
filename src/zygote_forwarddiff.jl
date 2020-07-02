@@ -1,3 +1,6 @@
+# Zygote loads ForwardDiff, so this adjoint will autmatically be loaded together
+# with `using Zygote`.
+
 # FIXME: This is inefficient, replace with the commented code below once Zygote supports it.
 @adjoint function poissonbinomial_pdf_fft(x::AbstractArray{T}) where T<:Real
     fft = poissonbinomial_pdf_fft(x)
