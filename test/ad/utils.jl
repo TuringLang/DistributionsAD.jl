@@ -1,5 +1,5 @@
 # Struct of distribution, corresponding parameters, and a sample.
-struct DistSpec{VF<:VariateForm,VS<:ValueSupport,F,T,X,G}
+struct DistSpec{VF<:VariateForm,VS<:ValueSupport,F,T,X,G,B<:Tuple}
     name::Symbol
     f::F
     "Distribution parameters."
@@ -8,19 +8,21 @@ struct DistSpec{VF<:VariateForm,VS<:ValueSupport,F,T,X,G}
     x::X
     "Transformation of sample `x`."
     xtrans::G
+    "Broken backends"
+    broken::B
 end
 
-function DistSpec(f, θ, x, xtrans=nothing)
+function DistSpec(f, θ, x, xtrans=nothing; broken=())
     name = f isa Distribution ? nameof(typeof(f)) : nameof(typeof(f(θ...)))
-    return DistSpec(name, f, θ, x, xtrans)
+    return DistSpec(name, f, θ, x, xtrans; broken=broken)
 end
 
-function DistSpec(name::Symbol, f, θ, x, xtrans=nothing)
+function DistSpec(name::Symbol, f, θ, x, xtrans=nothing; broken=())
     F = f isa Distribution ? typeof(f) : typeof(f(θ...))
     VF = Distributions.variate_form(F)
     VS = Distributions.value_support(F)
-    return DistSpec{VF,VS,typeof(f),typeof(θ),typeof(x),typeof(xtrans)}(
-        name, f, θ, x, xtrans
+    return DistSpec{VF,VS,typeof(f),typeof(θ),typeof(x),typeof(xtrans),typeof(broken)}(
+        name, f, θ, x, xtrans, broken,
     )
 end
 
@@ -87,6 +89,7 @@ function test_ad(dist::DistSpec; kwargs...)
     θ = dist.θ
     x = dist.x
     g = dist.xtrans
+    broken = dist.broken
 
     # Create function with all possible arguments
     f_allargs = let f=f, g=g
@@ -112,7 +115,7 @@ function test_ad(dist::DistSpec; kwargs...)
             ftest = let xorig=x, θorig=θ, inds=inds
                 x -> f_allargs(unpack(x, inds, xorig, θorig...)...)
             end
-            test_ad(ftest, xtest; kwargs...)
+            test_ad(ftest, xtest, broken; kwargs...)
         end
 
         # Test derivative with respect to location `x` as well
@@ -123,30 +126,42 @@ function test_ad(dist::DistSpec; kwargs...)
             ftest = let xorig=x, θorig=θ, inds=inds
                 x -> f_allargs(unpack(x, inds, xorig, θorig...)...)
             end
-            test_ad(ftest, xtest; kwargs...)
+            test_ad(ftest, xtest, broken; kwargs...)
         end
     end
 end
 
-function test_ad(f, x; rtol = 1e-6, atol = 1e-6)
+function test_ad(f, x, broken; rtol = 1e-6, atol = 1e-6)
     finitediff = FDM.grad(central_fdm(5, 1), f, x)[1]
 
     if AD == "All" || AD == "ForwardDiff_Tracker"
-        tracker = Tracker.data(Tracker.gradient(f, x)[1])
-        @test tracker ≈ finitediff rtol=rtol atol=atol
+        if :Tracker in broken
+            @test_broken Tracker.data(Tracker.gradient(f, x)[1]) ≈ finitediff rtol=rtol atol=atol
+        else
+            @test Tracker.data(Tracker.gradient(f, x)[1]) ≈ finitediff rtol=rtol atol=atol
+        end
 
-        forward = ForwardDiff.gradient(f, x)
-        @test forward ≈ finitediff rtol=rtol atol=atol
+        if :ForwardDiff in broken
+            @test_broken ForwardDiff.gradient(f, x) ≈ finitediff rtol=rtol atol=atol
+        else
+            @test ForwardDiff.gradient(f, x) ≈ finitediff rtol=rtol atol=atol
+        end
     end
 
     if AD == "All" || AD == "Zygote"
-        zygote = Zygote.gradient(f, x)[1]
-        @test zygote ≈ finitediff rtol=rtol atol=atol
+        if :Zygote in broken
+            @test_broken Zygote.gradient(f, x)[1] ≈ finitediff rtol=rtol atol=atol
+        else
+            @test Zygote.gradient(f, x)[1] ≈ finitediff rtol=rtol atol=atol
+        end
     end
 
     if AD == "All" || AD == "ReverseDiff"
-        reversediff = ReverseDiff.gradient(f, x)
-        @test reversediff ≈ finitediff rtol=rtol atol=atol
+        if :ReverseDiff in broken
+            @test_broken ReverseDiff.gradient(f, x) ≈ finitediff rtol=rtol atol=atol
+        else
+            @test ReverseDiff.gradient(f, x) ≈ finitediff rtol=rtol atol=atol
+        end
     end
 
     return

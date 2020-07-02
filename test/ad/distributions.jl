@@ -31,6 +31,8 @@
         return y ./ sum(y, dims=dims)
     end
 
+    # Tests that have a `broken` field can be executed but, according to FiniteDifferences,
+    # fail to produce the correct result. These tests can be checked with `@test_broken`.
     univariate_distributions = DistSpec[
         ## Univariate discrete distributions
 
@@ -87,6 +89,8 @@
         DistSpec(Cauchy, (), 0.5),
         DistSpec(Cauchy, (1.0,), 0.5),
         DistSpec(Cauchy, (1.0, 2.0), 0.5),
+
+        DistSpec(Chernoff, (), 0.5, broken=(:Zygote,)),
 
         DistSpec(Chi, (1.0,), 0.5),
 
@@ -152,6 +156,12 @@
         DistSpec(LogNormal, (1.0,), 0.5),
         DistSpec(LogNormal, (1.0, 2.0), 0.5),
 
+        # Dispatch error caused by ccall
+        DistSpec(NoncentralBeta, (1.0, 2.0, 1.0), 0.5, broken=(:Tracker, :ForwardDiff, :Zygote, :ReverseDiff)),
+        DistSpec(NoncentralChisq, (1.0, 2.0), 0.5, broken=(:Tracker, :ForwardDiff, :Zygote, :ReverseDiff)),
+        DistSpec(NoncentralF, (1.0, 2.0, 1.0), 0.5, broken=(:Tracker, :ForwardDiff, :Zygote, :ReverseDiff)),
+        DistSpec(NoncentralT, (1.0, 2.0), 0.5, broken=(:Tracker, :ForwardDiff, :Zygote, :ReverseDiff)),
+
         DistSpec(Normal, (), 0.5),
         DistSpec(Normal, (1.0,), 0.5),
         DistSpec(Normal, (1.0, 2.0), 0.5),
@@ -200,31 +210,28 @@
         DistSpec(Weibull, (1.0, 1.0), 1.0),
     ]
 
+    # Tests cannot be executed, so cannot be checked with `@test_broken`.
     broken_univariate_distributions = DistSpec[
-        # Zygote
-        DistSpec(Chernoff, (), 0.5),
-
         # Broken in Distributions even without autodiff
-        DistSpec(() -> KSDist(1), (), 0.5),
-        DistSpec(() -> KSOneSided(1), (), 0.5),
-        DistSpec(StudentizedRange, (1.0, 2.0), 0.5),
-
-        # Dispatch error caused by ccall
-        DistSpec(NoncentralBeta, (1.0, 2.0, 1.0), 0.5),
-        DistSpec(NoncentralChisq, (1.0, 2.0), 0.5),
-        DistSpec(NoncentralF, (1, 2, 1), 0.5),
-        DistSpec(NoncentralT, (1, 2), 0.5),
+        DistSpec(() -> KSDist(1), (), 0.5), # `pdf` method not defined
+        DistSpec(() -> KSOneSided(1), (), 0.5), # `pdf` method not defined
+        DistSpec(StudentizedRange, (1.0, 2.0), 0.5), # `srdistlogpdf` method not defined
 
         # Stackoverflow caused by SpecialFunctions.besselix
         DistSpec(VonMises, (1.0,), 1.0),
         DistSpec(VonMises, (1, 1), 1),
     ]
 
+    # Tests that have a `broken` field can be executed but, according to FiniteDifferences,
+    # fail to produce the correct result. These tests can be checked with `@test_broken`.
     multivariate_distributions = DistSpec[
         ## Multivariate discrete distributions
 
         # Vector x
         DistSpec(p -> Multinomial(2, p ./ sum(p)), (fill(0.5, 2),), [2, 0]),
+        DistSpec(p -> Multinomial(2, p ./ sum(p)), (fill(0.5, 2),), [2 1; 0 1],
+            broken=(:Tracker, :Zygote),
+        ),
 
         # Vector x
         DistSpec((m, A) -> MvNormal(m, PosDef.to_posdef(A)), (a, A), b),
@@ -278,8 +285,8 @@
         DistSpec(alpha -> Dirichlet(to_positive(alpha)), (a,), A, to_simplex),
     ]
 
+    # Tests cannot be executed, so cannot be checked with `@test_broken`.
     broken_multivariate_distributions = DistSpec[
-        DistSpec(p -> Multinomial(2, p ./ sum(p)), (fill(0.5, 2),), [2 1; 0 1]),
         # Dispatch error
         DistSpec((m, A) -> MvNormalCanon(m, PosDef.to_posdef(A)), (a, A), b),
         DistSpec(MvNormalCanon, (a, b), c),
@@ -296,9 +303,14 @@
     ]
 
     #=
+    # Tests that have a `broken` field can be executed but, according to FiniteDifferences,
+    # fail to produce the correct result. These tests can be checked with `@test_broken`.
     matrixvariate_distributions = DistSpec[
         # Matrix x
         DistSpec((n1, n2) -> MatrixBeta(dim, n1, n2), (3.0, 3.0), A, to_beta_mat),
+        DistSpec(() -> MatrixNormal(dim, dim), (), A, to_posdef,
+            broken=(:Tracker, :Zygote)
+        ),
         DistSpec((df, A) -> Wishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
         DistSpec((df, A) -> InverseWishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
         DistSpec((df, A) -> TuringWishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
@@ -337,21 +349,24 @@
         ),
     ]
 
+    # Tests cannot be executed, so cannot be checked with `@test_broken`.
     broken_matrixvariate_distributions = DistSpec[
         # Other
+        # TODO different tests are broken on different combinations of backends
         DistSpec(
             (A, B, C) -> MatrixNormal(A, to_posdef(B), to_posdef(C)),
             (A, B, B),
             C,
             to_posdef,
         ),
-        DistSpec(() -> MatrixNormal(dim, dim), (), A, to_posdef),
+        # TODO different tests are broken on different combinations of backends
         DistSpec(
             (df, A, B, C) -> MatrixTDist(df, A, to_posdef(B), to_posdef(C)),
             (1.0, A, B, B),
             C,
             to_posdef,
         ),
+        # TODO different tests are broken on different combinations of backends
         DistSpec(
             (n1, n2, A) -> MatrixFDist(n1, n2, to_posdef(A)),
             (3.0, 3.0, A),
@@ -405,10 +420,22 @@
 
                 # Test AD
                 test_ad(
-                    DistSpec(Symbol(:filldist, " (", d.name, ", $sz)"), f_filldist, d.θ, x)
+                    DistSpec(
+                        Symbol(:filldist, " (", d.name, ", $sz)"),
+                        f_filldist,
+                        d.θ,
+                        x;
+                        broken=d.broken,
+                    )
                 )
                 test_ad(
-                    DistSpec(Symbol(:arraydist, " (", d.name, ", $sz)"), f_arraydist, d.θ, x)
+                    DistSpec(
+                        Symbol(:arraydist, " (", d.name, ", $sz)"),
+                        f_arraydist,
+                        d.θ,
+                        x;
+                        broken=d.broken,
+                    )
                 )
             end
         end
@@ -443,10 +470,22 @@
 
             # Test AD
             test_ad(
-                DistSpec(Symbol(:filldist, " (", d.name, ", $n)"), f_filldist, d.θ, x_mat)
+                DistSpec(
+                    Symbol(:filldist, " (", d.name, ", $n)"),
+                    f_filldist,
+                    d.θ,
+                    x_mat;
+                    broken=d.broken,
+                )
             )
             test_ad(
-                DistSpec(Symbol(:arraydist, " (", d.name, ", $n)"), f_arraydist, d.θ, x_mat)
+                DistSpec(
+                    Symbol(:arraydist, " (", d.name, ", $n)"),
+                    f_arraydist,
+                    d.θ,
+                    x_mat;
+                    broken=d.broken,
+                )
             )
 
             # Vector of matrices `x`
@@ -458,7 +497,8 @@
                     Symbol(:filldist, " (", d.name, ", $n, 2)"),
                     f_filldist,
                     d.θ,
-                    x_vec_of_mat,
+                    x_vec_of_mat;
+                    broken=d.broken,
                 )
             )
             test_ad(
@@ -466,7 +506,8 @@
                     Symbol(:arraydist, " (", d.name, ", $n, 2)"),
                     f_arraydist,
                     d.θ,
-                    x_vec_of_mat,
+                    x_vec_of_mat;
+                    broken=d.broken,
                 )
             )
         end
@@ -500,10 +541,22 @@
 
             # Test AD
             test_ad(
-                DistSpec(Symbol(:filldist, " (", d.name, ", $n)"), f_filldist, d.θ, x_mat)
+                DistSpec(
+                    Symbol(:filldist, " (", d.name, ", $n)"),
+                    f_filldist,
+                    d.θ,
+                    x_mat;
+                    broken=d.broken,
+                )
             )
             test_ad(
-                DistSpec(Symbol(:arraydist, " (", d.name, ", $n)"), f_arraydist, d.θ, x_mat)
+                DistSpec(
+                    Symbol(:arraydist, " (", d.name, ", $n)"),
+                    f_arraydist,
+                    d.θ,
+                    x_mat;
+                    broken=d.broken,
+                )
             )
 
             # Vector of matrices `x`
@@ -515,7 +568,8 @@
                     Symbol(:filldist, " (", d.name, ", $n, 2)"),
                     f_filldist,
                     d.θ,
-                    x_vec_of_mat,
+                    x_vec_of_mat;
+                    broken=d.broken,
                 )
             )
             test_ad(
@@ -523,7 +577,8 @@
                     Symbol(:arraydist, " (", d.name, ", $n, 2)"),
                     f_arraydist,
                     d.θ,
-                    x_vec_of_mat,
+                    x_vec_of_mat;
+                    broken=d.broken,
                 )
             )
         end
