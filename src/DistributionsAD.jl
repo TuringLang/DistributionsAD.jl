@@ -9,13 +9,13 @@ using PDMats,
       Compat,
       Requires,
       ZygoteRules,
-      ChainRules
+      ChainRules,  # needed for `ChainRules.chol_blocked_rev`
+      FillArrays
 
 using SpecialFunctions: logabsgamma, digamma
 using LinearAlgebra: copytri!, AbstractTriangular
 using Distributions: AbstractMvLogNormal, 
                      ContinuousMultivariateDistribution
-using DiffRules, SpecialFunctions, FillArrays
 using Base.Iterators: drop
 
 import StatsFuns: logsumexp, 
