@@ -30,16 +30,20 @@ function TuringWishart(d::Wishart)
     return TuringWishart(d.df, getchol(d.S), d.logc0)
 end
 getchol(p::PDMat) = p.chol
-getchol(p::PDiagMat) = Diagonal(map(sqrt, p.diag))
-getchol(p::ScalMat) = Diagonal(fill(sqrt(p.value), p.dim))
+getchol(p::PDiagMat) = Cholesky(Diagonal(sqrt.(p.diag)), 'U', 0)
+getchol(p::ScalMat) = Cholesky(Diagonal(fill(sqrt(p.value), p.dim)), 'U', 0)
 
-function TuringWishart(df::T, S::AbstractMatrix) where {T <: Real}
-    p = size(S, 1)
-    df > p - 1 || error("dpf should be greater than dim - 1.")
+function TuringWishart(df::Real, S::AbstractMatrix{<:Real})
     C = cholesky(S)
     return TuringWishart(df, C)
 end
+function TuringWishart(df::Real, S::AbstractPDMat{<:Real})
+    C = getchol(S)
+    return TuringWishart(df, C)
+end
 function TuringWishart(df::T, C::Cholesky) where {T <: Real}
+    p = size(C, 1)
+    df > p - 1 || error("dpf should be greater than dim - 1.")
     logc0 = _wishart_logc0(df, C)
     R = Base.promote_eltype(T, logc0)
     return TuringWishart(R(df), C, R(logc0))
@@ -136,8 +140,8 @@ end
 
 ## Custom adjoint since Zygote can't differentiate through `@warn`
 # TODO: Remove when fixed upstream in Distributions
-ZygoteRules.@adjoint function Wishart(df::T, S::AbstractPDMat{T}, warn::Bool = true) where T
-    function _Wishart(df::T, S::AbstractPDMat{T}, warn::Bool = true) where T
+ZygoteRules.@adjoint function Wishart(df::T, S::AbstractPDMat{T}, warn::Bool = true) where {T <: Real}
+    function _Wishart(df::T, S::AbstractPDMat{T}, warn::Bool = true)
         df > 0 || throw(ArgumentError("df must be positive. got $(df)."))
         p = dim(S)
         rnk = p
@@ -175,10 +179,18 @@ getmatrix(p::PDMat) = p.mat
 getmatrix(p::PDiagMat) = Diagonal(p.diag)
 getmatrix(p::ScalMat) = Diagonal(fill(p.value, p.dim))
 
-function TuringInverseWishart(df::T, Ψ::AbstractMatrix) where T<:Real
+function TuringInverseWishart(df::Real, Ψ::AbstractMatrix)
+    C = cholesky(Ψ)
+    return TuringInverseWishart(df, Ψ, C)
+end
+function TuringInverseWishart(df::Real, D::AbstractPDMat)
+    Ψ = getmatrix(D)
+    C = getchol(D)
+    return TuringInverseWishart(df, Ψ, C)
+end
+function TuringInverseWishart(df::T, Ψ::AbstractMatrix, C::Cholesky) where T<:Real
     p = size(Ψ, 1)
     df > p - 1 || error("df should be greater than dim - 1.")
-    C = cholesky(Ψ)
     logc0 = _invwishart_logc0(df, C)
     R = Base.promote_eltype(T, logc0)
     return TuringInverseWishart(R(df), Ψ, R(logc0))
@@ -271,10 +283,18 @@ end
 
 Distributions.Wishart(df::TrackedReal, S::Matrix{<:Real}) = TuringWishart(df, S)
 Distributions.Wishart(df::TrackedReal, S::AbstractMatrix{<:Real}) = TuringWishart(df, S)
+Distributions.Wishart(df::Real, S::AbstractMatrix{<:TrackedReal}) = TuringWishart(df, S)
+Distributions.Wishart(df::TrackedReal, S::AbstractMatrix{<:TrackedReal}) = TuringWishart(df, S)
 Distributions.Wishart(df::Real, S::TrackedMatrix) = TuringWishart(df, S)
 Distributions.Wishart(df::TrackedReal, S::TrackedMatrix) = TuringWishart(df, S)
+Distributions.Wishart(df::Real, S::AbstractPDMat{<:TrackedReal}) = TuringWishart(df, S)
+Distributions.Wishart(df::TrackedReal, S::AbstractPDMat{<:TrackedReal}) = TuringWishart(df, S)
 
 Distributions.InverseWishart(df::TrackedReal, S::Matrix{<:Real}) = TuringInverseWishart(df, S)
 Distributions.InverseWishart(df::TrackedReal, S::AbstractMatrix{<:Real}) = TuringInverseWishart(df, S)
+Distributions.InverseWishart(df::Real, S::AbstractMatrix{<:TrackedReal}) = TuringInverseWishart(df, S)
+Distributions.InverseWishart(df::TrackedReal, S::AbstractMatrix{<:TrackedReal}) = TuringInverseWishart(df, S)
 Distributions.InverseWishart(df::Real, S::TrackedMatrix) = TuringInverseWishart(df, S)
 Distributions.InverseWishart(df::TrackedReal, S::TrackedMatrix) = TuringInverseWishart(df, S)
+Distributions.InverseWishart(df::Real, S::AbstractPDMat{<:TrackedReal}) = TuringInverseWishart(df, S)
+Distributions.InverseWishart(df::TrackedReal, S::AbstractPDMat{<:TrackedReal}) = TuringInverseWishart(df, S)
