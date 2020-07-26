@@ -1,7 +1,5 @@
 # Univariate
 
-Tracker.dual(x::Int, p) = x
-
 const FillVectorOfUnivariate{
     S <: ValueSupport,
     T <: UnivariateDistribution{S},

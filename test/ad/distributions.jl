@@ -13,21 +13,6 @@
     # Create a random number
     alpha = rand()
 
-    # Create positive definite matrix
-    to_posdef(A::AbstractMatrix) = A * A' + I
-    to_posdef_diagonal(a::AbstractVector) = Diagonal(a.^2 .+ 1)
-
-    # Define adjoints for Tracker
-    to_posdef(A::TrackedMatrix) = Tracker.track(to_posdef, A)
-    Tracker.@grad function to_posdef(A::TrackedMatrix)
-        data_A = Tracker.data(A)
-        S = data_A * data_A' + I
-        function pullback(∇)
-            return ((∇ + ∇') * data_A,)
-        end
-        return S, pullback
-    end
-
     # Create matrix `X` such that `X` and `I - X` are positive definite if `A ≠ 0`.
     function to_beta_mat(A)
         S = A * A' + I

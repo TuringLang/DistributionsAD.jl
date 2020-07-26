@@ -1,6 +1,3 @@
-# Figure out which AD backend to test
-const AD = get(ENV, "AD", "All")
-
 # Struct of distribution, corresponding parameters, and a sample.
 struct DistSpec{VF<:VariateForm,VS<:ValueSupport,F,T,X,G,B<:Tuple}
     name::Symbol
@@ -137,13 +134,15 @@ end
 function test_ad(f, x, broken; rtol = 1e-6, atol = 1e-6)
     finitediff = FDM.grad(central_fdm(5, 1), f, x)[1]
 
-    if AD == "All" || AD == "ForwardDiff_Tracker"
+    if AD == "All" || AD == "Tracker"
         if :Tracker in broken
             @test_broken Tracker.data(Tracker.gradient(f, x)[1]) ≈ finitediff rtol=rtol atol=atol
         else
             @test Tracker.data(Tracker.gradient(f, x)[1]) ≈ finitediff rtol=rtol atol=atol
         end
+    end
 
+    if AD == "All" || AD == "ForwardDiff"
         if :ForwardDiff in broken
             @test_broken ForwardDiff.gradient(f, x) ≈ finitediff rtol=rtol atol=atol
         else

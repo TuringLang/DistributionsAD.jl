@@ -1,8 +1,5 @@
 ## MatrixBeta
 
-function Distributions.logpdf(d::MatrixBeta, X::AbstractArray{<:TrackedMatrix{<:Real}})
-    return map(x -> logpdf(d, x), X)
-end
 ZygoteRules.@adjoint function Distributions.logpdf(
     d::MatrixBeta,
     X::AbstractArray{<:Matrix{<:Real}}
@@ -103,12 +100,6 @@ end
 
 #### Evaluation
 
-function Distributions.logpdf(d::Wishart, X::TrackedMatrix)
-    return logpdf(TuringWishart(d), X)
-end
-function Distributions.logpdf(d::Wishart, X::AbstractArray{<:TrackedMatrix})
-    return logpdf(TuringWishart(d), X)
-end
 function Distributions.logpdf(d::TuringWishart, X::AbstractMatrix{<:Real})
     df = d.df
     p = Distributions.dim(d)
@@ -229,12 +220,6 @@ end
 
 #### Evaluation
 
-function Distributions.logpdf(d::InverseWishart, X::TrackedMatrix)
-    return logpdf(TuringInverseWishart(d), X)
-end
-function Distributions.logpdf(d::InverseWishart, X::AbstractArray{<:TrackedMatrix})
-    return logpdf(TuringInverseWishart(d), X)
-end
 function Distributions.logpdf(d::TuringInverseWishart, X::AbstractMatrix{<:Real})
     p = Distributions.dim(d)
     df = d.df
@@ -268,13 +253,3 @@ ZygoteRules.@adjoint function Distributions.InverseWishart(
 )
     return ZygoteRules.pullback(TuringInverseWishart, df, S)
 end
-
-Distributions.Wishart(df::TrackedReal, S::Matrix{<:Real}) = TuringWishart(df, S)
-Distributions.Wishart(df::TrackedReal, S::AbstractMatrix{<:Real}) = TuringWishart(df, S)
-Distributions.Wishart(df::Real, S::TrackedMatrix) = TuringWishart(df, S)
-Distributions.Wishart(df::TrackedReal, S::TrackedMatrix) = TuringWishart(df, S)
-
-Distributions.InverseWishart(df::TrackedReal, S::Matrix{<:Real}) = TuringInverseWishart(df, S)
-Distributions.InverseWishart(df::TrackedReal, S::AbstractMatrix{<:Real}) = TuringInverseWishart(df, S)
-Distributions.InverseWishart(df::Real, S::TrackedMatrix) = TuringInverseWishart(df, S)
-Distributions.InverseWishart(df::TrackedReal, S::TrackedMatrix) = TuringInverseWishart(df, S)
