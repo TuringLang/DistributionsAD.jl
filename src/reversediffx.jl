@@ -16,18 +16,6 @@ end
 ## linalg ##
 ############
 
-Base.copy(A::Adjoint{<:TrackedReal, <:TrackedVecOrMat}) = copyadjoint(parent(A))
-copyadjoint(A) = copy(A')
-copyadjoint(A::TrackedVecOrMat) = track(copyadjoint, A)
-@grad function copyadjoint(A::AbstractVecOrMat)
-    return copy(value(A)'), ∇ -> (copy(∇'),)
-end
-
-Base.:*(A::Adjoint{<:Real, <:TrackedVector{<:Real}}, B::AbstractVector{<:Real}) = dot(A, B)
-Base.:*(A::Adjoint{<:Real, <:TrackedVector{<:Real}}, B::TrackedVector{<:Real}) = dot(A, B)
-Base.:*(A::AbstractVector{<:Real}, B::Adjoint{<:Real, <:TrackedVector{<:Real}}) = dot(A, B)
-Base.:*(A::TrackedVector{<:Real}, B::Adjoint{<:Real, <:TrackedVector{<:Real}}) = dot(A, B)
-
 function LinearAlgebra.cholesky(A::Symmetric{<:Any, <:TrackedMatrix}; check=true)
     uplo = A.uplo == 'U' ? (:U) : (:L)
     factors, info = symm_turing_chol(parent(A), check, uplo)
