@@ -374,7 +374,6 @@
         ),
     ]
 
-    #=
     @testset "Univariate distributions" begin
         println("\nTesting: Univariate distributions\n")
 
@@ -438,7 +437,6 @@
             end
         end
     end
-    =#
 
     @testset "Matrixvariate distributions" begin
         println("\nTesting: Matrixvariate distributions\n")
