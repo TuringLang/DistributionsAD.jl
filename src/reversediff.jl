@@ -2,23 +2,29 @@ module ReverseDiffX
 
 export NotTracked
 
-using MacroTools, LinearAlgebra, ..ReverseDiff, StaticArrays
+using LinearAlgebra
+using ..ReverseDiff
+using StaticArrays
+using Distributions
+using PDMats
+using ForwardDiff
+
 using Base.Broadcast: BroadcastStyle, ArrayStyle, Broadcasted, broadcasted
-using ForwardDiff: ForwardDiff, Dual
-using ..ReverseDiff: SpecialInstruction, value, value!, deriv, track, record!, tape, unseed!, @grad, TrackedReal, TrackedVector, TrackedMatrix, TrackedArray
+using ForwardDiff: Dual
+using ..ReverseDiff: SpecialInstruction, value, value!, deriv, track, record!,
+                     tape, unseed!, @grad, TrackedReal, TrackedVector,
+                     TrackedMatrix, TrackedArray
 using ..DistributionsAD: DistributionsAD
 
-const TrackedVecOrMat{V,D} = Union{TrackedVector{V,D},TrackedMatrix{V,D}}
 
 import SpecialFunctions, NaNMath
 import ..DistributionsAD: turing_chol, symm_turing_chol, _mv_categorical_logpdf
 import Base.Broadcast: materialize
 import StatsFuns: logsumexp
-import ZygoteRules
 
+const TrackedVecOrMat{V,D} = Union{TrackedVector{V,D},TrackedMatrix{V,D}}
 const RDBroadcasted{F, T} = Broadcasted{<:Any, <:Any, F, T}
 
-using Distributions, PDMats
 import Distributions: logpdf,
                       Gamma,
                       MvNormal,
@@ -29,12 +35,12 @@ import Distributions: logpdf,
                       PoissonBinomial,
                       isprobvec
 
-using ..DistributionsAD: TuringMvNormal,
+using ..DistributionsAD: TuringPoissonBinomial,
+                         TuringMvNormal,
                          TuringMvLogNormal,
                          TuringWishart,
                          TuringInverseWishart,
                          TuringDirichlet,
-                         TuringPoissonBinomial,
                          TuringScalMvNormal,
                          TuringDiagMvNormal,
                          TuringDenseMvNormal

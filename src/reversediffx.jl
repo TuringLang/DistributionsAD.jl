@@ -29,9 +29,8 @@ end
 function symm_turing_chol(x::TrackedArray{V,D}, check, uplo) where {V,D}
     tp = tape(x)
     x_value = value(x)
-    C, back = ZygoteRules.pullback(x_value, check, uplo) do A, check, uplo
-        cholesky(Symmetric(A, uplo), check=check)
-    end
+    (factors,info), back = DistributionsAD.symm_turing_chol_back(x_value, check, uplo)
+    C = Cholesky{eltype(factors), typeof(factors)}(factors, 'U', info)
     out = track(C.factors, D, tp)
     record!(tp, SpecialInstruction, symm_turing_chol, (x, check, uplo), out, (back, issuccess(C)))
     return out, C.info
@@ -39,9 +38,8 @@ end
 function turing_chol(x::TrackedArray{V,D}, check) where {V,D}
     tp = tape(x)
     x_value = value(x)
-    C, back = ZygoteRules.pullback(x_value, check) do A, check
-        cholesky(A, check=check)
-    end
+    (factors,info), back = DistributionsAD.turing_chol_back(x_value, check)
+    C = Cholesky{eltype(factors), typeof(factors)}(factors, 'U', info)
     out = track(C.factors, D, tp)
     record!(tp, SpecialInstruction, turing_chol, (x, check), out, (back, issuccess(C)))
     return out, C.info
