@@ -128,14 +128,16 @@ end
 function TuringInverseWishart(d::InverseWishart)
     d = TuringInverseWishart(d.df, getmatrix(d.Ψ), d.logc0)
 end
+getmatrix(p::AbstractMatrix) = p
 getmatrix(p::PDMat) = p.mat
 getmatrix(p::PDiagMat) = Diagonal(p.diag)
 getmatrix(p::ScalMat) = Diagonal(fill(p.value, p.dim))
 
-function TuringInverseWishart(df::T, Ψ::AbstractMatrix) where T<:Real
+function TuringInverseWishart(df::T, x::AbstractMatrix) where T<:Real
+    Ψ = getmatrix(x)
     p = size(Ψ, 1)
     df > p - 1 || error("df should be greater than dim - 1.")
-    C = cholesky(Ψ)
+    C = getchol(x)
     logc0 = _invwishart_logc0(df, C)
     R = Base.promote_eltype(T, logc0)
     return TuringInverseWishart(R(df), Ψ, R(logc0))
