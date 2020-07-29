@@ -26,7 +26,10 @@ function TuringWishart(df::Real, S::AbstractMatrix)
     C = getchol(S)
     return TuringWishart(df, C)
 end
+
 function TuringWishart(df::T, C::Cholesky) where {T <: Real}
+    p = size(C, 1)
+    df > p - 1 || error("dpf should be greater than dim - 1.")
     logc0 = _wishart_logc0(df, C)
     R = Base.promote_eltype(T, logc0)
     return TuringWishart(R(df), C, R(logc0))
