@@ -1,6 +1,8 @@
 # DistributionsAD.jl
 
-[![ForwardDiff and Tracker tests](https://github.com/TuringLang/DistributionsAD.jl/workflows/ForwardDiff%20and%20Tracker%20tests/badge.svg?branch=master)](https://github.com/TuringLang/DistributionsAD.jl/actions?query=workflow%3A%22ForwardDiff+and+Tracker+tests%22)
+[![Tracker tests](https://github.com/TuringLang/DistributionsAD.jl/workflows/Tracker%20tests/badge.svg?branch=master)](https://github.com/TuringLang/DistributionsAD.jl/actions?query=workflow%3A%22Tracker+tests%22)
+
+[![ForwardDiff tests](https://github.com/TuringLang/DistributionsAD.jl/workflows/ForwardDiff%20tests/badge.svg?branch=master)](https://github.com/TuringLang/DistributionsAD.jl/actions?query=workflow%3A%22ForwardDiff+tests%22)
 
 [![Zygote tests](https://github.com/TuringLang/DistributionsAD.jl/workflows/Zygote%20tests/badge.svg?branch=master)](https://github.com/TuringLang/DistributionsAD.jl/actions?query=workflow%3A%22Zygote+tests%22)
 
