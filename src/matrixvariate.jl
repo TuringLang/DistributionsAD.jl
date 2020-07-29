@@ -15,14 +15,15 @@ end
 function TuringWishart(d::Wishart)
     return TuringWishart(d.df, getchol(d.S), d.logc0)
 end
+getchol(p::AbstractMatrix) = cholesky(p)
 getchol(p::PDMat) = p.chol
-getchol(p::PDiagMat) = Diagonal(map(sqrt, p.diag))
-getchol(p::ScalMat) = Diagonal(fill(sqrt(p.value), p.dim))
+getchol(p::PDiagMat) = Cholesky(Diagonal(sqrt.(p.diag)), 'U', 0)
+getchol(p::ScalMat) = Cholesky(Diagonal(fill(sqrt(p.value), p.dim)), 'U', 0) 
 
-function TuringWishart(df::T, S::AbstractMatrix) where {T <: Real}
+function TuringWishart(df::Real, S::AbstractMatrix)
     p = size(S, 1)
     df > p - 1 || error("dpf should be greater than dim - 1.")
-    C = cholesky(S)
+    C = getchol(S)
     return TuringWishart(df, C)
 end
 function TuringWishart(df::T, C::Cholesky) where {T <: Real}

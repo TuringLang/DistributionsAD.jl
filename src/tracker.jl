@@ -518,7 +518,11 @@ end
 function Distributions.logpdf(d::Wishart, X::AbstractArray{<:TrackedMatrix})
     return logpdf(TuringWishart(d), X)
 end
+Distributions.Wishart(df::TrackedReal, S::Matrix{<:Real}) = TuringWishart(df, S)
+Distributions.Wishart(df::TrackedReal, S::AbstractMatrix{<:Real}) = TuringWishart(df, S)
 Distributions.Wishart(df::Real, S::TrackedMatrix) = TuringWishart(df, S)
+Distributions.Wishart(df::TrackedReal, S::TrackedMatrix) = TuringWishart(df, S)
+Distributions.Wishart(df::TrackedReal, S::AbstractPDMat{<:TrackedReal}) = TuringWishart(df, S)
 
 
 ## Inverse Wishart ##
@@ -534,3 +538,4 @@ Distributions.InverseWishart(df::TrackedReal, S::Matrix{<:Real}) = TuringInverse
 Distributions.InverseWishart(df::TrackedReal, S::AbstractMatrix{<:Real}) = TuringInverseWishart(df, S)
 Distributions.InverseWishart(df::Real, S::TrackedMatrix) = TuringInverseWishart(df, S)
 Distributions.InverseWishart(df::TrackedReal, S::TrackedMatrix) = TuringInverseWishart(df, S)
+Distributions.InverseWishart(df::TrackedReal, S::AbstractPDMat{<:TrackedReal}) = TuringInverseWishart(df, S)
