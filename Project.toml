@@ -21,6 +21,7 @@ StatsFuns = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
 ZygoteRules = "700de1a5-db45-46bc-99cf-38207098b444"
 
 [compat]
+ChainRules = "0.7"
 Compat = "3.6"
 DiffRules = "0.1, 1.0"
 Distributions = "0.23.3"
