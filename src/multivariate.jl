@@ -161,10 +161,17 @@ function _logpdf(d::TuringDenseMvNormal, x::AbstractMatrix)
     return -((size(x, 1) * log(2π) + logdet(d.C)) .+ vec(sum(abs2.(zygote_ldiv(d.C.U', x .- d.m)), dims=1))) ./ 2
 end
 
-import StatsBase: entropy
-function entropy(d::TuringDiagMvNormal)
-    T = eltype(d.σ)
-    return (length(d) * (T(log2π) + one(T)) / 2 + sum(log.(d.σ)))
+function StatsBase.entropy(d::TuringScalMvNormal)
+    s = log(d.σ)
+    return length(d) * ((1 + oftype(s, log2π)) / 2 + s)
+end
+function StatsBase.entropy(d::TuringDiagMvNormal)
+    s = sum(log, d.σ)
+    return length(d) * (1 + oftype(s, log2π)) / 2 + s
+end
+function StatsBase.entropy(d::TuringDenseMvNormal)
+    s = logdet(d.C)
+    return (length(d) * (1 + oftype(s, log2π)) + s) / 2
 end
 
 TuringMvNormal(d::Int, σ::Real) = TuringMvNormal(zeros(d), σ)
