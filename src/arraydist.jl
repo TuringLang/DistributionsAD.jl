@@ -76,7 +76,7 @@ end
 
 function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractMatrix{<:Real})
     # `eachcol` breaks Zygote, so we use `view` directly
-    return sum(map(logpdf, dist.dists, axes(x, 2)))
+    return sum(map((d, i) -> logpdf(d, view(x, :, i)), dist.dists, axes(x, 2)))
 end
 function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractArray{<:AbstractMatrix{<:Real}})
     return map(x -> logpdf(dist, x), x)
