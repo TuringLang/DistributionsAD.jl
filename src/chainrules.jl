@@ -8,10 +8,10 @@ function ChainRulesCore.rrule(::typeof(uniformlogpdf), a, b, x)
     function uniform_logpdf_pullback(ȳ)
         z = zero(x) * ȳ
         if a <= x <= b
-            c = ȳ / diff^2
+            c = ȳ / diff
             return NO_FIELDS, c, -c, z
         else
-            c = ȳ / one(diff)^2
+            c = ȳ / one(diff)
             cNaN = oftype(ȳ, NaN)
             return NO_FIELDS, cNaN, cNaN, oftype(z, NaN)
         end

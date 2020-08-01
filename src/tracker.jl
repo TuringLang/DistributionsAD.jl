@@ -223,10 +223,10 @@ uniformlogpdf(a::TrackedReal, b::TrackedReal, x::TrackedReal) = track(uniformlog
     function pullback(Δ)
         z = zero(x) * Δ
         if insupport
-            c = Δ / diff^2
+            c = Δ / diff
             return c, -c, z
         else
-            c = Δ / one(diff)^2
+            c = Δ / one(diff)
             cNaN = oftype(c, NaN)
             return cNaN, cNaN, oftype(z, NaN)
         end

@@ -10,8 +10,10 @@
     B = rand(dim, dim)
     C = rand(dim, dim)
 
-    # Create a random number
+    # Create random numbers
     alpha = rand()
+    beta = rand()
+    gamma = rand()
 
     # Create matrix `X` such that `X` and `I - X` are positive definite if `A ≠ 0`.
     function to_beta_mat(A)
@@ -198,10 +200,10 @@
         ),
 
         DistSpec(Uniform, (), 0.5),
-        DistSpec(Uniform, (0.0, 1.0), 0.5),
+        DistSpec(Uniform, (alpha, alpha + beta), alpha + beta * gamma),
 
         DistSpec(TuringUniform, (), 0.5),
-        DistSpec(TuringUniform, (0.0, 1.0), 0.5),
+        DistSpec(TuringUniform, (alpha, alpha + beta), alpha + beta * gamma),
 
         DistSpec(VonMises, (), 1.0),
 
