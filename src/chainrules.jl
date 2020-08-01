@@ -90,5 +90,5 @@ end
 
 @scalar_rule(
     poislogpdf(v::Real, x::Int),
-    (@thunk(x / v - 1), DoesNotExist()),
+    (x / v - 1, DoesNotExist()),
 )
