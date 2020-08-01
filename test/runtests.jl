@@ -27,7 +27,7 @@ using Distributions: meanlogdet
 using DistributionsAD: TuringUniform, TuringMvNormal, TuringMvLogNormal,
                        TuringPoissonBinomial
 using StatsBase: entropy
-using StatsFuns: binomlogpdf, logsumexp
+using StatsFuns: binomlogpdf, logsumexp, logistic
 
 const FDM = FiniteDifferences
 const GROUP = get(ENV, "GROUP", "All")
@@ -55,5 +55,6 @@ end
 
 if GROUP == "All" || GROUP == "AD"
     include("ad/utils.jl")
+    include("ad/chainrules.jl")
     include("ad/distributions.jl")
 end
