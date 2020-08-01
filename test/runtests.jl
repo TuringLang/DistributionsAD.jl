@@ -1,5 +1,6 @@
 using DistributionsAD
 
+using ChainRulesTestUtils
 using Combinatorics
 using Distributions
 using FiniteDifferences
