@@ -5,8 +5,8 @@
     z, Δz, z̄ = randn(3)
     Δu = randn()
 
-    ỹ = x + 10 * abs(y)
-    z̃ = x + 5 * abs(y)
+    ỹ = x + exp(y) + exp(z)
+    z̃ = x + exp(y)
     rrule_test(DistributionsAD.uniformlogpdf, Δu, (x, x̄), (ỹ, ȳ), (z̃, z̄))
 
     x̃ = exp(x)
