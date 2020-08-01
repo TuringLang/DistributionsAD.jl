@@ -7,6 +7,7 @@
 
     ỹ = x + exp(y) + exp(z)
     z̃ = x + exp(y)
+    frule_test(DistributionsAD.uniformlogpdf, (x, Δx), (ỹ, Δy), (z̃, Δz))
     rrule_test(DistributionsAD.uniformlogpdf, Δu, (x, x̄), (ỹ, ȳ), (z̃, z̄))
 
     x̃ = exp(x)

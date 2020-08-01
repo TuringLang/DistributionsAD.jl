@@ -1,24 +1,15 @@
 ## Uniform ##
 
-function ChainRulesCore.rrule(::typeof(uniformlogpdf), a, b, x)
-    diff = b - a
-    insupport = a <= x <= b
-    lp = insupport ? -log(diff) : log(zero(diff))
-
-    function uniform_logpdf_pullback(ȳ)
-        z = zero(x) * ȳ
-        if a <= x <= b
-            c = ȳ / diff
-            return NO_FIELDS, c, -c, z
-        else
-            c = ȳ / one(diff)
-            cNaN = oftype(c, NaN)
-            return NO_FIELDS, cNaN, cNaN, oftype(z, NaN)
-        end
-    end
-
-    return lp, uniform_logpdf_pullback
-end
+@scalar_rule(
+    uniformlogpdf(a, b, x),
+    @setup(
+        insupport = a <= x <= b,
+        diff = b - a,
+        c = insupport ? inv(diff) : inv(one(diff)),
+        z = insupport ? zero(x) : oftype(x, NaN),
+    ),
+    (c, -c, z),
+)
 
 ## Beta ##
 
