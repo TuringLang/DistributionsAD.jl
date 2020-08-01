@@ -83,7 +83,7 @@ end
 
 @scalar_rule(
     binomlogpdf(n::Int, p::Real, x::Int),
-    (DoesNotExist(), @thunk(x / p - (n - x) / (1 - p)), DoesNotExist()),
+    (DoesNotExist(), x / p - (n - x) / (1 - p), DoesNotExist()),
 )
 
 ## Poisson ##
