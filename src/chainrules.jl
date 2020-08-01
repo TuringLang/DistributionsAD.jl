@@ -12,7 +12,7 @@ function ChainRulesCore.rrule(::typeof(uniformlogpdf), a, b, x)
             return NO_FIELDS, c, -c, z
         else
             c = ȳ / one(diff)
-            cNaN = oftype(ȳ, NaN)
+            cNaN = oftype(c, NaN)
             return NO_FIELDS, cNaN, cNaN, oftype(z, NaN)
         end
     end
