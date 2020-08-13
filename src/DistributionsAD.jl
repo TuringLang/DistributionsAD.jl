@@ -75,6 +75,11 @@ include("zygote.jl")
                         TrackedArray, TrackedVecOrMat, track, @grad, data
         include("tracker.jl")
     end
+
+    @require CUDA="052768ef-5323-5732-b1bb-66c8b64840ba" begin
+        using .CUDA: CuArray, cu
+        randnsimilar(rng::Random.AbstractRNG, x::CuArray, dims...) = cu(randn(rng, dims...))
+    end
 end
 
 end

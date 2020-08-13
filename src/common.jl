@@ -47,3 +47,5 @@ end
 
 # Tracker's implementation of ldiv isn't good. We'll use Zygote's instead.
 zygote_ldiv(A::AbstractMatrix, B::AbstractVecOrMat) = A \ B
+
+randnsimilar(rng::Random.AbstractRNG, x, dims...) = randn(rng, dims...)
