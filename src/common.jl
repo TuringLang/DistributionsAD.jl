@@ -48,8 +48,12 @@ end
 # Tracker's implementation of ldiv isn't good. We'll use Zygote's instead.
 zygote_ldiv(A::AbstractMatrix, B::AbstractVecOrMat) = A \ B
 
-function randnsimilar(rng::Random.AbstractRNG, x::AbstractArray, dims...)
+function randnsimilar(rng, x::AbstractArray, dims...)
     randn!(rng, similar(x, dims...))
+end
+
+function randnsimilar(rng, x::CuArray, dims...)
+    adapt(CuArray, randn(rng, eltype(x), dims...))
 end
 
 # TODO: should be replace by @non_differentiable when

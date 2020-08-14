@@ -10,7 +10,9 @@ using PDMats,
       Requires,
       ZygoteRules,
       ChainRules,  # needed for `ChainRules.chol_blocked_rev`
-      FillArrays
+      FillArrays,
+      CUDA,
+      Adapt
 
 using SpecialFunctions: logabsgamma, digamma
 using LinearAlgebra: copytri!, AbstractTriangular
