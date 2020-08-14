@@ -56,7 +56,7 @@ end
 # https://github.com/JuliaDiff/ChainRulesCore.jl/issues/150 is fixed
 function ChainRules.rrule(::typeof(randnsimilar), rng, x, dims...)
     function randnsimilar_pullback(ΔQ)
-        return (NO_FIELDS, DoesNotExist(), DoesNotExist(), DoesNotExist())
+        return (NO_FIELDS, Zero(), Zero(), map(_ -> Zero(), dims)...)
     end
     randnsimilar(rng, x, dims...), randnsimilar_pullback
 end
