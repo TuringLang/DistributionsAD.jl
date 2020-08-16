@@ -307,9 +307,7 @@
     matrixvariate_distributions = DistSpec[
         # Matrix x
         DistSpec((n1, n2) -> MatrixBeta(dim, n1, n2), (3.0, 3.0), A, to_beta_mat),
-        DistSpec(() -> MatrixNormal(dim, dim), (), A, to_posdef,
-            broken=(:Tracker, :Zygote)
-        ),
+        DistSpec(() -> MatrixNormal(dim, dim), (), A, to_posdef, broken=(:Zygote,)),
         DistSpec((df, A) -> Wishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
         DistSpec((df, A) -> InverseWishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
         DistSpec((df, A) -> TuringWishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
