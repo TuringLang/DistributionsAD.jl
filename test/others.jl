@@ -234,11 +234,21 @@
     end
 
     @testset "Entropy" begin
-        sigmas = exp.(randn(10))
-        d1 = TuringDiagMvNormal(zeros(10), sigmas)
-        d2 = MvNormal(zeros(10), sigmas)
+        sigma = exp(randn())
+        d1 = TuringScalMvNormal(randn(10), sigma)
+        d2 = MvNormal(randn(10), sigma)
+        @test entropy(d1) ≈ entropy(d2) rtol=1e-6
 
-        @test isapprox(entropy(d1), entropy(d2), rtol = 1e-6)
+        sigmas = exp.(randn(10))
+        d1 = TuringDiagMvNormal(randn(10), sigmas)
+        d2 = MvNormal(randn(10), sigmas)
+        @test entropy(d1) ≈ entropy(d2) rtol=1e-6
+
+        A = randn(10)
+        C = A * A' + I
+        d1 = TuringDenseMvNormal(randn(10), C)
+        d2 = MvNormal(randn(10), C)
+        @test entropy(d1) ≈ entropy(d2) rtol=1e-6
     end
 
     @testset "Params" begin

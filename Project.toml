@@ -1,6 +1,6 @@
 name = "DistributionsAD"
 uuid = "ced4e74d-a319-5a8a-b0ac-84af2272839c"
-version = "0.6.3"
+version = "0.6.4"
 
 [deps]
 ChainRules = "082447d4-558c-5d27-93f4-14fc19e9eca2"
