@@ -2,23 +2,29 @@ module ReverseDiffX
 
 export NotTracked
 
-using MacroTools, LinearAlgebra, ..ReverseDiff, StaticArrays
+using LinearAlgebra
+using ..ReverseDiff
+using StaticArrays
+using Distributions
+using PDMats
+using ForwardDiff
+
 using Base.Broadcast: BroadcastStyle, ArrayStyle, Broadcasted, broadcasted
-using ForwardDiff: ForwardDiff, Dual
-using ..ReverseDiff: SpecialInstruction, value, value!, deriv, track, record!, tape, unseed!, @grad, TrackedReal, TrackedVector, TrackedMatrix, TrackedArray
+using ForwardDiff: Dual
+using ..ReverseDiff: SpecialInstruction, value, value!, deriv, track, record!,
+                     tape, unseed!, @grad, TrackedReal, TrackedVector,
+                     TrackedMatrix, TrackedArray
 using ..DistributionsAD: DistributionsAD
 
-const TrackedVecOrMat{V,D} = Union{TrackedVector{V,D},TrackedMatrix{V,D}}
 
 import SpecialFunctions, NaNMath
 import ..DistributionsAD: turing_chol, symm_turing_chol, _mv_categorical_logpdf
 import Base.Broadcast: materialize
 import StatsFuns: logsumexp
-import ZygoteRules
 
+const TrackedVecOrMat{V,D} = Union{TrackedVector{V,D},TrackedMatrix{V,D}}
 const RDBroadcasted{F, T} = Broadcasted{<:Any, <:Any, F, T}
 
-using Distributions, PDMats
 import Distributions: logpdf,
                       Gamma,
                       MvNormal,
@@ -29,12 +35,12 @@ import Distributions: logpdf,
                       PoissonBinomial,
                       isprobvec
 
-using ..DistributionsAD: TuringMvNormal,
+using ..DistributionsAD: TuringPoissonBinomial,
+                         TuringMvNormal,
                          TuringMvLogNormal,
                          TuringWishart,
                          TuringInverseWishart,
                          TuringDirichlet,
-                         TuringPoissonBinomial,
                          TuringScalMvNormal,
                          TuringDiagMvNormal,
                          TuringDenseMvNormal
@@ -74,20 +80,20 @@ end
 for T in (:TrackedVector, :TrackedMatrix)
     @eval begin
         function logpdf(d::MvNormal{<:Any, <:PDMats.ScalMat}, x::$T)
-            logpdf(TuringScalMvNormal(d.μ, d.Σ.value), x)
+            logpdf(TuringScalMvNormal(d.μ, sqrt(d.Σ.value)), x)
         end
         function logpdf(d::MvNormal{<:Any, <:PDMats.PDiagMat}, x::$T)
-            logpdf(TuringDiagMvNormal(d.μ, d.Σ.diag), x)
+            logpdf(TuringDiagMvNormal(d.μ, sqrt.(d.Σ.diag)), x)
         end
         function logpdf(d::MvNormal{<:Any, <:PDMats.PDMat}, x::$T)
             logpdf(TuringDenseMvNormal(d.μ, d.Σ.chol), x)
         end
         
         function logpdf(d::MvLogNormal{<:Any, <:PDMats.ScalMat}, x::$T)
-            logpdf(TuringMvLogNormal(TuringScalMvNormal(d.normal.μ, d.normal.Σ.value)), x)
+            logpdf(TuringMvLogNormal(TuringScalMvNormal(d.normal.μ, sqrt(d.normal.Σ.value))), x)
         end
         function logpdf(d::MvLogNormal{<:Any, <:PDMats.PDiagMat}, x::$T)
-            logpdf(TuringMvLogNormal(TuringDiagMvNormal(d.normal.μ, d.normal.Σ.diag)), x)
+            logpdf(TuringMvLogNormal(TuringDiagMvNormal(d.normal.μ, sqrt.(d.normal.Σ.diag))), x)
         end
         function logpdf(d::MvLogNormal{<:Any, <:PDMats.PDMat}, x::$T)
             logpdf(TuringMvLogNormal(TuringDenseMvNormal(d.normal.μ, d.normal.Σ.chol)), x)
@@ -249,15 +255,23 @@ function logpdf(d::MatrixBeta, X::AbstractArray{<:TrackedMatrix{<:Real}})
     return map(x -> logpdf(d, x), X)
 end
 
-Wishart(df::TrackedReal, S::Matrix{<:Real}) = TuringWishart(df, S)
-Wishart(df::TrackedReal, S::AbstractMatrix{<:Real}) = TuringWishart(df, S)
-Wishart(df::Real, S::TrackedMatrix) = TuringWishart(df, S)
-Wishart(df::TrackedReal, S::TrackedMatrix) = TuringWishart(df, S)
+Distributions.Wishart(df::TrackedReal, S::Matrix{<:Real}) = TuringWishart(df, S)
+Distributions.Wishart(df::TrackedReal, S::AbstractMatrix{<:Real}) = TuringWishart(df, S)
+Distributions.Wishart(df::Real, S::AbstractMatrix{<:TrackedReal}) = TuringWishart(df, S)
+Distributions.Wishart(df::TrackedReal, S::AbstractMatrix{<:TrackedReal}) = TuringWishart(df, S)
+Distributions.Wishart(df::Real, S::TrackedMatrix) = TuringWishart(df, S)
+Distributions.Wishart(df::TrackedReal, S::TrackedMatrix) = TuringWishart(df, S)
+Distributions.Wishart(df::Real, S::AbstractPDMat{<:TrackedReal}) = TuringWishart(df, S)
+Distributions.Wishart(df::TrackedReal, S::AbstractPDMat{<:TrackedReal}) = TuringWishart(df, S)
 
-InverseWishart(df::TrackedReal, S::Matrix{<:Real}) = TuringInverseWishart(df, S)
-InverseWishart(df::TrackedReal, S::AbstractMatrix{<:Real}) = TuringInverseWishart(df, S)
-InverseWishart(df::Real, S::TrackedMatrix) = TuringInverseWishart(df, S)
-InverseWishart(df::TrackedReal, S::TrackedMatrix) = TuringInverseWishart(df, S)
+Distributions.InverseWishart(df::TrackedReal, S::Matrix{<:Real}) = TuringInverseWishart(df, S)
+Distributions.InverseWishart(df::TrackedReal, S::AbstractMatrix{<:Real}) = TuringInverseWishart(df, S)
+Distributions.InverseWishart(df::Real, S::AbstractMatrix{<:TrackedReal}) = TuringInverseWishart(df, S)
+Distributions.InverseWishart(df::TrackedReal, S::AbstractMatrix{<:TrackedReal}) = TuringInverseWishart(df, S)
+Distributions.InverseWishart(df::Real, S::TrackedMatrix) = TuringInverseWishart(df, S)
+Distributions.InverseWishart(df::TrackedReal, S::TrackedMatrix) = TuringInverseWishart(df, S)
+Distributions.InverseWishart(df::Real, S::AbstractPDMat{<:TrackedReal}) = TuringInverseWishart(df, S)
+Distributions.InverseWishart(df::TrackedReal, S::AbstractPDMat{<:TrackedReal}) = TuringInverseWishart(df, S)
 
 function logpdf(d::Wishart, X::TrackedMatrix)
     return logpdf(TuringWishart(d), X)

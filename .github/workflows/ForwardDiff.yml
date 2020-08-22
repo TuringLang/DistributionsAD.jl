@@ -1,4 +1,4 @@
-name: ReverseDiff tests
+name: ForwardDiff tests
 
 on:
   push:
@@ -29,4 +29,4 @@ jobs:
       - uses: julia-actions/julia-runtest@latest
         env:
           GROUP: AD
-          AD: ReverseDiff
+          AD: ForwardDiff
