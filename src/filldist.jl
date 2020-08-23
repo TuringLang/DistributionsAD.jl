@@ -23,12 +23,6 @@ function Distributions.logpdf(
 )
     return _logpdf(dist, x)
 end
-ZygoteRules.@adjoint function Distributions.logpdf(
-    dist::FillVectorOfUnivariate,
-    x::AbstractMatrix{<:Real},
-)
-    return ZygoteRules.pullback(_logpdf, dist, x)
-end
 
 function _logpdf(
     dist::FillVectorOfUnivariate,
@@ -103,18 +97,14 @@ function Distributions.logpdf(
 )
     return _logpdf(dist, x)
 end
+
 function _logpdf(
     dist::FillVectorOfMultivariate,
     x::AbstractMatrix{<:Real},
 )
     return sum(logpdf(dist.dists.value, x))
 end
-ZygoteRules.@adjoint function Distributions.logpdf(
-    dist::FillVectorOfMultivariate,
-    x::AbstractMatrix{<:Real},
-)
-    return ZygoteRules.pullback(_logpdf, dist, x)
-end
+
 function Distributions.rand(rng::Random.AbstractRNG, dist::FillVectorOfMultivariate)
     return rand(rng, dist.dists.value, length.(dist.dists.axes)...,)
 end
