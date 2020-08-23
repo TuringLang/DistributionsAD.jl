@@ -215,16 +215,24 @@ uniformlogpdf(a::Real, b::Real, x::TrackedReal) = track(uniformlogpdf, a, b, x)
 uniformlogpdf(a::TrackedReal, b::TrackedReal, x::Real) = track(uniformlogpdf, a, b, x)
 uniformlogpdf(a::TrackedReal, b::TrackedReal, x::TrackedReal) = track(uniformlogpdf, a, b, x)
 @grad function uniformlogpdf(a, b, x)
+    # compute log pdf
     diff = data(b) - data(a)
-    T = typeof(diff)
-    if a <= data(x) <= b && a < b
-        l = -log(diff)
-        da = 1/diff^2
-        return l, Δ -> (da * Δ, -da * Δ, zero(T) * Δ)
-    else
-        n = T(NaN)
-        return n, Δ -> (n, n, n)
+    insupport = a <= data(x) <= b
+    lp = insupport ? -log(diff) : log(zero(diff))
+
+    function pullback(Δ)
+        z = zero(x) * Δ
+        if insupport
+            c = Δ / diff
+            return c, -c, z
+        else
+            c = Δ / one(diff)
+            cNaN = oftype(c, NaN)
+            return cNaN, cNaN, oftype(z, NaN)
+        end
     end
+
+    return lp, pullback
 end
 
 

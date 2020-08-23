@@ -18,14 +18,13 @@ Base.minimum(d::TuringUniform) = d.a
 Base.maximum(d::TuringUniform) = d.b
 
 function uniformlogpdf(a, b, x)
-    c = -log(b - a)
+    diff = b - a
     if a <= x <= b
-        return c
+        return -log(diff)
     else
-        return oftype(c, -Inf)
+        return log(zero(diff))
     end
 end
-
 
 if VERSION < v"1.2"
     Base.inv(::Irrational{:π}) = 1/π

@@ -10,6 +10,7 @@ using PDMats,
       Requires,
       ZygoteRules,
       ChainRules,  # needed for `ChainRules.chol_blocked_rev`
+      ChainRulesCore,
       FillArrays
 
 using SpecialFunctions: logabsgamma, digamma
@@ -53,6 +54,7 @@ include("flatten.jl")
 include("arraydist.jl")
 include("filldist.jl")
 
+include("chainrules.jl")
 include("zygote.jl")
 
 @init begin
