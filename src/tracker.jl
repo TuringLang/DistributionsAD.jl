@@ -5,11 +5,11 @@ Tracker.dual(x::Int, p) = x
 
 Base.prevfloat(r::TrackedReal) = track(prevfloat, r)
 @grad function prevfloat(r::Real)
-    prevfloat(data(r)), Δ -> Δ
+    prevfloat(data(r)), Δ -> (Δ,)
 end
 Base.nextfloat(r::TrackedReal) = track(nextfloat, r)
 @grad function nextfloat(r::Real)
-    nextfloat(data(r)), Δ -> Δ
+    nextfloat(data(r)), Δ -> (Δ,)
 end
 
 for f = [:hcat, :vcat]
