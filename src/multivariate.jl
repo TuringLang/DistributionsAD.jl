@@ -47,11 +47,8 @@ TuringDirichlet(d::Integer, alpha::Integer) = TuringDirichlet(d, Float64(alpha))
 
 Distributions.Dirichlet(alpha::AbstractVector) = TuringDirichlet(alpha)
 
-function Distributions.logpdf(d::TuringDirichlet, x::AbstractVector)
-    simplex_logpdf(d.alpha, d.lmnB, x)
-end
-function Distributions.logpdf(d::TuringDirichlet, x::AbstractMatrix)
-    simplex_logpdf(d.alpha, d.lmnB, x)
+function Distributions._logpdf(d::TuringDirichlet, x::AbstractVector)
+    return simplex_logpdf(d.alpha, d.lmnB, x)
 end
 
 ZygoteRules.@adjoint function Distributions.Dirichlet(alpha)
@@ -64,21 +61,9 @@ end
 function simplex_logpdf(alpha, lmnB, x::AbstractVector)
     sum((alpha .- 1) .* log.(x)) - lmnB
 end
-function simplex_logpdf(alpha, lmnB, x::AbstractMatrix)
-    @views init = vcat(sum((alpha .- 1) .* log.(x[:,1])) - lmnB)
-    mapreduce(vcat, drop(eachcol(x), 1); init = init) do c
-        sum((alpha .- 1) .* log.(c)) - lmnB
-    end
-end
 
 ZygoteRules.@adjoint function simplex_logpdf(alpha, lmnB, x::AbstractVector)
     simplex_logpdf(alpha, lmnB, x), Δ -> (Δ .* log.(x), -Δ, Δ .* (alpha .- 1) ./ x)
-end
-
-ZygoteRules.@adjoint function simplex_logpdf(alpha, lmnB, x::AbstractMatrix)
-    simplex_logpdf(alpha, lmnB, x), Δ -> begin
-        (log.(x) * Δ, -sum(Δ), ((alpha .- 1) ./ x) * Diagonal(Δ))
-    end
 end
 
 ## MvNormal ##

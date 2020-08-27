@@ -99,7 +99,7 @@ Distributions.pdf(d::MvDiscreteNonParametric) = copy(probs(d))
 
 # Helper functions for pdf and cdf required to fix ambiguous method
 # error involving [pc]df(::DisceteUnivariateDistribution, ::Int)
-function _logpdf(d::MvDiscreteNonParametric{T,P}, x::AbstractVector{T}) where {T,P}
+function __logpdf(d::MvDiscreteNonParametric{T,P}, x::AbstractVector{T}) where {T,P}
     s = zero(P)
     for col in 1:length(x)
         idx_range = searchsorted(support(d), x[col])
@@ -109,8 +109,8 @@ function _logpdf(d::MvDiscreteNonParametric{T,P}, x::AbstractVector{T}) where {T
     end
     return s
 end
-Distributions.logpdf(d::MvDiscreteNonParametric{T}, x::AbstractVector{<:Integer}) where T  = _logpdf(d, convert(AbstractVector{T}, x))
-Distributions.logpdf(d::MvDiscreteNonParametric{T}, x::AbstractVector{<:Real}) where T = _logpdf(d, convert(AbstractVector{T}, x))
+Distributions._logpdf(d::MvDiscreteNonParametric{T}, x::AbstractVector{<:Integer}) where T  = __logpdf(d, convert(AbstractVector{T}, x))
+Distributions._logpdf(d::MvDiscreteNonParametric{T}, x::AbstractVector{<:Real}) where T = __logpdf(d, convert(AbstractVector{T}, x))
 Distributions.pdf(d::MvDiscreteNonParametric, x::AbstractVector{<:Real}) = exp(logpdf(d, x))
 
 Base.minimum(d::MvDiscreteNonParametric) = first(support(d))
@@ -148,7 +148,7 @@ end
 Distributions.ncategories(d::MvCategorical) = support(d).stop
 Distributions.params(d::MvCategorical{P,Ps}) where {P<:Real, Ps<:AbstractVector{P}} = (probs(d),)
 Distributions.partype(::MvCategorical{T}) where {T<:Real} = T
-function Distributions.logpdf(d::MvCategorical{T}, x::AbstractVector{<:Integer}) where {T<:Real}
+function Distributions._logpdf(d::MvCategorical{T}, x::AbstractVector{<:Integer}) where {T<:Real}
     ps = probs(d)
     if insupport(d, x)
         _mv_categorical_logpdf(ps, x)

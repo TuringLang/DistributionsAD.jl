@@ -341,9 +341,11 @@ end
 Distributions.Dirichlet(alpha::TrackedVector) = TuringDirichlet(alpha)
 Distributions.Dirichlet(d::Integer, alpha::TrackedReal) = TuringDirichlet(d, alpha)
 
-function Distributions.logpdf(d::Dirichlet{T}, x::TrackedVecOrMat) where {T}
-    TV = typeof(d.alpha)
-    logpdf(TuringDirichlet{T, TV}(d.alpha, d.alpha0, d.lmnB), x)
+function Distributions._logpdf(d::Dirichlet, x::TrackedVector{<:Real})
+    return Distributions._logpdf(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
+end
+function Distributions.loglikelihood(d::Dirichlet, x::TrackedMatrix{<:Real})
+    return loglikelihood(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
 end
 
 for (f, T) in ((:_logpdf, :TrackedVector), (:loglikelihood, :TrackedMatrix))
