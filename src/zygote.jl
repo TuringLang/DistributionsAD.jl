@@ -21,16 +21,6 @@ end
 # end
 
 
-## MatrixBeta ##
-
-ZygoteRules.@adjoint function Distributions.logpdf(
-    d::MatrixBeta,
-    X::AbstractArray{<:Matrix{<:Real}}
-)
-    return ZygoteRules.pullback(d, X) do d, X
-        map(x -> logpdf(d, x), X)
-    end
-end
 
 ## Wishart ##
 

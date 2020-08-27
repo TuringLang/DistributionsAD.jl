@@ -242,10 +242,6 @@ end
     end
 end
 
-function logpdf(d::MatrixBeta, X::AbstractArray{<:TrackedMatrix{<:Real}})
-    return map(x -> logpdf(d, x), X)
-end
-
 Distributions.Wishart(df::TrackedReal, S::Matrix{<:Real}) = TuringWishart(df, S)
 Distributions.Wishart(df::TrackedReal, S::AbstractMatrix{<:Real}) = TuringWishart(df, S)
 Distributions.Wishart(df::Real, S::AbstractMatrix{<:TrackedReal}) = TuringWishart(df, S)
@@ -264,18 +260,18 @@ Distributions.InverseWishart(df::TrackedReal, S::TrackedMatrix) = TuringInverseW
 Distributions.InverseWishart(df::Real, S::AbstractPDMat{<:TrackedReal}) = TuringInverseWishart(df, S)
 Distributions.InverseWishart(df::TrackedReal, S::AbstractPDMat{<:TrackedReal}) = TuringInverseWishart(df, S)
 
-function logpdf(d::Wishart, X::TrackedMatrix)
-    return logpdf(TuringWishart(d), X)
+function _logpdf(d::Wishart, X::TrackedMatrix)
+    return _logpdf(TuringWishart(d), X)
 end
-function logpdf(d::Wishart, X::AbstractArray{<:TrackedMatrix})
-    return logpdf(TuringWishart(d), X)
+function loglikelihood(d::Wishart, X::AbstractArray{<:TrackedMatrix})
+    return loglikelihood(TuringWishart(d), X)
 end
 
-function logpdf(d::InverseWishart, X::TrackedMatrix)
-    return logpdf(TuringInverseWishart(d), X)
+function _logpdf(d::InverseWishart, X::TrackedMatrix)
+    return _logpdf(TuringInverseWishart(d), X)
 end
-function logpdf(d::InverseWishart, X::AbstractArray{<:TrackedMatrix})
-    return logpdf(TuringInverseWishart(d), X)
+function loglikelihood(d::InverseWishart, X::AbstractArray{<:TrackedMatrix})
+    return loglikelihood(TuringInverseWishart(d), X)
 end
 
 # isprobvec

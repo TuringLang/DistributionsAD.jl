@@ -46,15 +46,10 @@ Base.size(dist::MatrixOfUnivariate) = size(dist.dists)
 function arraydist(dists::AbstractMatrix{<:UnivariateDistribution})
     return MatrixOfUnivariate(dists)
 end
-function Distributions.logpdf(dist::MatrixOfUnivariate, x::AbstractMatrix{<:Real})
+function Distributions._logpdf(dist::MatrixOfUnivariate, x::AbstractMatrix{<:Real})
     return summaporbroadcast(logpdf, dist.dists, x)
 end
-function Distributions.logpdf(dist::MatrixOfUnivariate, x::AbstractArray{<:AbstractMatrix{<:Real}})
-    return map(x -> logpdf(dist, x), x)
-end
-function Distributions.logpdf(dist::MatrixOfUnivariate, x::AbstractArray{<:Matrix{<:Real}})
-    return map(x -> logpdf(dist, x), x)
-end
+
 function Distributions.rand(rng::Random.AbstractRNG, dist::MatrixOfUnivariate)
     return rand.(Ref(rng), dist.dists)
 end
@@ -74,15 +69,9 @@ function arraydist(dists::AbstractVector{<:MultivariateDistribution})
     return VectorOfMultivariate(dists)
 end
 
-function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractMatrix{<:Real})
+function Distributions._logpdf(dist::VectorOfMultivariate, x::AbstractMatrix{<:Real})
     # `eachcol` breaks Zygote, so we use `view` directly
-    return sum(map((d, i) -> logpdf(d, view(x, :, i)), dist.dists, axes(x, 2)))
-end
-function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractArray{<:AbstractMatrix{<:Real}})
-    return map(x -> logpdf(dist, x), x)
-end
-function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractArray{<:Matrix{<:Real}})
-    return map(x -> logpdf(dist, x), x)
+    return sum(i -> logpdf(dist.dists[i], view(x, :, i)), axes(x, 2))
 end
 
 function Distributions.rand(rng::Random.AbstractRNG, dist::VectorOfMultivariate)

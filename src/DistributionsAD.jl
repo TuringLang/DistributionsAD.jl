@@ -46,13 +46,13 @@ export TuringScalMvNormal,
        filldist
 
 include("common.jl")
+include("arraydist.jl")
+include("filldist.jl")
 include("univariate.jl")
 include("multivariate.jl")
 include("mvcategorical.jl")
 include("matrixvariate.jl")
 include("flatten.jl")
-include("arraydist.jl")
-include("filldist.jl")
 
 include("chainrules.jl")
 include("zygote.jl")

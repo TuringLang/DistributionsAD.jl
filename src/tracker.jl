@@ -508,21 +508,16 @@ Tracker.@grad function _mv_categorical_logpdf(ps, x)
 end
 
 
-## MatrixBeta ##
-
-function Distributions.logpdf(d::MatrixBeta, X::AbstractArray{<:TrackedMatrix{<:Real}})
-    return map(x -> logpdf(d, x), X)
-end
-
-
 ## Wishart ##
 
-function Distributions.logpdf(d::Wishart, X::TrackedMatrix)
-    return logpdf(TuringWishart(d), X)
+function Distributions._logpdf(d::Wishart, X::TrackedMatrix)
+    return Distributions._logpdf(TuringWishart(d), X)
 end
-function Distributions.logpdf(d::Wishart, X::AbstractArray{<:TrackedMatrix})
-    return logpdf(TuringWishart(d), X)
+
+function Distributions.loglikelihood(d::Wishart, X::AbstractArray{<:TrackedMatrix})
+    return loglikelihood(TuringWishart(d), X)
 end
+
 Distributions.Wishart(df::TrackedReal, S::Matrix{<:Real}) = TuringWishart(df, S)
 Distributions.Wishart(df::TrackedReal, S::AbstractMatrix{<:Real}) = TuringWishart(df, S)
 Distributions.Wishart(df::Real, S::TrackedMatrix) = TuringWishart(df, S)
@@ -532,11 +527,12 @@ Distributions.Wishart(df::TrackedReal, S::AbstractPDMat{<:TrackedReal}) = Turing
 
 ## Inverse Wishart ##
 
-function Distributions.logpdf(d::InverseWishart, X::TrackedMatrix)
-    return logpdf(TuringInverseWishart(d), X)
+function Distributions._logpdf(d::InverseWishart, X::TrackedMatrix)
+    return Distributions._logpdf(TuringInverseWishart(d), X)
 end
-function Distributions.logpdf(d::InverseWishart, X::AbstractArray{<:TrackedMatrix})
-    return logpdf(TuringInverseWishart(d), X)
+
+function Distributions.loglikelihood(d::InverseWishart, X::AbstractArray{<:TrackedMatrix})
+    return loglikelihood(TuringInverseWishart(d), X)
 end
 
 Distributions.InverseWishart(df::TrackedReal, S::Matrix{<:Real}) = TuringInverseWishart(df, S)

@@ -15,26 +15,13 @@ function Distributions.logpdf(
     dist::FillVectorOfUnivariate,
     x::AbstractVector{<:Real},
 )
-    return _logpdf(dist, x)
-end
-function Distributions.logpdf(
-    dist::FillVectorOfUnivariate,
-    x::AbstractMatrix{<:Real},
-)
-    return _logpdf(dist, x)
-end
-
-function _logpdf(
-    dist::FillVectorOfUnivariate,
-    x::AbstractVector{<:Real},
-)
     return _flat_logpdf(dist.v.value, x)
 end
-function _logpdf(
+function Distributions.loglikelihood(
     dist::FillVectorOfUnivariate,
     x::AbstractMatrix{<:Real},
 )
-    return _flat_logpdf_mat(dist.v.value, x)
+    return sum(_flat_logpdf_mat(dist.v.value, x))
 end
 
 function _flat_logpdf(dist, x)
@@ -73,7 +60,8 @@ const FillMatrixOfUnivariate{
 function filldist(dist::UnivariateDistribution, N1::Integer, N2::Integer)
     return MatrixOfUnivariate(Fill(dist, N1, N2))
 end
-function Distributions.logpdf(dist::FillMatrixOfUnivariate, x::AbstractMatrix{<:Real})
+function Distributions._logpdf(dist::FillMatrixOfUnivariate, x::AbstractMatrix{<:Real})
+    # return loglikelihood(dist.dists.value, x)
     return _flat_logpdf(dist.dists.value, x)
 end
 function Distributions.rand(rng::Random.AbstractRNG, dist::FillMatrixOfUnivariate)
@@ -91,18 +79,11 @@ const FillVectorOfMultivariate{
 function filldist(dist::MultivariateDistribution, N::Int)
     return VectorOfMultivariate(Fill(dist, N))
 end
-function Distributions.logpdf(
+function Distributions._logpdf(
     dist::FillVectorOfMultivariate,
     x::AbstractMatrix{<:Real},
 )
-    return _logpdf(dist, x)
-end
-
-function _logpdf(
-    dist::FillVectorOfMultivariate,
-    x::AbstractMatrix{<:Real},
-)
-    return sum(logpdf(dist.dists.value, x))
+    return loglikelihood(dist.dists.value, x)
 end
 
 function Distributions.rand(rng::Random.AbstractRNG, dist::FillVectorOfMultivariate)
