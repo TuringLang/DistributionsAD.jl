@@ -209,7 +209,6 @@ Distributions.Uniform(a::TrackedReal, b::Real) = TuringUniform{TrackedReal}(a, b
 Distributions.Uniform(a::Real, b::TrackedReal) = TuringUniform{TrackedReal}(a, b)
 Distributions.Uniform(a::TrackedReal, b::TrackedReal) = TuringUniform{TrackedReal}(a, b)
 Distributions.logpdf(d::Uniform, x::TrackedReal) = uniformlogpdf(d.a, d.b, x)
-Distributions.logpdf(d::Uniform, x::TrackedArray) = uniformlogpdf.(d.a, d.b, x)
 
 uniformlogpdf(a::Real, b::Real, x::TrackedReal) = track(uniformlogpdf, a, b, x)
 uniformlogpdf(a::TrackedReal, b::TrackedReal, x::Real) = track(uniformlogpdf, a, b, x)

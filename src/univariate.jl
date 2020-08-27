@@ -13,7 +13,7 @@ function TuringUniform(a::Real, b::Real)
     return TuringUniform{T}(T(a), T(b))
 end
 Distributions.logpdf(d::TuringUniform, x::Real) = uniformlogpdf(d.a, d.b, x)
-Distributions.logpdf(d::TuringUniform, x::AbstractArray) = uniformlogpdf.(d.a, d.b, x)
+
 Base.minimum(d::TuringUniform) = d.a
 Base.maximum(d::TuringUniform) = d.b
 
