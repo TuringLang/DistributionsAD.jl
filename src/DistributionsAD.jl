@@ -78,6 +78,39 @@ include("zygote.jl")
                         TrackedArray, TrackedVecOrMat, track, @grad, data
         include("tracker.jl")
     end
+
+    @require LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02" begin
+        using .LazyArrays: BroadcastArray, BroadcastVector, LazyArray
+
+        const LazyVectorOfUnivariate{
+            S<:ValueSupport,
+            T<:UnivariateDistribution{S},
+            Tdists<:BroadcastVector{T},
+        } = VectorOfUnivariate{S,T,Tdists}
+
+        function Distributions._logpdf(
+            dist::LazyVectorOfUnivariate,
+            x::AbstractVector{<:Real},
+        )
+            return sum(copy(logpdf.(dist.v, x)))
+        end
+
+        const LazyMatrixOfUnivariate{
+            S<:ValueSupport,
+            T<:UnivariateDistribution{S},
+            Tdists<:BroadcastArray{T,2},
+        } = MatrixOfUnivariate{S,T,Tdists}
+
+        function Distributions._logpdf(
+            dist::LazyMatrixOfUnivariate,
+            x::AbstractMatrix{<:Real},
+        )
+            return sum(copy(logpdf.(dist.dists, x)))
+        end
+
+        lazyarray(f, x...) = LazyArray(Base.broadcasted(f, x...))
+        export lazyarray
+    end
 end
 
 end

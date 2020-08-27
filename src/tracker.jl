@@ -347,6 +347,15 @@ function Distributions.loglikelihood(d::Dirichlet, x::TrackedMatrix{<:Real})
     return loglikelihood(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
 end
 
+## Product
+
+# TODO: Remove when modified upstream
+function Distributions.loglikelihood(dist::Product, x::TrackedVector{<:Real})
+    return Distributions.logpdf(dist, x)
+end
+
+## MvNormal
+
 for (f, T) in ((:_logpdf, :TrackedVector), (:loglikelihood, :TrackedMatrix))
     @eval begin
         function Distributions.$f(d::MvNormal{<:Any, <:PDMats.ScalMat}, x::$T{<:Real})

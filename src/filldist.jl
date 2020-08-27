@@ -11,17 +11,11 @@ function filldist(dist::UnivariateDistribution, N::Int)
 end
 filldist(d::Normal, N::Int) = TuringMvNormal(fill(d.μ, N), d.σ)
 
-function Distributions.logpdf(
+function Distributions._logpdf(
     dist::FillVectorOfUnivariate,
     x::AbstractVector{<:Real},
 )
     return _flat_logpdf(dist.v.value, x)
-end
-function Distributions.loglikelihood(
-    dist::FillVectorOfUnivariate,
-    x::AbstractMatrix{<:Real},
-)
-    return sum(_flat_logpdf_mat(dist.v.value, x))
 end
 
 function _flat_logpdf(dist, x)
@@ -32,15 +26,6 @@ function _flat_logpdf(dist, x)
         return sum(map(x) do x
             logpdf(dist, x)
         end)
-    end
-end
-function _flat_logpdf_mat(dist, x)
-    if toflatten(dist)
-        f, args = flatten(dist)
-        return vec(sum(f.(args..., x), dims = 1))
-    else
-        temp = map(x -> logpdf(dist, x), x)
-        return vec(sum(temp, dims = 1))
     end
 end
 
