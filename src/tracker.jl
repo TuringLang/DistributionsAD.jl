@@ -358,24 +358,42 @@ end
 
 for (f, T) in ((:_logpdf, :TrackedVector), (:loglikelihood, :TrackedMatrix))
     @eval begin
-        function Distributions.$f(d::MvNormal{<:Any, <:PDMats.ScalMat}, x::$T{<:Real})
+        function Distributions.$f(d::MvNormal{<:Real, <:PDMats.ScalMat}, x::$T{<:Real})
             return Distributions.$f(TuringScalMvNormal(d.μ, sqrt(d.Σ.value)), x)
         end
-        function Distributions.$f(d::MvNormal{<:Any, <:PDMats.PDiagMat}, x::$T{<:Real})
+        function Distributions.$f(d::MvNormal{<:Real, <:PDMats.PDiagMat}, x::$T{<:Real})
             return Distributions.$f(TuringDiagMvNormal(d.μ, sqrt.(d.Σ.diag)), x)
         end
-        function Distributions.$f(d::MvNormal{<:Any, <:PDMats.PDMat}, x::$T{<:Real})
+        function Distributions.$f(d::MvNormal{<:Real, <:PDMats.PDMat}, x::$T{<:Real})
             return Distributions.$f(TuringDenseMvNormal(d.μ, d.Σ.chol), x)
         end
 
-        function Distributions.$f(d::MvLogNormal{<:Any, <:PDMats.ScalMat}, x::$T{<:Real})
-            return Distributions.$f(TuringMvLogNormal(TuringScalMvNormal(d.normal.μ, sqrt(d.normal.Σ.value))), x)
+        function Distributions.$f(
+            d::MvLogNormal{<:Real, <:PDMats.ScalMat},
+            x::$T{<:Real},
+        )
+            return Distributions.$f(
+                TuringMvLogNormal(TuringScalMvNormal(d.normal.μ, sqrt(d.normal.Σ.value))),
+                x,
+            )
         end
-        function Distributions.$f(d::MvLogNormal{<:Any, <:PDMats.PDiagMat}, x::$T{<:Real})
-            return Distributions.$f(TuringMvLogNormal(TuringDiagMvNormal(d.normal.μ, sqrt.(d.normal.Σ.diag))), x)
+        function Distributions.$f(
+            d::MvLogNormal{<:Real, <:PDMats.PDiagMat},
+            x::$T{<:Real},
+        )
+            return Distributions.$f(
+                TuringMvLogNormal(TuringDiagMvNormal(d.normal.μ, sqrt.(d.normal.Σ.diag))),
+                x,
+            )
         end
-        function Distributions.$f(d::MvLogNormal{<:Any, <:PDMats.PDMat}, x::$T{<:Real})
-            return Distributions.$f(TuringMvLogNormal(TuringDenseMvNormal(d.normal.μ, d.normal.Σ.chol)), x)
+        function Distributions.$f(
+            d::MvLogNormal{<:Real, <:PDMats.PDMat},
+            x::$T{<:Real},
+        )
+            return Distributions.$f(
+                TuringMvLogNormal(TuringDenseMvNormal(d.normal.μ, d.normal.Σ.chol)),
+                x,
+            )
         end
     end
 end
