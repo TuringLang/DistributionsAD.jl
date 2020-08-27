@@ -20,7 +20,22 @@ end
 #     error("This needs ForwardDiff. `using ForwardDiff` should fix this error.")
 # end
 
+## Product
 
+# Tests with `Kolmogorov` seem to fail otherwise?!
+ZygoteRules.@adjoint function Distributions._logpdf(d::Product, x::AbstractVector{<:Real})
+    return ZygoteRules.pullback(d, x) do d, x
+        sum(map(logpdf, d.v, x))
+    end
+end
+ZygoteRules.@adjoint function Distributions._logpdf(
+    d::FillVectorOfUnivariate,
+    x::AbstractVector{<:Real},
+)
+    return ZygoteRules.pullback(d, x) do d, x
+        _flat_logpdf(d.v.value, x)
+    end
+end
 
 ## Wishart ##
 
