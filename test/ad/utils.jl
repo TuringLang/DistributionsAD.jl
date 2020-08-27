@@ -96,12 +96,7 @@ function test_ad(dist::DistSpec; kwargs...)
         function (x, θ...)
             dist = f(θ...)
             xtilde = g === nothing ? x : g(x)
-            if dist isa UnivariateDistribution && xtilde isa AbstractArray
-                result = logpdf.(dist, xtilde)
-            else
-                result = logpdf(dist, xtilde)
-            end
-            return sum(result)
+            return loglikelihood(dist, xtilde)
         end
     end
 
