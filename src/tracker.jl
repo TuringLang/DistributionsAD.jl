@@ -346,26 +346,26 @@ function Distributions.logpdf(d::Dirichlet{T}, x::TrackedVecOrMat) where {T}
     logpdf(TuringDirichlet{T, TV}(d.alpha, d.alpha0, d.lmnB), x)
 end
 
-for T in (:TrackedVector, :TrackedMatrix)
+for (f, T) in ((:_logpdf, :TrackedVector), (:loglikelihood, :TrackedMatrix))
     @eval begin
-        function Distributions.logpdf(d::MvNormal{<:Any, <:PDMats.ScalMat}, x::$T)
-            logpdf(TuringScalMvNormal(d.μ, sqrt(d.Σ.value)), x)
+        function Distributions.$f(d::MvNormal{<:Any, <:PDMats.ScalMat}, x::$T{<:Real})
+            return Distributions.$f(TuringScalMvNormal(d.μ, sqrt(d.Σ.value)), x)
         end
-        function Distributions.logpdf(d::MvNormal{<:Any, <:PDMats.PDiagMat}, x::$T)
-            logpdf(TuringDiagMvNormal(d.μ, sqrt.(d.Σ.diag)), x)
+        function Distributions.$f(d::MvNormal{<:Any, <:PDMats.PDiagMat}, x::$T{<:Real})
+            return Distributions.$f(TuringDiagMvNormal(d.μ, sqrt.(d.Σ.diag)), x)
         end
-        function Distributions.logpdf(d::MvNormal{<:Any, <:PDMats.PDMat}, x::$T)
-            logpdf(TuringDenseMvNormal(d.μ, d.Σ.chol), x)
+        function Distributions.$f(d::MvNormal{<:Any, <:PDMats.PDMat}, x::$T{<:Real})
+            return Distributions.$f(TuringDenseMvNormal(d.μ, d.Σ.chol), x)
         end
-        
-        function Distributions.logpdf(d::MvLogNormal{<:Any, <:PDMats.ScalMat}, x::$T)
-            logpdf(TuringMvLogNormal(TuringScalMvNormal(d.normal.μ, sqrt(d.normal.Σ.value))), x)
+
+        function Distributions.$f(d::MvLogNormal{<:Any, <:PDMats.ScalMat}, x::$T{<:Real})
+            return Distributions.$f(TuringMvLogNormal(TuringScalMvNormal(d.normal.μ, sqrt(d.normal.Σ.value))), x)
         end
-        function Distributions.logpdf(d::MvLogNormal{<:Any, <:PDMats.PDiagMat}, x::$T)
-            logpdf(TuringMvLogNormal(TuringDiagMvNormal(d.normal.μ, sqrt.(d.normal.Σ.diag))), x)
+        function Distributions.$f(d::MvLogNormal{<:Any, <:PDMats.PDiagMat}, x::$T{<:Real})
+            return Distributions.$f(TuringMvLogNormal(TuringDiagMvNormal(d.normal.μ, sqrt.(d.normal.Σ.diag))), x)
         end
-        function Distributions.logpdf(d::MvLogNormal{<:Any, <:PDMats.PDMat}, x::$T)
-            logpdf(TuringMvLogNormal(TuringDenseMvNormal(d.normal.μ, d.normal.Σ.chol)), x)
+        function Distributions.$f(d::MvLogNormal{<:Any, <:PDMats.PDMat}, x::$T{<:Real})
+            return Distributions.$f(TuringMvLogNormal(TuringDenseMvNormal(d.normal.μ, d.normal.Σ.chol)), x)
         end
     end
 end
@@ -425,10 +425,6 @@ end
 
 # zero mean,, constant variance
 MvNormal(d::Int, σ::TrackedReal{<:Real}) = TuringMvNormal(d, σ)
-
-for T in (:TrackedVector, :TrackedMatrix)
-    @eval Distributions.logpdf(d::TuringMvLogNormal, x::$T) = _logpdf(d, x)
-end
 
 # zero mean, dense covariance
 MvLogNormal(A::TrackedMatrix) = TuringMvLogNormal(TuringMvNormal(A))

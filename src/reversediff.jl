@@ -26,6 +26,8 @@ const TrackedVecOrMat{V,D} = Union{TrackedVector{V,D},TrackedMatrix{V,D}}
 const RDBroadcasted{F, T} = Broadcasted{<:Any, <:Any, F, T}
 
 import Distributions: logpdf,
+                      _logpdf,
+                      loglikelihood,
                       Gamma,
                       MvNormal,
                       MvLogNormal,
@@ -77,26 +79,28 @@ function Base.maximum(d::LocationScale{T}) where {T <: TrackedReal}
     end
 end
 
-for T in (:TrackedVector, :TrackedMatrix)
+## MvNormal
+
+for (f, T) in ((:_logpdf, :TrackedVector), (:loglikelihood, :TrackedMatrix))
     @eval begin
-        function logpdf(d::MvNormal{<:Any, <:PDMats.ScalMat}, x::$T)
-            logpdf(TuringScalMvNormal(d.μ, sqrt(d.Σ.value)), x)
+        function $f(d::MvNormal{<:Any, <:PDMats.ScalMat}, x::$T{<:Real})
+            return $f(TuringScalMvNormal(d.μ, sqrt(d.Σ.value)), x)
         end
-        function logpdf(d::MvNormal{<:Any, <:PDMats.PDiagMat}, x::$T)
-            logpdf(TuringDiagMvNormal(d.μ, sqrt.(d.Σ.diag)), x)
+        function $f(d::MvNormal{<:Any, <:PDMats.PDiagMat}, x::$T{<:Real})
+            return $f(TuringDiagMvNormal(d.μ, sqrt.(d.Σ.diag)), x)
         end
-        function logpdf(d::MvNormal{<:Any, <:PDMats.PDMat}, x::$T)
-            logpdf(TuringDenseMvNormal(d.μ, d.Σ.chol), x)
+        function $f(d::MvNormal{<:Any, <:PDMats.PDMat}, x::$T{<:Real})
+            return $f(TuringDenseMvNormal(d.μ, d.Σ.chol), x)
         end
-        
-        function logpdf(d::MvLogNormal{<:Any, <:PDMats.ScalMat}, x::$T)
-            logpdf(TuringMvLogNormal(TuringScalMvNormal(d.normal.μ, sqrt(d.normal.Σ.value))), x)
+
+        function $f(d::MvLogNormal{<:Any, <:PDMats.ScalMat}, x::$T{<:Real})
+            return $f(TuringMvLogNormal(TuringScalMvNormal(d.normal.μ, sqrt(d.normal.Σ.value))), x)
         end
-        function logpdf(d::MvLogNormal{<:Any, <:PDMats.PDiagMat}, x::$T)
-            logpdf(TuringMvLogNormal(TuringDiagMvNormal(d.normal.μ, sqrt.(d.normal.Σ.diag))), x)
+        function $f(d::MvLogNormal{<:Any, <:PDMats.PDiagMat}, x::$T{<:Real})
+            return $f(TuringMvLogNormal(TuringDiagMvNormal(d.normal.μ, sqrt.(d.normal.Σ.diag))), x)
         end
-        function logpdf(d::MvLogNormal{<:Any, <:PDMats.PDMat}, x::$T)
-            logpdf(TuringMvLogNormal(TuringDenseMvNormal(d.normal.μ, d.normal.Σ.chol)), x)
+        function $f(d::MvLogNormal{<:Any, <:PDMats.PDMat}, x::$T{<:Real})
+            return $f(TuringMvLogNormal(TuringDenseMvNormal(d.normal.μ, d.normal.Σ.chol)), x)
         end
     end
 end
