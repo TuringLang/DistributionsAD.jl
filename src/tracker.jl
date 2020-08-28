@@ -209,7 +209,6 @@ Distributions.Uniform(a::TrackedReal, b::Real) = TuringUniform{TrackedReal}(a, b
 Distributions.Uniform(a::Real, b::TrackedReal) = TuringUniform{TrackedReal}(a, b)
 Distributions.Uniform(a::TrackedReal, b::TrackedReal) = TuringUniform{TrackedReal}(a, b)
 Distributions.logpdf(d::Uniform, x::TrackedReal) = uniformlogpdf(d.a, d.b, x)
-Distributions.logpdf(d::Uniform, x::TrackedArray) = uniformlogpdf.(d.a, d.b, x)
 
 uniformlogpdf(a::Real, b::Real, x::TrackedReal) = track(uniformlogpdf, a, b, x)
 uniformlogpdf(a::TrackedReal, b::TrackedReal, x::Real) = track(uniformlogpdf, a, b, x)
@@ -323,6 +322,19 @@ end
         Δ->(Δ * _nbinomlogpdf_grad_1(r, p, k), Tracker._zero(p), nothing)
 end
 
+## Multinomial
+
+function Distributions.logpdf(
+    dist::Multinomial{<:Real,<:TrackedVector},
+    X::AbstractMatrix{<:Real}
+)
+    size(X, 1) == length(dist) ||
+        throw(DimensionMismatch("Inconsistent array dimensions."))
+
+    return map(axes(X, 2)) do i
+        Distributions._logpdf(dist, view(X, :, i))
+    end
+end
 
 ## Categorical ##
 
@@ -341,31 +353,74 @@ end
 Distributions.Dirichlet(alpha::TrackedVector) = TuringDirichlet(alpha)
 Distributions.Dirichlet(d::Integer, alpha::TrackedReal) = TuringDirichlet(d, alpha)
 
-function Distributions.logpdf(d::Dirichlet{T}, x::TrackedVecOrMat) where {T}
-    TV = typeof(d.alpha)
-    logpdf(TuringDirichlet{T, TV}(d.alpha, d.alpha0, d.lmnB), x)
+function Distributions._logpdf(d::Dirichlet, x::TrackedVector{<:Real})
+    return Distributions._logpdf(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
+end
+function Distributions.logpdf(d::Dirichlet, x::TrackedMatrix{<:Real})
+    return logpdf(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
+end
+function Distributions.loglikelihood(d::Dirichlet, x::TrackedMatrix{<:Real})
+    return loglikelihood(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
 end
 
-for T in (:TrackedVector, :TrackedMatrix)
+# Fix ambiguities
+function Distributions.logpdf(d::TuringDirichlet, x::TrackedMatrix{<:Real})
+    size(x, 1) == length(d) ||
+        throw(DimensionMismatch("Inconsistent array dimensions."))
+    return simplex_logpdf(d.alpha, d.lmnB, x)
+end
+
+## Product
+
+# TODO: Remove when modified upstream
+function Distributions.loglikelihood(dist::Product, x::TrackedVector{<:Real})
+    return Distributions.logpdf(dist, x)
+end
+
+## MvNormal
+
+for (f, T) in (
+    (:_logpdf, :TrackedVector),
+    (:logpdf, :TrackedMatrix),
+    (:loglikelihood, :TrackedMatrix),
+)
     @eval begin
-        function Distributions.logpdf(d::MvNormal{<:Any, <:PDMats.ScalMat}, x::$T)
-            logpdf(TuringScalMvNormal(d.μ, sqrt(d.Σ.value)), x)
+        function Distributions.$f(d::MvNormal{<:Real, <:PDMats.ScalMat}, x::$T{<:Real})
+            return Distributions.$f(TuringScalMvNormal(d.μ, sqrt(d.Σ.value)), x)
         end
-        function Distributions.logpdf(d::MvNormal{<:Any, <:PDMats.PDiagMat}, x::$T)
-            logpdf(TuringDiagMvNormal(d.μ, sqrt.(d.Σ.diag)), x)
+        function Distributions.$f(d::MvNormal{<:Real, <:PDMats.PDiagMat}, x::$T{<:Real})
+            return Distributions.$f(TuringDiagMvNormal(d.μ, sqrt.(d.Σ.diag)), x)
         end
-        function Distributions.logpdf(d::MvNormal{<:Any, <:PDMats.PDMat}, x::$T)
-            logpdf(TuringDenseMvNormal(d.μ, d.Σ.chol), x)
+        function Distributions.$f(d::MvNormal{<:Real, <:PDMats.PDMat}, x::$T{<:Real})
+            return Distributions.$f(TuringDenseMvNormal(d.μ, d.Σ.chol), x)
         end
-        
-        function Distributions.logpdf(d::MvLogNormal{<:Any, <:PDMats.ScalMat}, x::$T)
-            logpdf(TuringMvLogNormal(TuringScalMvNormal(d.normal.μ, sqrt(d.normal.Σ.value))), x)
+
+        function Distributions.$f(
+            d::MvLogNormal{<:Real, <:PDMats.ScalMat},
+            x::$T{<:Real},
+        )
+            return Distributions.$f(
+                TuringMvLogNormal(TuringScalMvNormal(d.normal.μ, sqrt(d.normal.Σ.value))),
+                x,
+            )
         end
-        function Distributions.logpdf(d::MvLogNormal{<:Any, <:PDMats.PDiagMat}, x::$T)
-            logpdf(TuringMvLogNormal(TuringDiagMvNormal(d.normal.μ, sqrt.(d.normal.Σ.diag))), x)
+        function Distributions.$f(
+            d::MvLogNormal{<:Real, <:PDMats.PDiagMat},
+            x::$T{<:Real},
+        )
+            return Distributions.$f(
+                TuringMvLogNormal(TuringDiagMvNormal(d.normal.μ, sqrt.(d.normal.Σ.diag))),
+                x,
+            )
         end
-        function Distributions.logpdf(d::MvLogNormal{<:Any, <:PDMats.PDMat}, x::$T)
-            logpdf(TuringMvLogNormal(TuringDenseMvNormal(d.normal.μ, d.normal.Σ.chol)), x)
+        function Distributions.$f(
+            d::MvLogNormal{<:Real, <:PDMats.PDMat},
+            x::$T{<:Real},
+        )
+            return Distributions.$f(
+                TuringMvLogNormal(TuringDenseMvNormal(d.normal.μ, d.normal.Σ.chol)),
+                x,
+            )
         end
     end
 end
@@ -425,10 +480,6 @@ end
 
 # zero mean,, constant variance
 MvNormal(d::Int, σ::TrackedReal{<:Real}) = TuringMvNormal(d, σ)
-
-for T in (:TrackedVector, :TrackedMatrix)
-    @eval Distributions.logpdf(d::TuringMvLogNormal, x::$T) = _logpdf(d, x)
-end
 
 # zero mean, dense covariance
 MvLogNormal(A::TrackedMatrix) = TuringMvLogNormal(TuringMvNormal(A))
@@ -511,21 +562,18 @@ Tracker.@grad function _mv_categorical_logpdf(ps, x)
 end
 
 
-## MatrixBeta ##
-
-function Distributions.logpdf(d::MatrixBeta, X::AbstractArray{<:TrackedMatrix{<:Real}})
-    return map(x -> logpdf(d, x), X)
-end
-
-
 ## Wishart ##
 
-function Distributions.logpdf(d::Wishart, X::TrackedMatrix)
-    return logpdf(TuringWishart(d), X)
+function Distributions._logpdf(d::Wishart, X::TrackedMatrix)
+    return Distributions._logpdf(TuringWishart(d), X)
 end
 function Distributions.logpdf(d::Wishart, X::AbstractArray{<:TrackedMatrix})
     return logpdf(TuringWishart(d), X)
 end
+function Distributions.loglikelihood(d::Wishart, X::AbstractArray{<:TrackedMatrix})
+    return loglikelihood(TuringWishart(d), X)
+end
+
 Distributions.Wishart(df::TrackedReal, S::Matrix{<:Real}) = TuringWishart(df, S)
 Distributions.Wishart(df::TrackedReal, S::AbstractMatrix{<:Real}) = TuringWishart(df, S)
 Distributions.Wishart(df::Real, S::TrackedMatrix) = TuringWishart(df, S)
@@ -535,11 +583,14 @@ Distributions.Wishart(df::TrackedReal, S::AbstractPDMat{<:TrackedReal}) = Turing
 
 ## Inverse Wishart ##
 
-function Distributions.logpdf(d::InverseWishart, X::TrackedMatrix)
-    return logpdf(TuringInverseWishart(d), X)
+function Distributions._logpdf(d::InverseWishart, X::TrackedMatrix)
+    return Distributions._logpdf(TuringInverseWishart(d), X)
 end
 function Distributions.logpdf(d::InverseWishart, X::AbstractArray{<:TrackedMatrix})
     return logpdf(TuringInverseWishart(d), X)
+end
+function Distributions.loglikelihood(d::InverseWishart, X::AbstractArray{<:TrackedMatrix})
+    return loglikelihood(TuringInverseWishart(d), X)
 end
 
 Distributions.InverseWishart(df::TrackedReal, S::Matrix{<:Real}) = TuringInverseWishart(df, S)
@@ -547,3 +598,4 @@ Distributions.InverseWishart(df::TrackedReal, S::AbstractMatrix{<:Real}) = Turin
 Distributions.InverseWishart(df::Real, S::TrackedMatrix) = TuringInverseWishart(df, S)
 Distributions.InverseWishart(df::TrackedReal, S::TrackedMatrix) = TuringInverseWishart(df, S)
 Distributions.InverseWishart(df::TrackedReal, S::AbstractPDMat{<:TrackedReal}) = TuringInverseWishart(df, S)
+

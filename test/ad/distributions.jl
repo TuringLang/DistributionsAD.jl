@@ -231,9 +231,7 @@
 
         # Vector x
         DistSpec(p -> Multinomial(2, p ./ sum(p)), (fill(0.5, 2),), [2, 0]),
-        DistSpec(p -> Multinomial(2, p ./ sum(p)), (fill(0.5, 2),), [2 1; 0 1],
-            broken=(:Tracker, :Zygote),
-        ),
+        DistSpec(p -> Multinomial(2, p ./ sum(p)), (fill(0.5, 2),), [2 1; 0 1]),
 
         # Vector x
         DistSpec((m, A) -> MvNormal(m, to_posdef(A)), (a, A), b),
