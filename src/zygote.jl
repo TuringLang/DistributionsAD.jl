@@ -72,3 +72,36 @@ ZygoteRules.@adjoint function Distributions.InverseWishart(
 )
     return ZygoteRules.pullback(TuringInverseWishart, df, S)
 end
+
+## General definitions of `logpdf` for arrays
+
+ZygoteRules.@adjoint function Distributions.logpdf(
+    dist::MultivariateDistribution,
+    X::AbstractMatrix{<:Real},
+)
+    size(X, 1) == length(dist) ||
+        throw(DimensionMismatch("Inconsistent array dimensions."))
+    return ZygoteRules.pullback(dist, X) do dist, X
+        return map(i -> Distributions._logpdf(dist, view(X, :, i)), axes(X, 2))
+    end
+end
+
+ZygoteRules.@adjoint function Distributions.logpdf(
+    dist::MatrixDistribution,
+    X::AbstractArray{<:Real,3},
+)
+    (size(X, 1), size(X, 2)) == size(dist) ||
+        throw(DimensionMismatch("Inconsistent array dimensions."))
+    return ZygoteRules.pullback(dist, X) do dist, X
+        return map(i -> Distributions._logpdf(dist, view(X, :, :, i)), axes(X, 3))
+    end
+end
+
+ZygoteRules.@adjoint function Distributions.logpdf(
+    dist::MatrixDistribution,
+    X::AbstractArray{<:AbstractMatrix{<:Real}},
+)
+    return ZygoteRules.pullback(dist, X) do dist, X
+        return map(x -> logpdf(dist, x), X)
+    end
+end

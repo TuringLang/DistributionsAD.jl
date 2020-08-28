@@ -322,6 +322,19 @@ end
         Δ->(Δ * _nbinomlogpdf_grad_1(r, p, k), Tracker._zero(p), nothing)
 end
 
+## Multinomial
+
+function Distributions.logpdf(
+    dist::Multinomial{<:Real,<:TrackedVector},
+    X::AbstractMatrix{<:Real}
+)
+    size(X, 1) == length(dist) ||
+        throw(DimensionMismatch("Inconsistent array dimensions."))
+
+    return map(axes(X, 2)) do i
+        Distributions._logpdf(dist, view(X, :, i))
+    end
+end
 
 ## Categorical ##
 
@@ -343,8 +356,18 @@ Distributions.Dirichlet(d::Integer, alpha::TrackedReal) = TuringDirichlet(d, alp
 function Distributions._logpdf(d::Dirichlet, x::TrackedVector{<:Real})
     return Distributions._logpdf(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
 end
+function Distributions.logpdf(d::Dirichlet, x::TrackedMatrix{<:Real})
+    return logpdf(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
+end
 function Distributions.loglikelihood(d::Dirichlet, x::TrackedMatrix{<:Real})
     return loglikelihood(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
+end
+
+# Fix ambiguities
+function Distributions.logpdf(d::TuringDirichlet, x::TrackedMatrix{<:Real})
+    size(x, 1) == length(d) ||
+        throw(DimensionMismatch("Inconsistent array dimensions."))
+    return simplex_logpdf(d.alpha, d.lmnB, x)
 end
 
 ## Product
@@ -356,7 +379,11 @@ end
 
 ## MvNormal
 
-for (f, T) in ((:_logpdf, :TrackedVector), (:loglikelihood, :TrackedMatrix))
+for (f, T) in (
+    (:_logpdf, :TrackedVector),
+    (:logpdf, :TrackedMatrix),
+    (:loglikelihood, :TrackedMatrix),
+)
     @eval begin
         function Distributions.$f(d::MvNormal{<:Real, <:PDMats.ScalMat}, x::$T{<:Real})
             return Distributions.$f(TuringScalMvNormal(d.μ, sqrt(d.Σ.value)), x)
@@ -397,6 +424,12 @@ for (f, T) in ((:_logpdf, :TrackedVector), (:loglikelihood, :TrackedMatrix))
         end
     end
 end
+
+# Fix method ambiguities
+Distributions.logpdf(d::TuringScalMvNormal, x::TrackedMatrix{<:Real}) = turing_logpdf(d, x)
+Distributions.logpdf(d::TuringDiagMvNormal, x::TrackedMatrix{<:Real}) = turing_logpdf(d, x)
+Distributions.logpdf(d::TuringDenseMvNormal, x::TrackedMatrix{<:Real}) = turing_logpdf(d, x)
+Distributions.logpdf(d::TuringMvLogNormal, x::TrackedMatrix{<:Real}) = turing_logpdf(d, x)
 
 # zero mean, dense covariance
 MvNormal(A::TrackedMatrix) = TuringMvNormal(A)
@@ -567,3 +600,31 @@ Distributions.InverseWishart(df::TrackedReal, S::AbstractMatrix{<:Real}) = Turin
 Distributions.InverseWishart(df::Real, S::TrackedMatrix) = TuringInverseWishart(df, S)
 Distributions.InverseWishart(df::TrackedReal, S::TrackedMatrix) = TuringInverseWishart(df, S)
 Distributions.InverseWishart(df::TrackedReal, S::AbstractPDMat{<:TrackedReal}) = TuringInverseWishart(df, S)
+
+## General definitions of `logpdf` for arrays
+
+function Distributions.logpdf(
+    dist::MultivariateDistribution,
+    X::TrackedMatrix{<:Real},
+)
+    size(X, 1) == length(dist) ||
+        throw(DimensionMismatch("Inconsistent array dimensions."))
+    return map(axes(X, 2)) do i
+        Distributions._logpdf(dist, view(X, :, i))
+    end
+end
+
+function Distributions.logpdf(dist::MatrixDistribution, X::TrackedArray{<:Real,3})
+    (size(X, 1), size(X, 2)) == size(dist) ||
+        throw(DimensionMismatch("Inconsistent array dimensions."))
+    return map(axes(X, 3)) do i
+        Distributions._logpdf(dist, view(X, :, :, i))
+    end
+end
+
+function Distributions.logpdf(
+    dist::MatrixDistribution,
+    X::AbstractArray{<:TrackedMatrix{<:Real}},
+)
+    return map(x -> logpdf(dist, x), X)
+end

@@ -18,7 +18,16 @@ function Distributions._logpdf(
     return _flat_logpdf(dist.v.value, x)
 end
 
-function _flat_logpdf(dist, x)
+function Distributions.logpdf(
+    dist::FillVectorOfUnivariate,
+    x::AbstractMatrix{<:Real},
+)
+    size(x, 1) == length(dist) ||
+        throw(DimensionMismatch("Inconsistent array dimensions."))
+    return _flat_logpdf_mat(dist.v.value, x)
+end
+
+ function _flat_logpdf(dist, x)
     if toflatten(dist)
         f, args = flatten(dist)
         return sum(f.(args..., x))
@@ -26,6 +35,16 @@ function _flat_logpdf(dist, x)
         return sum(map(x) do x
             logpdf(dist, x)
         end)
+    end
+end
+
+function _flat_logpdf_mat(dist, x)
+    if toflatten(dist)
+        f, args = flatten(dist)
+        return vec(sum(f.(args..., x), dims = 1))
+    else
+        temp = map(x -> logpdf(dist, x), x)
+        return vec(sum(temp, dims = 1))
     end
 end
 

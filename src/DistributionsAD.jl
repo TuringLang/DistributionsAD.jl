@@ -95,6 +95,15 @@ include("zygote.jl")
             return sum(copy(logpdf.(dist.v, x)))
         end
 
+        function Distributions.logpdf(
+            dist::LazyVectorOfUnivariate,
+            x::AbstractMatrix{<:Real},
+        )
+            size(x, 1) == length(dist) ||
+                throw(DimensionMismatch("Inconsistent array dimensions."))
+            return vec(sum(copy(logpdf.(dists, x)), dims = 1))
+        end
+
         const LazyMatrixOfUnivariate{
             S<:ValueSupport,
             T<:UnivariateDistribution{S},

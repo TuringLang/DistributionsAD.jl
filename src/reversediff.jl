@@ -14,7 +14,7 @@ using ForwardDiff: Dual
 using ..ReverseDiff: SpecialInstruction, value, value!, deriv, track, record!,
                      tape, unseed!, @grad, TrackedReal, TrackedVector,
                      TrackedMatrix, TrackedArray
-using ..DistributionsAD: DistributionsAD
+using ..DistributionsAD: DistributionsAD, turing_logpdf
 
 
 import SpecialFunctions, NaNMath
@@ -79,31 +79,72 @@ function Base.maximum(d::LocationScale{T}) where {T <: TrackedReal}
     end
 end
 
+## General definitions of `logpdf` for arrays
+
+function logpdf(dist::MultivariateDistribution, X::TrackedMatrix{<:Real})
+    size(X, 1) == length(dist) ||
+        throw(DimensionMismatch("Inconsistent array dimensions."))
+    return map(axes(X, 2)) do i
+        _logpdf(dist, view(X, :, i))
+    end
+end
+
+function logpdf(dist::MatrixDistribution, X::TrackedArray{<:Real,<:Real,3})
+    (size(X, 1), size(X, 2)) == size(dist) ||
+        throw(DimensionMismatch("Inconsistent array dimensions."))
+    return map(axes(X, 3)) do i
+        _logpdf(dist, view(X, :, :, i))
+    end
+end
+
+function logpdf(dist::MatrixDistribution, X::AbstractArray{<:TrackedMatrix{<:Real}})
+    return map(x -> logpdf(dist, x), X)
+end
+
 ## MvNormal
 
-for (f, T) in ((:_logpdf, :TrackedVector), (:loglikelihood, :TrackedMatrix))
+for (f, T) in (
+    (:_logpdf, :TrackedVector),
+    (:logpdf, :TrackedMatrix),
+    (:loglikelihood, :TrackedMatrix),
+)
     @eval begin
-        function $f(d::MvNormal{<:Any, <:PDMats.ScalMat}, x::$T{<:Real})
+        function $f(d::MvNormal{<:Real,<:PDMats.ScalMat}, x::$T{<:Real})
             return $f(TuringScalMvNormal(d.μ, sqrt(d.Σ.value)), x)
         end
-        function $f(d::MvNormal{<:Any, <:PDMats.PDiagMat}, x::$T{<:Real})
+        function $f(d::MvNormal{<:Real,<:PDMats.PDiagMat}, x::$T{<:Real})
             return $f(TuringDiagMvNormal(d.μ, sqrt.(d.Σ.diag)), x)
         end
-        function $f(d::MvNormal{<:Any, <:PDMats.PDMat}, x::$T{<:Real})
+        function $f(d::MvNormal{<:Real,<:PDMats.PDMat}, x::$T{<:Real})
             return $f(TuringDenseMvNormal(d.μ, d.Σ.chol), x)
         end
 
-        function $f(d::MvLogNormal{<:Any, <:PDMats.ScalMat}, x::$T{<:Real})
-            return $f(TuringMvLogNormal(TuringScalMvNormal(d.normal.μ, sqrt(d.normal.Σ.value))), x)
+        function $f(d::MvLogNormal{<:Real,<:PDMats.ScalMat}, x::$T{<:Real})
+            return $f(
+                TuringMvLogNormal(TuringScalMvNormal(d.normal.μ, sqrt(d.normal.Σ.value))),
+                x,
+            )
         end
-        function $f(d::MvLogNormal{<:Any, <:PDMats.PDiagMat}, x::$T{<:Real})
-            return $f(TuringMvLogNormal(TuringDiagMvNormal(d.normal.μ, sqrt.(d.normal.Σ.diag))), x)
+        function $f(d::MvLogNormal{<:Real,<:PDMats.PDiagMat}, x::$T{<:Real})
+            return $f(
+                TuringMvLogNormal(TuringDiagMvNormal(d.normal.μ, sqrt.(d.normal.Σ.diag))),
+                x,
+            )
         end
-        function $f(d::MvLogNormal{<:Any, <:PDMats.PDMat}, x::$T{<:Real})
-            return $f(TuringMvLogNormal(TuringDenseMvNormal(d.normal.μ, d.normal.Σ.chol)), x)
+        function $f(d::MvLogNormal{<:Real,<:PDMats.PDMat}, x::$T{<:Real})
+            return $f(
+                TuringMvLogNormal(TuringDenseMvNormal(d.normal.μ, d.normal.Σ.chol)),
+                x,
+            )
         end
     end
 end
+
+# Fix method ambiguities
+logpdf(d::TuringScalMvNormal, x::TrackedMatrix{<:Real}) = turing_logpdf(d, x)
+logpdf(d::TuringDiagMvNormal, x::TrackedMatrix{<:Real}) = turing_logpdf(d, x)
+logpdf(d::TuringDenseMvNormal, x::TrackedMatrix{<:Real}) = turing_logpdf(d, x)
+logpdf(d::TuringMvLogNormal, x::TrackedMatrix{<:Real}) = turing_logpdf(d, x)
 
 # zero mean, dense covariance
 MvNormal(A::TrackedMatrix) = TuringMvNormal(A)
@@ -225,6 +266,13 @@ MvLogNormal(d::Int, σ::TrackedReal) = TuringMvLogNormal(TuringMvNormal(d, σ))
 
 Dirichlet(alpha::TrackedVector) = TuringDirichlet(alpha)
 Dirichlet(d::Integer, alpha::TrackedReal) = TuringDirichlet(d, alpha)
+
+# Fix ambiguity
+function logpdf(d::TuringDirichlet, x::TrackedMatrix{<:Real})
+    size(x, 1) == length(d) ||
+        throw(DimensionMismatch("Inconsistent array dimensions."))
+    return simplex_logpdf(d.alpha, d.lmnB, x)
+end
 for func_header in [
     :(simplex_logpdf(alpha::TrackedVector, lmnB::Real, x::AbstractVector)),
     :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::AbstractVector)),
@@ -233,12 +281,25 @@ for func_header in [
     :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::TrackedVector)),
     :(simplex_logpdf(alpha::TrackedVector, lmnB::Real, x::TrackedVector)),
     :(simplex_logpdf(alpha::TrackedVector, lmnB::TrackedReal, x::TrackedVector)),
+
+    :(simplex_logpdf(alpha::TrackedVector, lmnB::Real, x::AbstractMatrix)),
+    :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::AbstractMatrix)),
+    :(simplex_logpdf(alpha::AbstractVector, lmnB::Real, x::TrackedMatrix)),
+    :(simplex_logpdf(alpha::TrackedVector, lmnB::TrackedReal, x::AbstractMatrix)),
+    :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::TrackedMatrix)),
+    :(simplex_logpdf(alpha::TrackedVector, lmnB::Real, x::TrackedMatrix)),
+    :(simplex_logpdf(alpha::TrackedVector, lmnB::TrackedReal, x::TrackedMatrix)),
 ]
     @eval $func_header = track(simplex_logpdf, alpha, lmnB, x)
 end
 @grad function simplex_logpdf(alpha, lmnB, x::AbstractVector)
     simplex_logpdf(value(alpha), value(lmnB), value(x)), Δ -> begin
         (Δ .* log.(value(x)), -Δ, Δ .* (value(alpha) .- 1))
+    end
+end
+@grad function simplex_logpdf(alpha, lmnB, x::AbstractMatrix)
+    simplex_logpdf(value(alpha), value(lmnB), value(x)), Δ -> begin
+        (log.(value(x)) * Δ, -sum(Δ), repeat(value(alpha) .- 1, 1, size(x, 2)) * Diagonal(Δ))
     end
 end
 
