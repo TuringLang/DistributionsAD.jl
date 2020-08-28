@@ -27,7 +27,7 @@ function Distributions.logpdf(
     return _flat_logpdf_mat(dist.v.value, x)
 end
 
- function _flat_logpdf(dist, x)
+function _flat_logpdf(dist, x)
     if toflatten(dist)
         f, args = flatten(dist)
         return sum(f.(args..., x))

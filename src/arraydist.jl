@@ -29,6 +29,12 @@ function Distributions._logpdf(dist::MatrixOfUnivariate, x::AbstractMatrix{<:Rea
     # Broadcasting here breaks Tracker for some reason
     return sum(map(logpdf, dist.dists, x))
 end
+function Distributions.logpdf(dist::MatrixOfUnivariate, x::AbstractArray{<:AbstractMatrix{<:Real}})
+    return map(x -> logpdf(dist, x), x)
+end
+function Distributions.logpdf(dist::MatrixOfUnivariate, x::AbstractArray{<:Matrix{<:Real}})
+    return map(x -> logpdf(dist, x), x)
+end
 
 function Distributions.rand(rng::Random.AbstractRNG, dist::MatrixOfUnivariate)
     return rand.(Ref(rng), dist.dists)
@@ -52,6 +58,12 @@ end
 function Distributions._logpdf(dist::VectorOfMultivariate, x::AbstractMatrix{<:Real})
     # `eachcol` breaks Zygote, so we use `view` directly
     return sum(i -> logpdf(dist.dists[i], view(x, :, i)), axes(x, 2))
+end
+function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractArray{<:AbstractMatrix{<:Real}})
+    return map(x -> logpdf(dist, x), x)
+end
+function Distributions.logpdf(dist::VectorOfUnivariate, x::AbstractArray{<:Matrix{<:Real}})
+    return map(x -> logpdf(dist, x), x)
 end
 
 function Distributions.rand(rng::Random.AbstractRNG, dist::VectorOfMultivariate)

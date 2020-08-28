@@ -425,12 +425,6 @@ for (f, T) in (
     end
 end
 
-# Fix method ambiguities
-Distributions.logpdf(d::TuringScalMvNormal, x::TrackedMatrix{<:Real}) = turing_logpdf(d, x)
-Distributions.logpdf(d::TuringDiagMvNormal, x::TrackedMatrix{<:Real}) = turing_logpdf(d, x)
-Distributions.logpdf(d::TuringDenseMvNormal, x::TrackedMatrix{<:Real}) = turing_logpdf(d, x)
-Distributions.logpdf(d::TuringMvLogNormal, x::TrackedMatrix{<:Real}) = turing_logpdf(d, x)
-
 # zero mean, dense covariance
 MvNormal(A::TrackedMatrix) = TuringMvNormal(A)
 
@@ -573,7 +567,9 @@ end
 function Distributions._logpdf(d::Wishart, X::TrackedMatrix)
     return Distributions._logpdf(TuringWishart(d), X)
 end
-
+function Distributions.logpdf(d::Wishart, X::AbstractArray{<:TrackedMatrix})
+    return logpdf(TuringWishart(d), X)
+end
 function Distributions.loglikelihood(d::Wishart, X::AbstractArray{<:TrackedMatrix})
     return loglikelihood(TuringWishart(d), X)
 end
@@ -590,7 +586,9 @@ Distributions.Wishart(df::TrackedReal, S::AbstractPDMat{<:TrackedReal}) = Turing
 function Distributions._logpdf(d::InverseWishart, X::TrackedMatrix)
     return Distributions._logpdf(TuringInverseWishart(d), X)
 end
-
+function Distributions.logpdf(d::InverseWishart, X::AbstractArray{<:TrackedMatrix})
+    return logpdf(TuringInverseWishart(d), X)
+end
 function Distributions.loglikelihood(d::InverseWishart, X::AbstractArray{<:TrackedMatrix})
     return loglikelihood(TuringInverseWishart(d), X)
 end
@@ -601,30 +599,3 @@ Distributions.InverseWishart(df::Real, S::TrackedMatrix) = TuringInverseWishart(
 Distributions.InverseWishart(df::TrackedReal, S::TrackedMatrix) = TuringInverseWishart(df, S)
 Distributions.InverseWishart(df::TrackedReal, S::AbstractPDMat{<:TrackedReal}) = TuringInverseWishart(df, S)
 
-## General definitions of `logpdf` for arrays
-
-function Distributions.logpdf(
-    dist::MultivariateDistribution,
-    X::TrackedMatrix{<:Real},
-)
-    size(X, 1) == length(dist) ||
-        throw(DimensionMismatch("Inconsistent array dimensions."))
-    return map(axes(X, 2)) do i
-        Distributions._logpdf(dist, view(X, :, i))
-    end
-end
-
-function Distributions.logpdf(dist::MatrixDistribution, X::TrackedArray{<:Real,3})
-    (size(X, 1), size(X, 2)) == size(dist) ||
-        throw(DimensionMismatch("Inconsistent array dimensions."))
-    return map(axes(X, 3)) do i
-        Distributions._logpdf(dist, view(X, :, :, i))
-    end
-end
-
-function Distributions.logpdf(
-    dist::MatrixDistribution,
-    X::AbstractArray{<:TrackedMatrix{<:Real}},
-)
-    return map(x -> logpdf(dist, x), X)
-end

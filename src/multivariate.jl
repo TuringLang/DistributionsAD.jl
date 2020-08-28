@@ -138,8 +138,7 @@ function Distributions._logpdf(d::TuringScalMvNormal, x::AbstractVector)
     σ2 = abs2(d.σ)
     return -(length(x) * log(2π * σ2) + sum(abs2.(x .- d.m)) / σ2) / 2
 end
-Distributions.logpdf(d::TuringScalMvNormal, x::AbstractMatrix{<:Real}) = turing_logpdf(d, x)
-function turing_logpdf(d::TuringScalMvNormal, x::AbstractMatrix{<:Real})
+function Distributions.logpdf(d::TuringScalMvNormal, x::AbstractMatrix{<:Real})
     size(x, 1) == length(d) ||
         throw(DimensionMismatch("Inconsistent array dimensions."))
     return -(size(x, 1) * log(2π * abs2(d.σ)) .+ vec(sum(abs2.((x .- d.m) ./ d.σ), dims=1))) ./ 2
@@ -152,8 +151,7 @@ end
 function Distributions._logpdf(d::TuringDiagMvNormal, x::AbstractVector)
     return -(length(x) * log(2π) + 2 * sum(log.(d.σ)) + sum(abs2.((x .- d.m) ./ d.σ))) / 2
 end
-Distributions.logpdf(d::TuringDiagMvNormal, x::AbstractMatrix{<:Real}) = turing_logpdf(d, x)
-function turing_logpdf(d::TuringDiagMvNormal, x::AbstractMatrix{<:Real})
+function Distributions.logpdf(d::TuringDiagMvNormal, x::AbstractMatrix{<:Real})
     size(x, 1) == length(d) ||
         throw(DimensionMismatch("Inconsistent array dimensions."))
     return -((size(x, 1) * log(2π) + 2 * sum(log.(d.σ))) .+ vec(sum(abs2.((x .- d.m) ./ d.σ), dims=1))) ./ 2
@@ -166,9 +164,6 @@ function Distributions._logpdf(d::TuringDenseMvNormal, x::AbstractVector)
     return -(length(x) * log(2π) + logdet(d.C) + sum(abs2.(zygote_ldiv(d.C.U', x .- d.m)))) / 2
 end
 function Distributions.logpdf(d::TuringDenseMvNormal, x::AbstractMatrix{<:Real})
-    return turing_logpdf(d, x)
-end
-function turing_logpdf(d::TuringDenseMvNormal, x::AbstractMatrix{<:Real})
     size(x, 1) == length(d) ||
         throw(DimensionMismatch("Inconsistent array dimensions."))
     return -((size(x, 1) * log(2π) + logdet(d.C)) .+ vec(sum(abs2.(zygote_ldiv(d.C.U', x .- d.m)), dims=1))) ./ 2
@@ -234,8 +229,7 @@ function Distributions._logpdf(d::TuringMvLogNormal, x::AbstractVector{T}) where
         return -T(Inf)
     end
 end
-Distributions.logpdf(d::TuringMvLogNormal, x::AbstractMatrix{<:Real}) = turing_logpdf(d, x)
-function turing_logpdf(d::TuringMvLogNormal, x::AbstractMatrix{<:Real})
+function Distributions.logpdf(d::TuringMvLogNormal, x::AbstractMatrix{<:Real})
     size(x, 1) == length(d) ||
         throw(DimensionMismatch("Inconsistent array dimensions."))
     if all(i -> DistributionsAD.insupport(d, view(x, :, i)), axes(x, 2))

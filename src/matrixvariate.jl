@@ -100,6 +100,13 @@ function Distributions._logpdf(d::TuringWishart, X::AbstractMatrix{<:Real})
     return ((df - (p + 1)) * logdet(Xcf) - tr(d.chol \ X)) / 2 + d.logc0
 end
 
+function Distributions.logpdf(d::TuringWishart, X::AbstractArray{<:AbstractMatrix{<:Real}})
+    return map(x -> logpdf(d, x), X)
+end
+function Distributions.logpdf(d::TuringWishart, X::AbstractArray{<:Matrix{<:Real}})
+    return map(x -> logpdf(d, x), X)
+end
+
 #### Sampling
 function Distributions._rand!(rng::AbstractRNG, d::TuringWishart, A::AbstractMatrix)
     Distributions._wishart_genA!(rng, Distributions.dim(d), d.df, A)
@@ -192,6 +199,13 @@ function Distributions._logpdf(d::TuringInverseWishart, X::AbstractMatrix{<:Real
     # we use the fact: tr(Ψ * inv(X)) = tr(inv(X) * Ψ) = tr(X \ Ψ)
     Ψ = d.S
     return -((df + p + 1) * logdet(Xcf) + tr(Xcf \ Ψ)) / 2 + d.logc0
+end
+
+function Distributions.logpdf(d::TuringInverseWishart, X::AbstractArray{<:AbstractMatrix{<:Real}})
+    return map(x -> logpdf(d, x), X)
+end
+function Distributions.logpdf(d::TuringInverseWishart, X::AbstractArray{<:Matrix{<:Real}})
+    return map(x -> logpdf(d, x), X)
 end
 
 #### Sampling
