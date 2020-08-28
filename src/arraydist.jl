@@ -62,7 +62,7 @@ end
 function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractArray{<:AbstractMatrix{<:Real}})
     return map(x -> logpdf(dist, x), x)
 end
-function Distributions.logpdf(dist::VectorOfUnivariate, x::AbstractArray{<:Matrix{<:Real}})
+function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractArray{<:Matrix{<:Real}})
     return map(x -> logpdf(dist, x), x)
 end
 
