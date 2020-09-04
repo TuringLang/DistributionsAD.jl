@@ -10,8 +10,10 @@
     B = rand(dim, dim)
     C = rand(dim, dim)
 
-    # Create a random number
+    # Create random numbers
     alpha = rand()
+    beta = rand()
+    gamma = rand()
 
     # Create matrix `X` such that `X` and `I - X` are positive definite if `A ≠ 0`.
     function to_beta_mat(A)
@@ -198,10 +200,10 @@
         ),
 
         DistSpec(Uniform, (), 0.5),
-        DistSpec(Uniform, (0.0, 1.0), 0.5),
+        DistSpec(Uniform, (alpha, alpha + beta), alpha + beta * gamma),
 
         DistSpec(TuringUniform, (), 0.5),
-        DistSpec(TuringUniform, (0.0, 1.0), 0.5),
+        DistSpec(TuringUniform, (alpha, alpha + beta), alpha + beta * gamma),
 
         DistSpec(VonMises, (), 1.0),
 
@@ -229,9 +231,7 @@
 
         # Vector x
         DistSpec(p -> Multinomial(2, p ./ sum(p)), (fill(0.5, 2),), [2, 0]),
-        DistSpec(p -> Multinomial(2, p ./ sum(p)), (fill(0.5, 2),), [2 1; 0 1],
-            broken=(:Tracker, :Zygote),
-        ),
+        DistSpec(p -> Multinomial(2, p ./ sum(p)), (fill(0.5, 2),), [2 1; 0 1]),
 
         # Vector x
         DistSpec((m, A) -> MvNormal(m, to_posdef(A)), (a, A), b),
@@ -307,9 +307,7 @@
     matrixvariate_distributions = DistSpec[
         # Matrix x
         DistSpec((n1, n2) -> MatrixBeta(dim, n1, n2), (3.0, 3.0), A, to_beta_mat),
-        DistSpec(() -> MatrixNormal(dim, dim), (), A, to_posdef,
-            broken=(:Tracker, :Zygote)
-        ),
+        DistSpec(() -> MatrixNormal(dim, dim), (), A, to_posdef, broken=(:Zygote,)),
         DistSpec((df, A) -> Wishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
         DistSpec((df, A) -> InverseWishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
         DistSpec((df, A) -> TuringWishart(df, to_posdef(A)), (3.0, A), B, to_posdef),

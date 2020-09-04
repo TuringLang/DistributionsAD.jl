@@ -93,12 +93,13 @@ end
 
 #### Evaluation
 
-function Distributions.logpdf(d::TuringWishart, X::AbstractMatrix{<:Real})
+function Distributions._logpdf(d::TuringWishart, X::AbstractMatrix{<:Real})
     df = d.df
     p = Distributions.dim(d)
     Xcf = cholesky(X)
-    return 0.5 * ((df - (p + 1)) * logdet(Xcf) - tr(d.chol \ X)) + d.logc0
+    return ((df - (p + 1)) * logdet(Xcf) - tr(d.chol \ X)) / 2 + d.logc0
 end
+
 function Distributions.logpdf(d::TuringWishart, X::AbstractArray{<:AbstractMatrix{<:Real}})
     return map(x -> logpdf(d, x), X)
 end
@@ -191,14 +192,15 @@ end
 
 #### Evaluation
 
-function Distributions.logpdf(d::TuringInverseWishart, X::AbstractMatrix{<:Real})
+function Distributions._logpdf(d::TuringInverseWishart, X::AbstractMatrix{<:Real})
     p = Distributions.dim(d)
     df = d.df
     Xcf = cholesky(X)
     # we use the fact: tr(Ψ * inv(X)) = tr(inv(X) * Ψ) = tr(X \ Ψ)
     Ψ = d.S
-    -0.5 * ((df + p + 1) * logdet(Xcf) + tr(Xcf \ Ψ)) + d.logc0
+    return -((df + p + 1) * logdet(Xcf) + tr(Xcf \ Ψ)) / 2 + d.logc0
 end
+
 function Distributions.logpdf(d::TuringInverseWishart, X::AbstractArray{<:AbstractMatrix{<:Real}})
     return map(x -> logpdf(d, x), X)
 end
@@ -211,4 +213,23 @@ end
 function Distributions._rand!(rng::AbstractRNG, d::TuringInverseWishart, A::AbstractMatrix)
     X = Distributions._rand!(rng, TuringWishart(d.df, inv(cholesky(d.S))), A)
     A .= inv(cholesky!(X))
+end
+
+# TODO: Remove when available in Distributions
+for T in (:MatrixBeta, :MatrixNormal, :Wishart, :InverseWishart,
+          :TuringWishart, :TuringInverseWishart,
+          :VectorOfMultivariate, :MatrixOfUnivariate)
+    @eval begin
+        Distributions.loglikelihood(d::$T, X::AbstractMatrix{<:Real}) = logpdf(d, X)
+        function Distributions.loglikelihood(d::$T, X::AbstractArray{<:Real,3})
+            (size(X, 1), size(X, 2)) == size(d) || throw(DimensionMismatch("Inconsistent array dimensions."))
+            return sum(i -> _logpdf(d, view(X, :, :, i)), axes(X, 3))
+        end
+        function Distributions.loglikelihood(
+            d::$T,
+            X::AbstractArray{<:AbstractMatrix{<:Real}},
+        )
+            return sum(x -> logpdf(d, x), X)
+        end
+    end
 end

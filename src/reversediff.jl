@@ -26,6 +26,8 @@ const TrackedVecOrMat{V,D} = Union{TrackedVector{V,D},TrackedMatrix{V,D}}
 const RDBroadcasted{F, T} = Broadcasted{<:Any, <:Any, F, T}
 
 import Distributions: logpdf,
+                      _logpdf,
+                      loglikelihood,
                       Gamma,
                       MvNormal,
                       MvLogNormal,
@@ -77,26 +79,41 @@ function Base.maximum(d::LocationScale{T}) where {T <: TrackedReal}
     end
 end
 
-for T in (:TrackedVector, :TrackedMatrix)
+## MvNormal
+
+for (f, T) in (
+    (:_logpdf, :TrackedVector),
+    (:logpdf, :TrackedMatrix),
+    (:loglikelihood, :TrackedMatrix),
+)
     @eval begin
-        function logpdf(d::MvNormal{<:Any, <:PDMats.ScalMat}, x::$T)
-            logpdf(TuringScalMvNormal(d.μ, sqrt(d.Σ.value)), x)
+        function $f(d::MvNormal{<:Real,<:PDMats.ScalMat}, x::$T{<:Real})
+            return $f(TuringScalMvNormal(d.μ, sqrt(d.Σ.value)), x)
         end
-        function logpdf(d::MvNormal{<:Any, <:PDMats.PDiagMat}, x::$T)
-            logpdf(TuringDiagMvNormal(d.μ, sqrt.(d.Σ.diag)), x)
+        function $f(d::MvNormal{<:Real,<:PDMats.PDiagMat}, x::$T{<:Real})
+            return $f(TuringDiagMvNormal(d.μ, sqrt.(d.Σ.diag)), x)
         end
-        function logpdf(d::MvNormal{<:Any, <:PDMats.PDMat}, x::$T)
-            logpdf(TuringDenseMvNormal(d.μ, d.Σ.chol), x)
+        function $f(d::MvNormal{<:Real,<:PDMats.PDMat}, x::$T{<:Real})
+            return $f(TuringDenseMvNormal(d.μ, d.Σ.chol), x)
         end
-        
-        function logpdf(d::MvLogNormal{<:Any, <:PDMats.ScalMat}, x::$T)
-            logpdf(TuringMvLogNormal(TuringScalMvNormal(d.normal.μ, sqrt(d.normal.Σ.value))), x)
+
+        function $f(d::MvLogNormal{<:Real,<:PDMats.ScalMat}, x::$T{<:Real})
+            return $f(
+                TuringMvLogNormal(TuringScalMvNormal(d.normal.μ, sqrt(d.normal.Σ.value))),
+                x,
+            )
         end
-        function logpdf(d::MvLogNormal{<:Any, <:PDMats.PDiagMat}, x::$T)
-            logpdf(TuringMvLogNormal(TuringDiagMvNormal(d.normal.μ, sqrt.(d.normal.Σ.diag))), x)
+        function $f(d::MvLogNormal{<:Real,<:PDMats.PDiagMat}, x::$T{<:Real})
+            return $f(
+                TuringMvLogNormal(TuringDiagMvNormal(d.normal.μ, sqrt.(d.normal.Σ.diag))),
+                x,
+            )
         end
-        function logpdf(d::MvLogNormal{<:Any, <:PDMats.PDMat}, x::$T)
-            logpdf(TuringMvLogNormal(TuringDenseMvNormal(d.normal.μ, d.normal.Σ.chol)), x)
+        function $f(d::MvLogNormal{<:Real,<:PDMats.PDMat}, x::$T{<:Real})
+            return $f(
+                TuringMvLogNormal(TuringDenseMvNormal(d.normal.μ, d.normal.Σ.chol)),
+                x,
+            )
         end
     end
 end
@@ -221,6 +238,7 @@ MvLogNormal(d::Int, σ::TrackedReal) = TuringMvLogNormal(TuringMvNormal(d, σ))
 
 Dirichlet(alpha::TrackedVector) = TuringDirichlet(alpha)
 Dirichlet(d::Integer, alpha::TrackedReal) = TuringDirichlet(d, alpha)
+
 for func_header in [
     :(simplex_logpdf(alpha::TrackedVector, lmnB::Real, x::AbstractVector)),
     :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::AbstractVector)),
@@ -251,10 +269,6 @@ end
     end
 end
 
-function logpdf(d::MatrixBeta, X::AbstractArray{<:TrackedMatrix{<:Real}})
-    return map(x -> logpdf(d, x), X)
-end
-
 Distributions.Wishart(df::TrackedReal, S::Matrix{<:Real}) = TuringWishart(df, S)
 Distributions.Wishart(df::TrackedReal, S::AbstractMatrix{<:Real}) = TuringWishart(df, S)
 Distributions.Wishart(df::Real, S::AbstractMatrix{<:TrackedReal}) = TuringWishart(df, S)
@@ -273,18 +287,24 @@ Distributions.InverseWishart(df::TrackedReal, S::TrackedMatrix) = TuringInverseW
 Distributions.InverseWishart(df::Real, S::AbstractPDMat{<:TrackedReal}) = TuringInverseWishart(df, S)
 Distributions.InverseWishart(df::TrackedReal, S::AbstractPDMat{<:TrackedReal}) = TuringInverseWishart(df, S)
 
-function logpdf(d::Wishart, X::TrackedMatrix)
-    return logpdf(TuringWishart(d), X)
+function _logpdf(d::Wishart, X::TrackedMatrix)
+    return _logpdf(TuringWishart(d), X)
 end
 function logpdf(d::Wishart, X::AbstractArray{<:TrackedMatrix})
     return logpdf(TuringWishart(d), X)
 end
+function loglikelihood(d::Wishart, X::AbstractArray{<:TrackedMatrix})
+    return loglikelihood(TuringWishart(d), X)
+end
 
-function logpdf(d::InverseWishart, X::TrackedMatrix)
-    return logpdf(TuringInverseWishart(d), X)
+function _logpdf(d::InverseWishart, X::TrackedMatrix)
+    return _logpdf(TuringInverseWishart(d), X)
 end
 function logpdf(d::InverseWishart, X::AbstractArray{<:TrackedMatrix})
     return logpdf(TuringInverseWishart(d), X)
+end
+function loglikelihood(d::InverseWishart, X::AbstractArray{<:TrackedMatrix})
+    return loglikelihood(TuringInverseWishart(d), X)
 end
 
 # isprobvec

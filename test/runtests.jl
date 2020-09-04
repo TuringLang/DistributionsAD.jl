@@ -1,5 +1,6 @@
 using DistributionsAD
 
+using ChainRulesTestUtils
 using Combinatorics
 using Distributions
 using FiniteDifferences
@@ -27,7 +28,9 @@ using Distributions: meanlogdet
 using DistributionsAD: TuringUniform, TuringMvNormal, TuringMvLogNormal,
                        TuringPoissonBinomial
 using StatsBase: entropy
-using StatsFuns: binomlogpdf, logsumexp
+using StatsFuns: binomlogpdf, logsumexp, logistic
+
+Random.seed!(1) # Set seed that all testsets should reset to.
 
 const FDM = FiniteDifferences
 const GROUP = get(ENV, "GROUP", "All")
@@ -55,5 +58,6 @@ end
 
 if GROUP == "All" || GROUP == "AD"
     include("ad/utils.jl")
+    include("ad/chainrules.jl")
     include("ad/distributions.jl")
 end

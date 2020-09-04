@@ -13,19 +13,18 @@ function TuringUniform(a::Real, b::Real)
     return TuringUniform{T}(T(a), T(b))
 end
 Distributions.logpdf(d::TuringUniform, x::Real) = uniformlogpdf(d.a, d.b, x)
-Distributions.logpdf(d::TuringUniform, x::AbstractArray) = uniformlogpdf.(d.a, d.b, x)
+
 Base.minimum(d::TuringUniform) = d.a
 Base.maximum(d::TuringUniform) = d.b
 
 function uniformlogpdf(a, b, x)
-    c = -log(b - a)
+    diff = b - a
     if a <= x <= b
-        return c
+        return -log(diff)
     else
-        return oftype(c, -Inf)
+        return log(zero(diff))
     end
 end
-
 
 if VERSION < v"1.2"
     Base.inv(::Irrational{:π}) = 1/π
