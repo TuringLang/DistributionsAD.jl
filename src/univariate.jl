@@ -37,12 +37,19 @@ struct TuringPoissonBinomial{T<:Real, TV1<:AbstractVector{T}, TV2<:AbstractVecto
     p::TV1
     pmf::TV2
 end
+
 function TuringPoissonBinomial(p::AbstractArray{<:Real}; check_args = true)
     pb = Distributions.poissonbinomial_pdf_fft(p)
     ϵ = eps(eltype(pb))
-    check_args && @assert all(x -> x >= -ϵ, pb) && isapprox(sum(pb), 1, atol = ϵ)
+    check_args && @assert all(x -> x >= -ϵ, pb) && _isapprox(sum(pb), 1, ϵ)
     return TuringPoissonBinomial(p, pb)
 end
+
+# @non_differentiable cannot deal with kwargs.
+# This circumvents the kwarg in `isapprox` in the constructor above
+_isapprox(x,y,atol) = isapprox(x,y,atol=atol)
+@non_differentiable _isapprox(::Any,::Any,::Any)
+
 function logpdf(d::TuringPoissonBinomial{T}, k::Int) where T<:Real
     insupport(d, k) ? log(d.pmf[k + 1]) : -T(Inf)
 end
