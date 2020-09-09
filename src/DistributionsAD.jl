@@ -12,7 +12,6 @@ using PDMats,
       ChainRules,  # needed for `ChainRules.chol_blocked_rev`
       ChainRulesCore,
       FillArrays,
-      CUDA,
       Adapt
 
 using SpecialFunctions: logabsgamma, digamma

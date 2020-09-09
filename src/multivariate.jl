@@ -100,7 +100,7 @@ end
 Base.length(d::TuringDenseMvNormal) = length(d.m)
 Distributions.rand(d::TuringDenseMvNormal, n::Int...) = rand(Random.GLOBAL_RNG, d, n...)
 function Distributions.rand(rng::Random.AbstractRNG, d::TuringDenseMvNormal, n::Int...)
-    return d.m .+ d.C.U' * randnsimilar(rng, d.m, length(d), n...)
+    return d.m .+ d.C.U' * adapt_randn(rng, d.m, length(d), n...)
 end
 
 """
@@ -118,7 +118,7 @@ Base.length(d::TuringDiagMvNormal) = length(d.m)
 Base.size(d::TuringDiagMvNormal) = (length(d),)
 Distributions.rand(d::TuringDiagMvNormal, n::Int...) = rand(Random.GLOBAL_RNG, d, n...)
 function Distributions.rand(rng::Random.AbstractRNG, d::TuringDiagMvNormal, n::Int...)
-    return d.m .+ d.σ .* randnsimilar(rng, d.m, length(d), n...)
+    return d.m .+ d.σ .* adapt_randn(rng, d.m, length(d), n...)
 end
 
 struct TuringScalMvNormal{Tm<:AbstractVector, Tσ<:Real} <: ContinuousMultivariateDistribution
@@ -131,7 +131,7 @@ Base.length(d::TuringScalMvNormal) = length(d.m)
 Base.size(d::TuringScalMvNormal) = (length(d),)
 Distributions.rand(d::TuringScalMvNormal, n::Int...) = rand(Random.GLOBAL_RNG, d, n...)
 function Distributions.rand(rng::Random.AbstractRNG, d::TuringScalMvNormal, n::Int...)
-    return d.m .+ d.σ .* randnsimilar(rng, d.m, length(d), n...)
+    return d.m .+ d.σ .* adapt_randn(rng, d.m, length(d), n...)
 end
 
 function Distributions._logpdf(d::TuringScalMvNormal, x::AbstractVector)

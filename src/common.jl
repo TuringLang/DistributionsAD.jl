@@ -48,19 +48,15 @@ end
 # Tracker's implementation of ldiv isn't good. We'll use Zygote's instead.
 zygote_ldiv(A::AbstractMatrix, B::AbstractVecOrMat) = A \ B
 
-function randnsimilar(rng, x::AbstractArray, dims...)
-    randn!(rng, similar(x, dims...))
+function adapt_randn(rng, x::AbstractArray, dims...)
+    adapt(typeof(x), randn(rng, eltype(x), dims...))
 end
 
-function randnsimilar(rng, x::CuArray, dims...)
-    adapt(CuArray, randn(rng, eltype(x), dims...))
-end
-
-# TODO: should be replace by @non_differentiable when
-# https://github.com/JuliaDiff/ChainRulesCore.jl/issues/150 is fixed
-function ChainRules.rrule(::typeof(randnsimilar), rng, x, dims...)
-    function randnsimilar_pullback(ΔQ)
+# TODO: should be replaced by @non_differentiable when
+# https://github.com/JuliaDiff/ChainRulesCore.jl/issues/212 is fixed
+function ChainRules.rrule(::typeof(adapt_randn), rng, x, dims...)
+    function adapt_randn_pullback(ΔQ)
         return (NO_FIELDS, Zero(), Zero(), map(_ -> Zero(), dims)...)
     end
-    randnsimilar(rng, x, dims...), randnsimilar_pullback
+    adapt_randn(rng, x, dims...), adapt_randn_pullback
 end
