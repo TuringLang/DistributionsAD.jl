@@ -11,7 +11,8 @@ using PDMats,
       ZygoteRules,
       ChainRules,  # needed for `ChainRules.chol_blocked_rev`
       ChainRulesCore,
-      FillArrays
+      FillArrays,
+      Adapt
 
 using SpecialFunctions: logabsgamma, digamma
 using LinearAlgebra: copytri!, AbstractTriangular
