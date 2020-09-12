@@ -261,4 +261,38 @@
         d = TuringScalMvNormal(m, sigmas[1])
         @test params(d) == (m, sigmas[1])
     end
+
+    @testset "adapt_randn" begin
+        rng = MersenneTwister()
+
+        xs = Any[(rng, T, n) -> rand(rng, T, n)]
+        if AD == "All" || AD == "ForwardDiff"
+            push!(xs, (rng, T, n) -> [ForwardDiff.Dual(rand(rng, T)) for _ in 1:n])
+        end
+        if AD == "All" || AD == "Tracker"
+            push!(xs, (rng, T, n) -> Tracker.TrackedArray(rand(rng, T, n)))
+        end
+        if AD == "All" || AD == "ReverseDiff"
+            push!(xs, (rng, T, n) -> begin
+                  v = rand(rng, T, n)
+                  d = rand(Int, n)
+                  tp = ReverseDiff.InstructionTape()
+                  ReverseDiff.TrackedArray(v, d, tp)
+                  end)
+        end
+
+        for T in (Float32, Float64)
+            for f in xs
+                x = f(rng, T, 50)
+
+                Random.seed!(rng, 100)
+                y = DistributionsAD.adapt_randn(rng, x, 10, 30)
+                @test y isa Matrix{T}
+                @test size(y) == (10, 30)
+
+                Random.seed!(rng, 100)
+                @test y == randn(rng, T, 10, 30)
+            end
+        end
+    end
 end
