@@ -202,6 +202,9 @@ for f in (:+, :-, :*, :/, :\, :dot), (T1, T2) in [
     end
 end
 
+## `adapt_randn`
+
+adapt_randn(rng::AbstractRNG, x::TrackedArray, dims...) = adapt_randn(rng, data(x), dims...)
 
 ## Uniform ##
 

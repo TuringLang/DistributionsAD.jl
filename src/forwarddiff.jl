@@ -1,3 +1,7 @@
+function adapt_randn(rng::AbstractRNG, x::AbstractArray{<:ForwardDiff.Dual}, dims...)
+    adapt(typeof(x), randn(rng, ForwardDiff.valtype(eltype(x)), dims...))
+end
+
 ## Binomial ##
 
 function binomlogpdf(n::Int, p::ForwardDiff.Dual{T}, x::Int) where {T}
