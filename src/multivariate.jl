@@ -113,7 +113,7 @@ end
 
 function TuringMFMvNormal(m::AbstractVector, A::AbstractVector{<:AbstractMatrix})
     length(m) == sum(size.(A, 1)) || error("Size between the mean and variance is not compatible")
-    return TuringMFMvNormal(m, BlockDiagonal(getproperty.(cholesky.(A), :U)), vcat(0, cumsum(size.(A, 1))))
+    return TuringMFMvNormal(m, BlockDiagonal(getproperty.(cholesky.(A), :U)))
 end
 Base.length(d::TuringMFMvNormal) = length(d.m)
 Distributions.rand(d::TuringMFMvNormal, n::Int...) = rand(Random.GLOBAL_RNG, d, n...)
@@ -225,6 +225,7 @@ TuringMvNormal(d::Int, σ::Real) = TuringMvNormal(zeros(d), σ)
 TuringMvNormal(m::AbstractVector{<:Real}, σ::Real) = TuringScalMvNormal(m, σ)
 TuringMvNormal(σ::AbstractVector) = TuringMvNormal(zeros(length(σ)), σ)
 TuringMvNormal(A::AbstractMatrix) = TuringMvNormal(zeros(size(A, 1)), A)
+TuringMvNormal(A::AbstractVector{<:AbstractMatrix}) = TuringMvNormal(zeros(sum(size.(A, 1))), A)
 function TuringMvNormal(m::AbstractVector{<:Real}, σ::AbstractVector{<:Real})
     return TuringDiagMvNormal(m, σ)
 end

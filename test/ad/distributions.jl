@@ -6,9 +6,13 @@
     a = rand(dim)
     b = rand(dim)
     c = rand(dim)
+    d = rand(2 * dim)
+    e = rand(2 * dim)
     A = rand(dim, dim)
     B = rand(dim, dim)
     C = rand(dim, dim)
+    D = [rand(dim, dim), rand(dim, dim)]
+    E = rand(2 * dim, dim)
 
     # Create random numbers
     alpha = rand()
@@ -244,11 +248,13 @@
         DistSpec(s -> MvNormal(to_posdef_diagonal(s)), (a,), b),
         DistSpec(s -> MvNormal(dim, s), (alpha,), a),
         DistSpec((m, A) -> TuringMvNormal(m, to_posdef(A)), (a, A), b),
+        DistSpec((m, A) -> TuringMvNormal(m, to_posdef.(A)), (d, D), e),
         DistSpec(TuringMvNormal, (a, b), c),
         DistSpec((m, s) -> TuringMvNormal(m, to_posdef_diagonal(s)), (a, b), c),
         DistSpec(TuringMvNormal, (a, alpha), b),
         DistSpec((m, s) -> TuringMvNormal(m, s^2 * I), (a, alpha), b),
         DistSpec(A -> TuringMvNormal(to_posdef(A)), (A,), a),
+        DistSpec(A -> TuringMvNormal(to_posdef.(A)), (D,), d),
         DistSpec(TuringMvNormal, (a,), b),
         DistSpec(s -> TuringMvNormal(to_posdef_diagonal(s)), (a,), b),
         DistSpec(s -> TuringMvNormal(dim, s), (alpha,), a),
