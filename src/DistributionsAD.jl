@@ -19,6 +19,7 @@ using LinearAlgebra: copytri!, AbstractTriangular
 using Distributions: AbstractMvLogNormal, 
                      ContinuousMultivariateDistribution
 using Base.Iterators: drop
+using BlockDiagonals: BlockDiagonal
 
 import StatsBase
 import StatsFuns: logsumexp, 
@@ -39,6 +40,7 @@ import Distributions: MvNormal,
 export TuringScalMvNormal,
        TuringDiagMvNormal,
        TuringDenseMvNormal,
+       TuringMFMvNormal,
        TuringMvLogNormal,
        TuringPoissonBinomial,
        TuringWishart,

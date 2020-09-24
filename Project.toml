@@ -4,6 +4,7 @@ version = "0.6.9"
 
 [deps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
+BlockDiagonals = "0a1fb500-61f7-11e9-3c65-f5ef3456f9f0"
 ChainRules = "082447d4-558c-5d27-93f4-14fc19e9eca2"
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
@@ -24,6 +25,7 @@ ZygoteRules = "700de1a5-db45-46bc-99cf-38207098b444"
 
 [compat]
 Adapt = "2"
+BlockDiagonals = "0.1"
 ChainRules = "0.7"
 ChainRulesCore = "0.9.7"
 Compat = "3.6"

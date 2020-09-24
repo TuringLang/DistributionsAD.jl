@@ -104,6 +104,24 @@ function Distributions.rand(rng::Random.AbstractRNG, d::TuringDenseMvNormal, n::
 end
 
 """
+    TuringMFMvNormal{Tm<:Ab}
+"""
+struct TuringMFMvNormal{Tm<:AbstractVector, TC<:BlockDiagonal} <: ContinuousMultivariateDistribution
+    m::Tm
+    C::TC
+end
+
+function TuringMFMvNormal(m::AbstractVector, A::AbstractVector{<:AbstractMatrix})
+    length(m) == sum(size.(A, 1)) || error("Size between the mean and variance is not compatible")
+    return TuringMFMvNormal(m, BlockDiagonal(getproperty.(cholesky.(A), :U)), vcat(0, cumsum(size.(A, 1))))
+end
+Base.length(d::TuringMFMvNormal) = length(d.m)
+Distributions.rand(d::TuringMFMvNormal, n::Int...) = rand(Random.GLOBAL_RNG, d, n...)
+function Distributions.rand(rng::Random.AbstractRNG, d::TuringMFMvNormal, n::Int...)
+    return d.m .+ d.C' * DistributionsAD.adapt_randn(rng, d.m, length(d), n...)
+end
+
+"""
     TuringDiagMvNormal{Tm<:AbstractVector, Tσ<:AbstractVector} <: ContinuousMultivariateDistribution
 
 A multivariate normal distribution whose covariance is diagonal. Compatible with Tracker.
@@ -172,6 +190,20 @@ function Distributions.loglikelihood(d::TuringDenseMvNormal, x::AbstractMatrix{<
     return -(length(x) * log(2π) + size(x, 2) * logdet(d.C) + sum(abs2.(zygote_ldiv(d.C.U', x .- d.m)))) / 2
 end
 
+
+function Distributions._logpdf(d::TuringMFMvNormal, x::AbstractVector)
+    return -(length(x) * log(2π) + 2 * logdet(d.C) + sum(abs2.(DistributionsAD.zygote_ldiv(d.C', x .- d.m)))) / 2
+end
+function Distributions.logpdf(d::TuringMFMvNormal, x::AbstractMatrix{<:Real})
+    size(x, 1) == length(d) ||
+        throw(DimensionMismatch("Inconsistent array dimensions."))
+    return -((size(x, 1) * log(2π) + 2 * logdet(d.C)) .+ vec(sum(abs2.(DistributionsAD.zygote_ldiv(d.C', x .- d.m)), dims=1))) ./ 2
+end
+function Distributions.loglikelihood(d::TuringMFMvNormal, x::AbstractMatrix{<:Real})
+    return -(length(x) * log(2π) + size(x, 2) * 2 * logdet(d.C) + sum(abs2.(DistributionsAD.zygote_ldiv(d.C', x .- d.m)))) / 2
+end
+
+
 function StatsBase.entropy(d::TuringScalMvNormal)
     s = log(d.σ)
     return length(d) * ((1 + oftype(s, log2π)) / 2 + s)
@@ -182,6 +214,10 @@ function StatsBase.entropy(d::TuringDiagMvNormal)
 end
 function StatsBase.entropy(d::TuringDenseMvNormal)
     s = logdet(d.C)
+    return (length(d) * (1 + oftype(s, log2π)) + s) / 2
+end
+function StatsBase.entropy(d::TuringMFMvNormal)
+    s = 2 * logdet(d.C)
     return (length(d) * (1 + oftype(s, log2π)) + s) / 2
 end
 
@@ -203,6 +239,12 @@ function TuringMvNormal(m::AbstractVector{<:Real}, A::AbstractMatrix{<:Real})
 end
 function TuringMvNormal(m::AbstractVector{<:Real}, A::UniformScaling{<:Real})
     return TuringMvNormal(m, sqrt(A.λ))
+end
+function TuringMvNormal(m::AbstractVector{<:Real}, A::AbstractVector{<:AbstractMatrix})
+    return TuringMFMvNormal(m, A)
+end
+function TuringMvNormal(m::AbstractVector{<:AbstractVector{<:Real}}, A::AbstractVector{<:AbstractMatrix})
+    return TuringMvNormal(reduce(vcat, m), A)
 end
 
 ## MvLogNormal ##
