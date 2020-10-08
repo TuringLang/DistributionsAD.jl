@@ -60,7 +60,10 @@ function nbinomlogpdf(r::ForwardDiff.Dual{T}, p::Real, k::Int) where {T}
 end
 
 ## ForwardDiff broadcasting support ##
-
-function Distributions.logpdf(d::DiscreteUnivariateDistribution, k::ForwardDiff.Dual)
-    return logpdf(d, convert(Integer, ForwardDiff.value(k)))
+if !DISTRIBUTIONS_GENERIC_UNIVARIATE_PDF
+    @eval begin
+        function Distributions.logpdf(d::DiscreteUnivariateDistribution, k::ForwardDiff.Dual)
+            return logpdf(d, convert(Integer, ForwardDiff.value(k)))
+        end
+    end
 end
