@@ -46,6 +46,9 @@ export TuringScalMvNormal,
        arraydist,
        filldist
 
+# check if Distributions >= 0.24 by checking if a generic implementation of `pdf` is defined
+const DISTRIBUTIONS_HAS_GENERIC_UNIVARIATE_PDF = hasmethod(pdf, Tuple{UnivariateDistribution,Real}) 
+
 include("common.jl")
 include("arraydist.jl")
 include("filldist.jl")
