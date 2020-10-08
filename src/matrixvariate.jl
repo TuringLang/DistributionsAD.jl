@@ -216,7 +216,7 @@ function Distributions._rand!(rng::AbstractRNG, d::TuringInverseWishart, A::Abst
 end
 
 # Only needed in Distributions < 0.24
-if !DISTRIBUTIONS_GENERIC_UNIVARIATE_PDF
+if !DISTRIBUTIONS_HAS_GENERIC_UNIVARIATE_PDF
     for T in (:MatrixBeta, :MatrixNormal, :Wishart, :InverseWishart,
               :TuringWishart, :TuringInverseWishart,
               :VectorOfMultivariate, :MatrixOfUnivariate)
