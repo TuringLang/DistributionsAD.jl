@@ -205,6 +205,14 @@ function TuringMvNormal(m::AbstractVector{<:Real}, A::UniformScaling{<:Real})
     return TuringMvNormal(m, sqrt(A.λ))
 end
 
+# Mean and covariance
+mean(d::TuringDiagMvNormal) = d.m
+mean(d::TuringScalMvNormal) = d.m
+mean(d::TuringDenseMvNormal) = d.m
+cov(d::TuringDiagMvNormal) = Diagonal(abs2.(d.σ))
+cov(d::TuringScalMvNormal) = Diagonal(fill(abs2(d.σ),length(d.m)))
+cov(d::TuringDenseMvNormal) = Array(d.C)  # turns cholesky to matrix
+
 ## MvLogNormal ##
 
 struct TuringMvLogNormal{TD} <: AbstractMvLogNormal

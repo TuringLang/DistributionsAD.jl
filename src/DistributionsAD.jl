@@ -20,6 +20,8 @@ using Distributions: AbstractMvLogNormal,
                      ContinuousMultivariateDistribution
 using Base.Iterators: drop
 
+
+import Statistics: mean, cov
 import StatsBase
 import StatsFuns: logsumexp, 
                   binomlogpdf, 
