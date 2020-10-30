@@ -90,17 +90,22 @@ end
 
 A multivariate Normal distribution whose covariance is dense. Compatible with Tracker.
 """
-struct TuringDenseMvNormal{Tm<:AbstractVector, TC<:Cholesky} <: ContinuousMultivariateDistribution
+struct TuringDenseMvNormal{Tm<:AbstractVector, TC<:AbstractMatrix} <: ContinuousMultivariateDistribution
     m::Tm
     C::TC
 end
 function TuringDenseMvNormal(m::AbstractVector, A::AbstractMatrix)
-    return TuringDenseMvNormal(m, cholesky(A))
+    return TuringDenseMvNormal(m, cholesky(A).L)
 end
+
+function TuringSqrtDenseMvNormal(m::AbstractVector, C::AbstractMatrix)
+    TuringDenseMvNormal(m, C)
+end
+
 Base.length(d::TuringDenseMvNormal) = length(d.m)
 Distributions.rand(d::TuringDenseMvNormal, n::Int...) = rand(Random.GLOBAL_RNG, d, n...)
 function Distributions.rand(rng::Random.AbstractRNG, d::TuringDenseMvNormal, n::Int...)
-    return d.m .+ d.C.U' * adapt_randn(rng, d.m, length(d), n...)
+    return d.m .+ d.C * adapt_randn(rng, d.m, length(d), n...)
 end
 
 """
