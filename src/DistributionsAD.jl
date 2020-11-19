@@ -46,6 +46,9 @@ export TuringScalMvNormal,
        arraydist,
        filldist
 
+# check if Distributions >= 0.24 by checking if a generic implementation of `pdf` is defined
+const DISTRIBUTIONS_HAS_GENERIC_UNIVARIATE_PDF = hasmethod(pdf, Tuple{UnivariateDistribution,Real}) 
+
 include("common.jl")
 include("arraydist.jl")
 include("filldist.jl")
@@ -63,7 +66,7 @@ include("zygote.jl")
         using .ForwardDiff: @define_binary_dual_op # Needed for `eval`ing diffrules here
         include("forwarddiff.jl")
 
-        # loads adjoint for `poissonbinomial_pdf_fft`
+        # loads adjoint for `poissonbinomial_pdf` and `poissonbinomial_pdf_fft`
         include("zygote_forwarddiff.jl")
     end
 
