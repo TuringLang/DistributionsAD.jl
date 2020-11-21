@@ -1,4 +1,4 @@
-name: ForwardDiff tests
+name: AD tests
 
 on:
   push:
@@ -9,6 +9,7 @@ on:
 jobs:
   test:
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.version == 'nightly' }}
     strategy:
       matrix:
         version:
@@ -19,6 +20,11 @@ jobs:
           - macOS-latest
         arch:
           - x64
+        AD:
+          - ForwardDiff
+          - Tracker
+          - ReverseDiff
+          - Zygote
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
@@ -29,4 +35,4 @@ jobs:
       - uses: julia-actions/julia-runtest@latest
         env:
           GROUP: AD
-          AD: ForwardDiff
+          AD: ${{ matrix.AD }}
