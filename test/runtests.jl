@@ -14,6 +14,8 @@ using DistributionsAD: TuringUniform, TuringMvNormal, TuringMvLogNormal,
 using StatsBase: entropy
 using StatsFuns: binomlogpdf, logsumexp, logistic
 
+import NNlib
+
 Random.seed!(1) # Set seed that all testsets should reset to.
 
 const FDM = FiniteDifferences
