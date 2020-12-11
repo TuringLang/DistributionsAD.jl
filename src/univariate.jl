@@ -37,12 +37,17 @@ struct TuringPoissonBinomial{T<:Real, TV1<:AbstractVector{T}, TV2<:AbstractVecto
     p::TV1
     pmf::TV2
 end
-function TuringPoissonBinomial(p::AbstractArray{<:Real}; check_args = true)
-    pb = Distributions.poissonbinomial_pdf_fft(p)
-    ϵ = eps(eltype(pb))
-    check_args && @assert all(x -> x >= -ϵ, pb) && isapprox(sum(pb), 1, atol = ϵ)
-    return TuringPoissonBinomial(p, pb)
+
+# if available use the faster `poissonbinomial_pdf`
+@eval begin
+    function TuringPoissonBinomial(p::AbstractArray{<:Real}; check_args = true)
+        pb = $(isdefined(Distributions, :poissonbinomial_pdf) ? Distributions.poissonbinomial_pdf : Distributions.poissonbinomial_pdf_fft)(p)
+        ϵ = eps(eltype(pb))
+        check_args && @assert all(x -> x >= -ϵ, pb) && isapprox(sum(pb), 1; atol=ϵ)
+        return TuringPoissonBinomial(p, pb)
+    end
 end
+
 function logpdf(d::TuringPoissonBinomial{T}, k::Int) where T<:Real
     insupport(d, k) ? log(d.pmf[k + 1]) : -T(Inf)
 end

@@ -1,3 +1,7 @@
+function adapt_randn(rng::AbstractRNG, x::AbstractArray{<:ForwardDiff.Dual}, dims...)
+    adapt(typeof(x), randn(rng, ForwardDiff.valtype(eltype(x)), dims...))
+end
+
 ## Binomial ##
 
 function binomlogpdf(n::Int, p::ForwardDiff.Dual{T}, x::Int) where {T}
@@ -56,7 +60,17 @@ function nbinomlogpdf(r::ForwardDiff.Dual{T}, p::Real, k::Int) where {T}
 end
 
 ## ForwardDiff broadcasting support ##
-
-function Distributions.logpdf(d::DiscreteUnivariateDistribution, k::ForwardDiff.Dual)
-    return logpdf(d, convert(Integer, ForwardDiff.value(k)))
+# If we use Distributions >= 0.24, then `DISTRIBUTIONS_HAS_GENERIC_UNIVARIATE_PDF` is `true`.
+# In Distributions 0.24 `logpdf` is defined for inputs of type `Real` which are then
+# converted to the support of the distributions (such as integers) in their concrete implementations.
+# Thus it is no needed to have a special function for dual numbers that performs the conversion
+# (and actually this method leads to method ambiguity errors since even discrete distributions now
+# define logpdf(::MyDistribution, ::Real), see, e.g.,
+# JuliaStats/Distributions.jl@ae2d6c5/src/univariate/discrete/binomial.jl#L119).
+if !DISTRIBUTIONS_HAS_GENERIC_UNIVARIATE_PDF
+    @eval begin
+        function Distributions.logpdf(d::DiscreteUnivariateDistribution, k::ForwardDiff.Dual)
+            return logpdf(d, convert(Integer, ForwardDiff.value(k)))
+        end
+    end
 end

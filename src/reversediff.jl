@@ -18,12 +18,14 @@ using ..DistributionsAD: DistributionsAD
 
 
 import SpecialFunctions, NaNMath
-import ..DistributionsAD: turing_chol, symm_turing_chol, _mv_categorical_logpdf
+import ..DistributionsAD: turing_chol, symm_turing_chol, _mv_categorical_logpdf, adapt_randn
 import Base.Broadcast: materialize
 import StatsFuns: logsumexp
 
 const TrackedVecOrMat{V,D} = Union{TrackedVector{V,D},TrackedMatrix{V,D}}
 const RDBroadcasted{F, T} = Broadcasted{<:Any, <:Any, F, T}
+
+import Random
 
 import Distributions: logpdf,
                       _logpdf,
@@ -48,6 +50,8 @@ using ..DistributionsAD: TuringPoissonBinomial,
                          TuringDenseMvNormal
 
 include("reversediffx.jl")
+
+adapt_randn(rng::Random.AbstractRNG, x::TrackedArray, dims...) = adapt_randn(rng, value(x), dims...)
 
 function PoissonBinomial(p::TrackedArray{<:Real}; check_args=true)
     return TuringPoissonBinomial(p; check_args = check_args)
