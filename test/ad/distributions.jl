@@ -394,7 +394,7 @@
 
             # Skellam only fails in these tests with ReverseDiff
             # Ref: https://github.com/TuringLang/DistributionsAD.jl/issues/126
-            filldist_broken = d.f(d.θ...) isa Skellam ? union((:ReverseDiff,), d.broken) : d.broken
+            filldist_broken = d.f(d.θ...) isa Skellam ? (d.broken..., :ReverseDiff) : d.broken
             arraydist_broken = d.broken
 
             # Create `filldist` distribution
