@@ -58,8 +58,8 @@
         DistSpec(Poisson, (0.5,), 1),
         DistSpec(Poisson, (0.5,), [1, 1]),
 
-        DistSpec(Skellam, (1.0, 2.0), -2),
-        DistSpec(Skellam, (1.0, 2.0), [-2, -2]),
+        DistSpec(Skellam, (1.0, 2.0), -2; broken=(:Zygote,)),
+        DistSpec(Skellam, (1.0, 2.0), [-2, -2]; broken=(:Zygote,)),
 
         DistSpec(PoissonBinomial, ([0.5, 0.5],), 0),
         DistSpec(PoissonBinomial, ([0.5, 0.5],), [0, 0]),
@@ -167,9 +167,9 @@
 
         DistSpec(NormalCanon, (1.0, 2.0), 0.5),
 
-        DistSpec(NormalInverseGaussian, (1.0, 2.0, 1.0, 1.0), 0.5),
+        DistSpec(NormalInverseGaussian, (1.0, 2.0, 1.0, 1.0), 0.5; broken=(:Zygote,)),
 
-        DistSpec(Pareto, (), 1.5),
+        DistSpec(Pareto, (), 1.5; broken=(:Zygote,)),
         DistSpec(Pareto, (1.0,), 1.5),
         DistSpec(Pareto, (1.0, 1.0), 1.5),
 
@@ -394,7 +394,7 @@
 
             # Skellam only fails in these tests with ReverseDiff
             # Ref: https://github.com/TuringLang/DistributionsAD.jl/issues/126
-            filldist_broken = d.f(d.θ...) isa Skellam ? (:ReverseDiff,) : d.broken
+            filldist_broken = d.f(d.θ...) isa Skellam ? union((:ReverseDiff,), d.broken) : d.broken
             arraydist_broken = d.broken
 
             # Create `filldist` distribution
