@@ -169,7 +169,6 @@
 
         DistSpec(NormalInverseGaussian, (1.0, 2.0, 1.0, 1.0), 0.5; broken=(:Zygote,)),
 
-        DistSpec(Pareto, (), 1.5; broken=(:Zygote,)),
         DistSpec(Pareto, (1.0,), 1.5),
         DistSpec(Pareto, (1.0, 1.0), 1.5),
 
@@ -219,6 +218,9 @@
         # Stackoverflow caused by SpecialFunctions.besselix
         DistSpec(VonMises, (1.0,), 1.0),
         DistSpec(VonMises, (1, 1), 1),
+        
+        # Only some Zygote tests are broken and therefore this can not be checked
+        DistSpec(Pareto, (), 1.5; broken=(:Zygote,)),
     ]
 
     # Tests that have a `broken` field can be executed but, according to FiniteDifferences,
