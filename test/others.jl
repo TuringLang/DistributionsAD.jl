@@ -51,9 +51,11 @@
             end
             d2 = MvNormal(m, C)
 
-            @testset "$F" for F in (length, size, mean, cov, var)
+            @testset "$F" for F in (length, size, mean)
                 @test F(d1) == F(d2)
             end
+            @test cov(d1) ≈ cov(d2)
+            @test var(d1) ≈ var(d2)
 
             x1 = rand(d1)
             x2 = rand(d1, 3)
