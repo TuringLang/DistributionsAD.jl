@@ -207,11 +207,16 @@ end
 
 # Mean and covariance
 Distributions.mean(d::TuringDiagMvNormal) = d.m
+Distributions.var(d::TuringDiagMvNormal) = abs2.(d.σ)
+Distributions.cov(d::TuringDiagMvNormal) = Diagonal(cov(d))
+
 Distributions.mean(d::TuringScalMvNormal) = d.m
+Distributions.var(d::TuringScalMvNormal) = Fill(abs2(d.σ),length(d.m))
+Distributions.cov(d::TuringScalMvNormal) = Diagonal(cov(d))
+
 Distributions.mean(d::TuringDenseMvNormal) = d.m
-Distributions.cov(d::TuringDiagMvNormal) = Diagonal(abs2.(d.σ))
-Distributions.cov(d::TuringScalMvNormal) = Diagonal(Fill(abs2(d.σ),length(d.m)))
-Distributions.cov(d::TuringDenseMvNormal) = Array(d.C)  # turns cholesky to matrix
+Distributions.var(d::TuringDenseMvNormal) = diag(cov(d))
+Distributions.cov(d::TuringDenseMvNormal) = Matrix(d.C) # turns cholesky to matrix
 
 ## MvLogNormal ##
 

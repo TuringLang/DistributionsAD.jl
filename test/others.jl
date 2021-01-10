@@ -51,7 +51,7 @@
             end
             d2 = MvNormal(m, C)
 
-            @testset "$F" for F in (length, size, mean, cov)
+            @testset "$F" for F in (length, size, mean, cov, var)
                 @test F(d1) == F(d2)
             end
 
