@@ -208,11 +208,11 @@ end
 # Mean and covariance
 Distributions.mean(d::TuringDiagMvNormal) = d.m
 Distributions.var(d::TuringDiagMvNormal) = abs2.(d.σ)
-Distributions.cov(d::TuringDiagMvNormal) = Diagonal(cov(d))
+Distributions.cov(d::TuringDiagMvNormal) = Diagonal(var(d))
 
 Distributions.mean(d::TuringScalMvNormal) = d.m
 Distributions.var(d::TuringScalMvNormal) = Fill(abs2(d.σ),length(d.m))
-Distributions.cov(d::TuringScalMvNormal) = Diagonal(cov(d))
+Distributions.cov(d::TuringScalMvNormal) = Diagonal(var(d))
 
 Distributions.mean(d::TuringDenseMvNormal) = d.m
 Distributions.var(d::TuringDenseMvNormal) = diag(cov(d))
