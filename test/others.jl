@@ -39,18 +39,19 @@
         @testset "$TD" for TD in [TuringDenseMvNormal, TuringDiagMvNormal, TuringScalMvNormal]
             m = rand(3)
             if TD <: TuringDenseMvNormal
-                C = Matrix{Float64}(I, 3, 3)
+                A = rand(3, 3)
+                C = A' * A + I
                 d1 = TuringMvNormal(m, C)
             elseif TD <: TuringDiagMvNormal
-                C = ones(3)
+                C = rand(3)
                 d1 = TuringMvNormal(m, C)
             else
-                C = 1.0
+                C = rand()
                 d1 = TuringMvNormal(m, C)
             end
             d2 = MvNormal(m, C)
 
-            @testset "$F" for F in (length, size)
+            @testset "$F" for F in (length, size, mean, cov)
                 @test F(d1) == F(d2)
             end
 
