@@ -15,27 +15,7 @@ end
 ## PoissonBinomial ##
 
 # Zygote loads ForwardDiff, so this dummy adjoint should never be needed.
-# The adjoint that is used for `poissonbinomial_pdf_fft` is defined in `src/zygote_forwarddiff.jl`
-# ZygoteRules.@adjoint function poissonbinomial_pdf_fft(x::AbstractArray{T}) where T<:Real
-#     error("This needs ForwardDiff. `using ForwardDiff` should fix this error.")
-# end
-
-## Product
-
-# Tests with `Kolmogorov` seem to fail otherwise?!
-ZygoteRules.@adjoint function Distributions._logpdf(d::Product, x::AbstractVector{<:Real})
-    return ZygoteRules.pullback(d, x) do d, x
-        sum(map(logpdf, d.v, x))
-    end
-end
-ZygoteRules.@adjoint function Distributions._logpdf(
-    d::FillVectorOfUnivariate,
-    x::AbstractVector{<:Real},
-)
-    return ZygoteRules.pullback(d, x) do d, x
-        _flat_logpdf(d.v.value, x)
-    end
-end
+# The adjoint that is used for `poissonbinomial_pdf` is defined in `src/zygote_forwarddiff.jl`
 
 ## Wishart ##
 
@@ -71,37 +51,4 @@ ZygoteRules.@adjoint function Distributions.InverseWishart(
     S::AbstractMatrix{<:Real}
 )
     return ZygoteRules.pullback(TuringInverseWishart, df, S)
-end
-
-## General definitions of `logpdf` for arrays
-
-ZygoteRules.@adjoint function Distributions.logpdf(
-    dist::MultivariateDistribution,
-    X::AbstractMatrix{<:Real},
-)
-    size(X, 1) == length(dist) ||
-        throw(DimensionMismatch("Inconsistent array dimensions."))
-    return ZygoteRules.pullback(dist, X) do dist, X
-        return map(i -> Distributions._logpdf(dist, view(X, :, i)), axes(X, 2))
-    end
-end
-
-ZygoteRules.@adjoint function Distributions.logpdf(
-    dist::MatrixDistribution,
-    X::AbstractArray{<:Real,3},
-)
-    (size(X, 1), size(X, 2)) == size(dist) ||
-        throw(DimensionMismatch("Inconsistent array dimensions."))
-    return ZygoteRules.pullback(dist, X) do dist, X
-        return map(i -> Distributions._logpdf(dist, view(X, :, :, i)), axes(X, 3))
-    end
-end
-
-ZygoteRules.@adjoint function Distributions.logpdf(
-    dist::MatrixDistribution,
-    X::AbstractArray{<:AbstractMatrix{<:Real}},
-)
-    return ZygoteRules.pullback(dist, X) do dist, X
-        return map(x -> logpdf(dist, x), X)
-    end
 end

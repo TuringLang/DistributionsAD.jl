@@ -261,28 +261,15 @@ end
 PoissonBinomial(p::TrackedArray{<:Real}; check_args=true) =
     TuringPoissonBinomial(p; check_args = check_args)
 
-# TODO: add adjoints without ForwardDiff
-poissonbinomial_pdf_fft(x::TrackedArray) = track(poissonbinomial_pdf_fft, x)
-@grad function poissonbinomial_pdf_fft(x::TrackedArray)
+Distributions.poissonbinomial_pdf(x::TrackedArray) = track(Distributions.poissonbinomial_pdf, x)
+@grad function Distributions.poissonbinomial_pdf(x::TrackedArray)
     x_data = data(x)
     T = eltype(x_data)
-    fft = poissonbinomial_pdf_fft(x_data)
-    return  fft, Δ -> begin
-        ((ForwardDiff.jacobian(poissonbinomial_pdf_fft, x_data)::Matrix{T})' * Δ,)
+    value = Distributions.poissonbinomial_pdf(x_data)
+    function poissonbinomial_pdf_pullback(Δ)
+        return ((ForwardDiff.jacobian(Distributions.poissonbinomial_pdf, x_data)::Matrix{T})' * Δ,)
     end
-end
-
-if isdefined(Distributions, :poissonbinomial_pdf)
-    Distributions.poissonbinomial_pdf(x::TrackedArray) = track(Distributions.poissonbinomial_pdf, x)
-    @grad function Distributions.poissonbinomial_pdf(x::TrackedArray)
-        x_data = data(x)
-        T = eltype(x_data)
-        value = Distributions.poissonbinomial_pdf(x_data)
-        function poissonbinomial_pdf_pullback(Δ)
-            return ((ForwardDiff.jacobian(Distributions.poissonbinomial_pdf, x_data)::Matrix{T})' * Δ,)
-        end
-        return value, poissonbinomial_pdf_pullback
-    end
+    return value, poissonbinomial_pdf_pullback
 end
 
 ## Semicircle ##
@@ -339,61 +326,13 @@ end
         Δ->(Δ * _nbinomlogpdf_grad_1(r, p, k), Tracker._zero(p), nothing)
 end
 
-## Multinomial
-
-function Distributions.logpdf(
-    dist::Multinomial{<:Real,<:TrackedVector},
-    X::AbstractMatrix{<:Real}
-)
-    size(X, 1) == length(dist) ||
-        throw(DimensionMismatch("Inconsistent array dimensions."))
-
-    return map(axes(X, 2)) do i
-        Distributions._logpdf(dist, view(X, :, i))
-    end
-end
-
-## Categorical ##
-
-function Distributions.DiscreteNonParametric{T,P,Ts,Ps}(
-    vs::Ts,
-    ps::Ps;
-    check_args=true,
-) where {T<:Real,P<:Real,Ts<:AbstractVector{T},Ps<:TrackedArray{P, 1, <:SubArray{P, 1}}}
-    cps = ps[:]
-    return DiscreteNonParametric{T,P,Ts,typeof(cps)}(vs, cps; check_args = check_args)
-end
-
-
 ## Dirichlet ##
 
-Distributions.Dirichlet(alpha::TrackedVector) = TuringDirichlet(alpha)
-Distributions.Dirichlet(d::Integer, alpha::TrackedReal) = TuringDirichlet(d, alpha)
-
-function Distributions._logpdf(d::Dirichlet, x::TrackedVector{<:Real})
-    return Distributions._logpdf(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
+# needed since `eltype(alpha) = TrackedReal` is not covered by the inner
+# constructor in Distributions
+function Dirichlet(alpha::TrackedVector{T}; check_args=true) where {T<:Real}
+    return Dirichlet{T}(alpha; check_args=check_args)
 end
-function Distributions.logpdf(d::Dirichlet, x::TrackedMatrix{<:Real})
-    return logpdf(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
-end
-function Distributions.loglikelihood(d::Dirichlet, x::TrackedMatrix{<:Real})
-    return loglikelihood(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
-end
-
-# Fix ambiguities
-function Distributions.logpdf(d::TuringDirichlet, x::TrackedMatrix{<:Real})
-    size(x, 1) == length(d) ||
-        throw(DimensionMismatch("Inconsistent array dimensions."))
-    return simplex_logpdf(d.alpha, d.lmnB, x)
-end
-
-## Product
-
-# TODO: Remove when modified upstream
-function Distributions.loglikelihood(dist::Product, x::TrackedVector{<:Real})
-    return Distributions.logpdf(dist, x)
-end
-
 ## MvNormal
 
 for (f, T) in (
@@ -615,4 +554,3 @@ Distributions.InverseWishart(df::TrackedReal, S::AbstractMatrix{<:Real}) = Turin
 Distributions.InverseWishart(df::Real, S::TrackedMatrix) = TuringInverseWishart(df, S)
 Distributions.InverseWishart(df::TrackedReal, S::TrackedMatrix) = TuringInverseWishart(df, S)
 Distributions.InverseWishart(df::TrackedReal, S::AbstractPDMat{<:TrackedReal}) = TuringInverseWishart(df, S)
-

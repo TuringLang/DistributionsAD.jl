@@ -28,7 +28,6 @@ import StatsFuns: logsumexp,
                   nbetalogpdf
 import Distributions: MvNormal, 
                       MvLogNormal, 
-                      poissonbinomial_pdf_fft, 
                       logpdf, 
                       quantile, 
                       PoissonBinomial,
@@ -45,9 +44,6 @@ export TuringScalMvNormal,
        TuringInverseWishart,
        arraydist,
        filldist
-
-# check if Distributions >= 0.24 by checking if a generic implementation of `pdf` is defined
-const DISTRIBUTIONS_HAS_GENERIC_UNIVARIATE_PDF = hasmethod(pdf, Tuple{UnivariateDistribution,Real}) 
 
 include("common.jl")
 include("arraydist.jl")
@@ -66,7 +62,7 @@ include("zygote.jl")
         using .ForwardDiff: @define_binary_dual_op # Needed for `eval`ing diffrules here
         include("forwarddiff.jl")
 
-        # loads adjoint for `poissonbinomial_pdf` and `poissonbinomial_pdf_fft`
+        # loads adjoint for `poissonbinomial_pdf`
         include("zygote_forwarddiff.jl")
     end
 
@@ -97,15 +93,6 @@ include("zygote.jl")
             x::AbstractVector{<:Real},
         )
             return sum(copy(logpdf.(dist.v, x)))
-        end
-
-        function Distributions.logpdf(
-            dist::LazyVectorOfUnivariate,
-            x::AbstractMatrix{<:Real},
-        )
-            size(x, 1) == length(dist) ||
-                throw(DimensionMismatch("Inconsistent array dimensions."))
-            return vec(sum(copy(logpdf.(dists, x)), dims = 1))
         end
 
         const LazyMatrixOfUnivariate{

@@ -2,16 +2,7 @@
 
 const VectorOfUnivariate = Distributions.Product
 
-function arraydist(dists::AbstractVector{<:UnivariateDistribution})
-    return Product(dists)
-end
-
-function Distributions.logpdf(dist::VectorOfUnivariate, x::AbstractMatrix{<:Real})
-    size(x, 1) == length(dist) ||
-        throw(DimensionMismatch("Inconsistent array dimensions."))
-    # `eachcol` breaks Zygote, so we use `view` directly
-    return map(i -> sum(map(logpdf, dist.v, view(x, :, i))), axes(x, 2))
-end
+arraydist(dists::AbstractVector{<:UnivariateDistribution}) = Product(dists)
 
 struct MatrixOfUnivariate{
     S <: ValueSupport,
@@ -28,12 +19,6 @@ function Distributions._logpdf(dist::MatrixOfUnivariate, x::AbstractMatrix{<:Rea
     # return sum(((d, xi),) -> logpdf(d, xi), zip(dist.dists, x))
     # Broadcasting here breaks Tracker for some reason
     return sum(map(logpdf, dist.dists, x))
-end
-function Distributions.logpdf(dist::MatrixOfUnivariate, x::AbstractArray{<:AbstractMatrix{<:Real}})
-    return map(x -> logpdf(dist, x), x)
-end
-function Distributions.logpdf(dist::MatrixOfUnivariate, x::AbstractArray{<:Matrix{<:Real}})
-    return map(x -> logpdf(dist, x), x)
 end
 
 function Distributions.rand(rng::Random.AbstractRNG, dist::MatrixOfUnivariate)
@@ -58,12 +43,6 @@ end
 function Distributions._logpdf(dist::VectorOfMultivariate, x::AbstractMatrix{<:Real})
     # `eachcol` breaks Zygote, so we use `view` directly
     return sum(i -> logpdf(dist.dists[i], view(x, :, i)), axes(x, 2))
-end
-function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractArray{<:AbstractMatrix{<:Real}})
-    return map(x -> logpdf(dist, x), x)
-end
-function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractArray{<:Matrix{<:Real}})
-    return map(x -> logpdf(dist, x), x)
 end
 
 function Distributions.rand(rng::Random.AbstractRNG, dist::VectorOfMultivariate)
