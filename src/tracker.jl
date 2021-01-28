@@ -330,7 +330,7 @@ end
 
 # needed since `eltype(alpha) = TrackedReal` is not covered by the inner
 # constructor in Distributions
-function Dirichlet(alpha::TrackedVector{T}; check_args=true) where {T<:Real}
+function Distributions.Dirichlet(alpha::TrackedVector{T}; check_args=true) where {T<:Real}
     return Dirichlet{T}(alpha; check_args=check_args)
 end
 ## MvNormal
