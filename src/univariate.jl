@@ -38,14 +38,11 @@ struct TuringPoissonBinomial{T<:Real, TV1<:AbstractVector{T}, TV2<:AbstractVecto
     pmf::TV2
 end
 
-# if available use the faster `poissonbinomial_pdf`
-@eval begin
-    function TuringPoissonBinomial(p::AbstractArray{<:Real}; check_args = true)
-        pb = $(isdefined(Distributions, :poissonbinomial_pdf) ? Distributions.poissonbinomial_pdf : Distributions.poissonbinomial_pdf_fft)(p)
-        ϵ = eps(eltype(pb))
-        check_args && @assert all(x -> x >= -ϵ, pb) && isapprox(sum(pb), 1; atol=ϵ)
-        return TuringPoissonBinomial(p, pb)
-    end
+function TuringPoissonBinomial(p::AbstractArray{<:Real}; check_args = true)
+    pb = Distributions.poissonbinomial_pdf(p)
+    ϵ = eps(eltype(pb))
+    check_args && @assert all(x -> x >= -ϵ, pb) && isapprox(sum(pb), 1; atol=ϵ)
+    return TuringPoissonBinomial(p, pb)
 end
 
 function logpdf(d::TuringPoissonBinomial{T}, k::Int) where T<:Real
@@ -54,23 +51,3 @@ end
 quantile(d::TuringPoissonBinomial, x::Float64) = quantile(Categorical(d.pmf), x) - 1
 Base.minimum(d::TuringPoissonBinomial) = 0
 Base.maximum(d::TuringPoissonBinomial) = length(d.p)
-
-
-## Categorical ##
-
-function Base.convert(
-    ::Type{Distributions.DiscreteNonParametric{T,P,Ts,Ps}},
-    d::Distributions.DiscreteNonParametric{T,P,Ts,Ps},
-) where {T<:Real,P<:Real,Ts<:AbstractVector{T},Ps<:AbstractVector{P}}
-    DiscreteNonParametric{T,P,Ts,Ps}(support(d), probs(d), check_args=false)
-end
-
-# Fix SubArray support
-function Distributions.DiscreteNonParametric{T,P,Ts,Ps}(
-    vs::Ts,
-    ps::Ps;
-    check_args=true,
-) where {T<:Real, P<:Real, Ts<:AbstractVector{T}, Ps<:SubArray{P, 1}}
-    cps = ps[:]
-    return DiscreteNonParametric{T,P,Ts,typeof(cps)}(vs, cps; check_args = check_args)
-end
