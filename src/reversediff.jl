@@ -248,8 +248,6 @@ function _logpdf(d::Dirichlet, x::TrackedVector{<:Real})
     return _logpdf(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
 end
 function logpdf(d::Dirichlet, x::TrackedMatrix{<:Real})
-    size(x, 1) == length(d) ||
-        throw(DimensionMismatch("Inconsistent array dimensions."))
     return logpdf(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
 end
 function loglikelihood(d::Dirichlet, x::TrackedMatrix{<:Real})
