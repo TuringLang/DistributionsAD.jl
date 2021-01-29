@@ -52,8 +52,10 @@ if GROUP == "All" || GROUP == "AD"
     if AD == "All" || AD == "ReverseDiff"
         @eval begin
             # Define adjoint for ReverseDiff
-            to_simplex(x::ReverseDiff.TrackedArray) = ReverseDiff.track(to_simplex, x)
-            ReverseDiff.@grad function to_simplex(x::ReverseDiff.TrackedArray)
+            function to_simplex(x::AbstractArray{<:ReverseDiff.TrackedReal})
+                return ReverseDiff.track(to_simplex, x)
+            end
+            ReverseDiff.@grad function to_simplex(x)
                 _x = ReverseDiff.value(x)
                 y = to_simplex(_x)
                 function pullback(∇)

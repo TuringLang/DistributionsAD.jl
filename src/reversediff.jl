@@ -48,11 +48,24 @@ using ..DistributionsAD: TuringPoissonBinomial,
                          TuringDirichlet,
                          TuringScalMvNormal,
                          TuringDiagMvNormal,
-                         TuringDenseMvNormal
+                         TuringDenseMvNormal,
+                         VectorOfMultivariate,
+                         FillVectorOfMultivariate
 
 include("reversediffx.jl")
 
 adapt_randn(rng::Random.AbstractRNG, x::TrackedArray, dims...) = adapt_randn(rng, value(x), dims...)
+
+# without this definition tests of `VectorOfMultivariate` with `Dirichlet` fail
+# maybe an upstream bug caused by `view`?
+function _logpdf(dist::VectorOfMultivariate, x::AbstractMatrix{<:TrackedReal})
+    return sum(i -> _logpdf(dist.dists[i], x[:, i]), axes(x, 2))
+end
+
+# fix method ambiguity
+function _logpdf(dist::FillVectorOfMultivariate, x::AbstractMatrix{<:TrackedReal})
+    return loglikelihood(dist.dists.value, x)
+end
 
 function PoissonBinomial(p::TrackedArray{<:Real}; check_args=true)
     return TuringPoissonBinomial(p; check_args = check_args)
@@ -241,38 +254,43 @@ end
 # zero mean,, constant variance
 MvLogNormal(d::Int, σ::TrackedReal) = TuringMvLogNormal(TuringMvNormal(d, σ))
 
-Dirichlet(alpha::TrackedVector) = TuringDirichlet(alpha)
+# Dirichlet
+
+Dirichlet(alpha::AbstractVector{<:TrackedReal}) = TuringDirichlet(alpha)
 Dirichlet(d::Integer, alpha::TrackedReal) = TuringDirichlet(d, alpha)
 
-function _logpdf(d::Dirichlet, x::TrackedVector{<:Real})
+function _logpdf(d::Dirichlet, x::AbstractVector{<:TrackedReal})
     return _logpdf(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
 end
-function logpdf(d::Dirichlet, x::TrackedMatrix{<:Real})
+function logpdf(d::Dirichlet, x::AbstractMatrix{<:TrackedReal})
     return logpdf(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
 end
-function loglikelihood(d::Dirichlet, x::TrackedMatrix{<:Real})
+function loglikelihood(d::Dirichlet, x::AbstractMatrix{<:TrackedReal})
     return loglikelihood(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
 end
 
 # default definition of `loglikelihood` yields gradients of zero?!
-loglikelihood(d::TuringDirichlet, x::TrackedMatrix{<:Real}) = sum(logpdf(d, x))
+# again `view` seems to be problematic
+function loglikelihood(d::TuringDirichlet, x::AbstractMatrix{<:TrackedReal})
+    return sum(i -> logpdf(d, x[:, i]), axes(x, 2))
+end
 
 for func_header in [
-    :(simplex_logpdf(alpha::TrackedVector, lmnB::Real, x::AbstractVector)),
+    :(simplex_logpdf(alpha::AbstractVector{<:TrackedReal}, lmnB::Real, x::AbstractVector)),
     :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::AbstractVector)),
-    :(simplex_logpdf(alpha::AbstractVector, lmnB::Real, x::TrackedVector)),
-    :(simplex_logpdf(alpha::TrackedVector, lmnB::TrackedReal, x::AbstractVector)),
-    :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::TrackedVector)),
-    :(simplex_logpdf(alpha::TrackedVector, lmnB::Real, x::TrackedVector)),
-    :(simplex_logpdf(alpha::TrackedVector, lmnB::TrackedReal, x::TrackedVector)),
+    :(simplex_logpdf(alpha::AbstractVector, lmnB::Real, x::AbstractVector{<:TrackedReal})),
+    :(simplex_logpdf(alpha::AbstractVector{<:TrackedReal}, lmnB::TrackedReal, x::AbstractVector)),
+    :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::AbstractVector{<:TrackedReal})),
+    :(simplex_logpdf(alpha::AbstractVector{<:TrackedReal}, lmnB::Real, x::AbstractVector{<:TrackedReal})),
+    :(simplex_logpdf(alpha::AbstractVector{<:TrackedReal}, lmnB::TrackedReal, x::AbstractVector{<:TrackedReal})),
 
-    :(simplex_logpdf(alpha::TrackedVector, lmnB::Real, x::AbstractMatrix)),
+    :(simplex_logpdf(alpha::AbstractVector{<:TrackedReal}, lmnB::Real, x::AbstractMatrix)),
     :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::AbstractMatrix)),
-    :(simplex_logpdf(alpha::AbstractVector, lmnB::Real, x::TrackedMatrix)),
-    :(simplex_logpdf(alpha::TrackedVector, lmnB::TrackedReal, x::AbstractMatrix)),
-    :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::TrackedMatrix)),
-    :(simplex_logpdf(alpha::TrackedVector, lmnB::Real, x::TrackedMatrix)),
-    :(simplex_logpdf(alpha::TrackedVector, lmnB::TrackedReal, x::TrackedMatrix)),
+    :(simplex_logpdf(alpha::AbstractVector, lmnB::Real, x::AbstractMatrix{<:TrackedReal})),
+    :(simplex_logpdf(alpha::AbstractVector{<:TrackedReal}, lmnB::TrackedReal, x::AbstractMatrix)),
+    :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::AbstractMatrix{<:TrackedReal})),
+    :(simplex_logpdf(alpha::AbstractVector{<:TrackedReal}, lmnB::Real, x::AbstractMatrix{<:TrackedReal})),
+    :(simplex_logpdf(alpha::AbstractVector{<:TrackedReal}, lmnB::TrackedReal, x::AbstractMatrix{<:TrackedReal})),
 ]
     @eval $func_header = track(simplex_logpdf, alpha, lmnB, x)
 end
