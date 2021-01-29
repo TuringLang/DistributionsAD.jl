@@ -18,7 +18,8 @@ using ..DistributionsAD: DistributionsAD
 
 
 import SpecialFunctions, NaNMath
-import ..DistributionsAD: turing_chol, symm_turing_chol, _mv_categorical_logpdf, adapt_randn
+import ..DistributionsAD: turing_chol, symm_turing_chol, _mv_categorical_logpdf, adapt_randn,
+    simplex_logpdf
 import Base.Broadcast: materialize
 import StatsFuns: logsumexp
 
@@ -47,11 +48,24 @@ using ..DistributionsAD: TuringPoissonBinomial,
                          TuringDirichlet,
                          TuringScalMvNormal,
                          TuringDiagMvNormal,
-                         TuringDenseMvNormal
+                         TuringDenseMvNormal,
+                         VectorOfMultivariate,
+                         FillVectorOfMultivariate
 
 include("reversediffx.jl")
 
 adapt_randn(rng::Random.AbstractRNG, x::TrackedArray, dims...) = adapt_randn(rng, value(x), dims...)
+
+# without this definition tests of `VectorOfMultivariate` with `Dirichlet` fail
+# upstream bug caused by `view` + `track`: https://github.com/JuliaDiff/ReverseDiff.jl/pull/164
+function _logpdf(dist::VectorOfMultivariate, x::AbstractMatrix{<:TrackedReal})
+    return sum(i -> _logpdf(dist.dists[i], x[:, i]), axes(x, 2))
+end
+
+# fix method ambiguity
+function _logpdf(dist::FillVectorOfMultivariate, x::AbstractMatrix{<:TrackedReal})
+    return loglikelihood(dist.dists.value, x)
+end
 
 function PoissonBinomial(p::TrackedArray{<:Real}; check_args=true)
     return TuringPoissonBinomial(p; check_args = check_args)
@@ -240,36 +254,60 @@ end
 # zero mean,, constant variance
 MvLogNormal(d::Int, σ::TrackedReal) = TuringMvLogNormal(TuringMvNormal(d, σ))
 
-Dirichlet(alpha::TrackedVector) = TuringDirichlet(alpha)
+# Dirichlet
+
+Dirichlet(alpha::AbstractVector{<:TrackedReal}) = TuringDirichlet(alpha)
 Dirichlet(d::Integer, alpha::TrackedReal) = TuringDirichlet(d, alpha)
 
-for func_header in [
-    :(simplex_logpdf(alpha::TrackedVector, lmnB::Real, x::AbstractVector)),
-    :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::AbstractVector)),
-    :(simplex_logpdf(alpha::AbstractVector, lmnB::Real, x::TrackedVector)),
-    :(simplex_logpdf(alpha::TrackedVector, lmnB::TrackedReal, x::AbstractVector)),
-    :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::TrackedVector)),
-    :(simplex_logpdf(alpha::TrackedVector, lmnB::Real, x::TrackedVector)),
-    :(simplex_logpdf(alpha::TrackedVector, lmnB::TrackedReal, x::TrackedVector)),
+function _logpdf(d::Dirichlet, x::AbstractVector{<:TrackedReal})
+    return _logpdf(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
+end
+function logpdf(d::Dirichlet, x::AbstractMatrix{<:TrackedReal})
+    return logpdf(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
+end
+function loglikelihood(d::Dirichlet, x::AbstractMatrix{<:TrackedReal})
+    return loglikelihood(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
+end
 
-    :(simplex_logpdf(alpha::TrackedVector, lmnB::Real, x::AbstractMatrix)),
+# default definition of `loglikelihood` yields gradients of zero?!
+# upstream bug caused by `view` + `track`: https://github.com/JuliaDiff/ReverseDiff.jl/pull/164
+function loglikelihood(d::TuringDirichlet, x::AbstractMatrix{<:TrackedReal})
+    return sum(i -> logpdf(d, x[:, i]), axes(x, 2))
+end
+
+for func_header in [
+    :(simplex_logpdf(alpha::AbstractVector{<:TrackedReal}, lmnB::Real, x::AbstractVector)),
+    :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::AbstractVector)),
+    :(simplex_logpdf(alpha::AbstractVector, lmnB::Real, x::AbstractVector{<:TrackedReal})),
+    :(simplex_logpdf(alpha::AbstractVector{<:TrackedReal}, lmnB::TrackedReal, x::AbstractVector)),
+    :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::AbstractVector{<:TrackedReal})),
+    :(simplex_logpdf(alpha::AbstractVector{<:TrackedReal}, lmnB::Real, x::AbstractVector{<:TrackedReal})),
+    :(simplex_logpdf(alpha::AbstractVector{<:TrackedReal}, lmnB::TrackedReal, x::AbstractVector{<:TrackedReal})),
+
+    :(simplex_logpdf(alpha::AbstractVector{<:TrackedReal}, lmnB::Real, x::AbstractMatrix)),
     :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::AbstractMatrix)),
-    :(simplex_logpdf(alpha::AbstractVector, lmnB::Real, x::TrackedMatrix)),
-    :(simplex_logpdf(alpha::TrackedVector, lmnB::TrackedReal, x::AbstractMatrix)),
-    :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::TrackedMatrix)),
-    :(simplex_logpdf(alpha::TrackedVector, lmnB::Real, x::TrackedMatrix)),
-    :(simplex_logpdf(alpha::TrackedVector, lmnB::TrackedReal, x::TrackedMatrix)),
+    :(simplex_logpdf(alpha::AbstractVector, lmnB::Real, x::AbstractMatrix{<:TrackedReal})),
+    :(simplex_logpdf(alpha::AbstractVector{<:TrackedReal}, lmnB::TrackedReal, x::AbstractMatrix)),
+    :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::AbstractMatrix{<:TrackedReal})),
+    :(simplex_logpdf(alpha::AbstractVector{<:TrackedReal}, lmnB::Real, x::AbstractMatrix{<:TrackedReal})),
+    :(simplex_logpdf(alpha::AbstractVector{<:TrackedReal}, lmnB::TrackedReal, x::AbstractMatrix{<:TrackedReal})),
 ]
     @eval $func_header = track(simplex_logpdf, alpha, lmnB, x)
 end
 @grad function simplex_logpdf(alpha, lmnB, x::AbstractVector)
-    simplex_logpdf(value(alpha), value(lmnB), value(x)), Δ -> begin
-        (Δ .* log.(value(x)), -Δ, Δ .* (value(alpha) .- 1))
+    _alpha = value(alpha)
+    _lmnB = value(lmnB)
+    _x = value(x)
+    simplex_logpdf(_alpha, _lmnB, _x), Δ -> begin
+        (Δ .* log.(_x), -Δ, Δ .* (_alpha .- 1) ./ _x)
     end
 end
 @grad function simplex_logpdf(alpha, lmnB, x::AbstractMatrix)
-    simplex_logpdf(value(alpha), value(lmnB), value(x)), Δ -> begin
-        (log.(value(x)) * Δ, -sum(Δ), repeat(value(alpha) .- 1, 1, size(x, 2)) * Diagonal(Δ))
+    _alpha = value(alpha)
+    _lmnB = value(lmnB)
+    _x = value(x)
+    simplex_logpdf(_alpha, _lmnB, _x), Δ -> begin
+        (log.(_x) * Δ, -sum(Δ), ((_alpha .- 1) ./ _x) * Diagonal(Δ))
     end
 end
 
