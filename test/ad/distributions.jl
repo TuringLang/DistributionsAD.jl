@@ -26,10 +26,6 @@
     to_positive(x) = exp.(x)
     to_positive(x::AbstractArray{<:AbstractArray}) = to_positive.(x)
 
-    # Create vectors in probability simplex.
-    to_simplex(x::AbstractArray; dims=1) = NNlib.softmax(x; dims=dims)
-    to_simplex(x::AbstractArray{<:AbstractArray}; dims=1) = to_simplex.(x; dims=dims)
-
     # Tests that have a `broken` field can be executed but, according to FiniteDifferences,
     # fail to produce the correct result. These tests can be checked with `@test_broken`.
     univariate_distributions = DistSpec[

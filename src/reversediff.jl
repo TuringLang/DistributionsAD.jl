@@ -18,7 +18,8 @@ using ..DistributionsAD: DistributionsAD
 
 
 import SpecialFunctions, NaNMath
-import ..DistributionsAD: turing_chol, symm_turing_chol, _mv_categorical_logpdf, adapt_randn
+import ..DistributionsAD: turing_chol, symm_turing_chol, _mv_categorical_logpdf, adapt_randn,
+    simplex_logpdf
 import Base.Broadcast: materialize
 import StatsFuns: logsumexp
 
@@ -243,6 +244,21 @@ MvLogNormal(d::Int, σ::TrackedReal) = TuringMvLogNormal(TuringMvNormal(d, σ))
 Dirichlet(alpha::TrackedVector) = TuringDirichlet(alpha)
 Dirichlet(d::Integer, alpha::TrackedReal) = TuringDirichlet(d, alpha)
 
+function _logpdf(d::Dirichlet, x::TrackedVector{<:Real})
+    return _logpdf(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
+end
+function logpdf(d::Dirichlet, x::TrackedMatrix{<:Real})
+    size(x, 1) == length(d) ||
+        throw(DimensionMismatch("Inconsistent array dimensions."))
+    return logpdf(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
+end
+function loglikelihood(d::Dirichlet, x::TrackedMatrix{<:Real})
+    return loglikelihood(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
+end
+
+# default definition of `loglikelihood` yields gradients of zero?!
+loglikelihood(d::TuringDirichlet, x::TrackedMatrix{<:Real}) = sum(logpdf(d, x))
+
 for func_header in [
     :(simplex_logpdf(alpha::TrackedVector, lmnB::Real, x::AbstractVector)),
     :(simplex_logpdf(alpha::AbstractVector, lmnB::TrackedReal, x::AbstractVector)),
@@ -263,13 +279,19 @@ for func_header in [
     @eval $func_header = track(simplex_logpdf, alpha, lmnB, x)
 end
 @grad function simplex_logpdf(alpha, lmnB, x::AbstractVector)
-    simplex_logpdf(value(alpha), value(lmnB), value(x)), Δ -> begin
-        (Δ .* log.(value(x)), -Δ, Δ .* (value(alpha) .- 1))
+    _alpha = value(alpha)
+    _lmnB = value(lmnB)
+    _x = value(x)
+    simplex_logpdf(_alpha, _lmnB, _x), Δ -> begin
+        (Δ .* log.(_x), -Δ, Δ .* (_alpha .- 1) ./ _x)
     end
 end
 @grad function simplex_logpdf(alpha, lmnB, x::AbstractMatrix)
-    simplex_logpdf(value(alpha), value(lmnB), value(x)), Δ -> begin
-        (log.(value(x)) * Δ, -sum(Δ), repeat(value(alpha) .- 1, 1, size(x, 2)) * Diagonal(Δ))
+    _alpha = value(alpha)
+    _lmnB = value(lmnB)
+    _x = value(x)
+    simplex_logpdf(_alpha, _lmnB, _x), Δ -> begin
+        (log.(_x) * Δ, -sum(Δ), ((_alpha .- 1) ./ _x) * Diagonal(Δ))
     end
 end
 

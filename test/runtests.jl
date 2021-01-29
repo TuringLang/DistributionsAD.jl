@@ -45,11 +45,30 @@ if GROUP == "All" || GROUP == "AD"
     to_posdef(A::AbstractMatrix) = A * A' + I
     to_posdef_diagonal(a::AbstractVector) = Diagonal(a.^2 .+ 1)
 
+    # Create vectors in probability simplex.
+    to_simplex(x::AbstractArray) = NNlib.softmax(x; dims=1)
+    to_simplex(x::AbstractArray{<:AbstractArray}) = to_simplex.(x)
+
+    if AD == "All" || AD == "ReverseDiff"
+        @eval begin
+            # Define adjoint for ReverseDiff
+            to_simplex(x::ReverseDiff.TrackedArray) = ReverseDiff.track(to_simplex, x)
+            ReverseDiff.@grad function to_simplex(x::ReverseDiff.TrackedArray)
+                _x = ReverseDiff.value(x)
+                y = to_simplex(_x)
+                function pullback(∇)
+                    return (NNlib.∇softmax(∇, _x, y; dims=1),)
+                end
+                return y, pullback
+            end
+        end
+    end
+
     if AD == "All" || AD == "Tracker"
         @eval begin
             # Define adjoints for Tracker
-            to_posdef(A::TrackedMatrix) = Tracker.track(to_posdef, A)
-            Tracker.@grad function to_posdef(A::TrackedMatrix)
+            to_posdef(A::Tracker.TrackedMatrix) = Tracker.track(to_posdef, A)
+            Tracker.@grad function to_posdef(A::Tracker.TrackedMatrix)
                 data_A = Tracker.data(A)
                 S = data_A * data_A' + I
                 function pullback(∇)
