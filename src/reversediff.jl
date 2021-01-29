@@ -57,7 +57,7 @@ include("reversediffx.jl")
 adapt_randn(rng::Random.AbstractRNG, x::TrackedArray, dims...) = adapt_randn(rng, value(x), dims...)
 
 # without this definition tests of `VectorOfMultivariate` with `Dirichlet` fail
-# maybe an upstream bug caused by `view`?
+# upstream bug caused by `view` + `track`: https://github.com/JuliaDiff/ReverseDiff.jl/pull/164
 function _logpdf(dist::VectorOfMultivariate, x::AbstractMatrix{<:TrackedReal})
     return sum(i -> _logpdf(dist.dists[i], x[:, i]), axes(x, 2))
 end
@@ -270,7 +270,7 @@ function loglikelihood(d::Dirichlet, x::AbstractMatrix{<:TrackedReal})
 end
 
 # default definition of `loglikelihood` yields gradients of zero?!
-# again `view` seems to be problematic
+# upstream bug caused by `view` + `track`: https://github.com/JuliaDiff/ReverseDiff.jl/pull/164
 function loglikelihood(d::TuringDirichlet, x::AbstractMatrix{<:TrackedReal})
     return sum(i -> logpdf(d, x[:, i]), axes(x, 2))
 end
