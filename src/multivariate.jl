@@ -63,14 +63,9 @@ ZygoteRules.@adjoint function Distributions.Dirichlet(d, alpha)
     return ZygoteRules.pullback(TuringDirichlet, d, alpha)
 end
 
-function simplex_logpdf(alpha, lmnB, x::AbstractVector)
-    sum((alpha .- 1) .* log.(x)) - lmnB
-end
+simplex_logpdf(alpha, lmnB, x::AbstractVector) = sum(xlogy.(alpha .- 1, x)) - lmnB
 function simplex_logpdf(alpha, lmnB, x::AbstractMatrix)
-    @views init = vcat(sum((alpha .- 1) .* log.(x[:,1])) - lmnB)
-    mapreduce(vcat, drop(eachcol(x), 1); init = init) do c
-        sum((alpha .- 1) .* log.(c)) - lmnB
-    end
+    return vec(sum(xlogy.(alpha .- 1, x); dims=1)) .- lmnB
 end
 
 ZygoteRules.@adjoint function simplex_logpdf(alpha, lmnB, x::AbstractVector)
