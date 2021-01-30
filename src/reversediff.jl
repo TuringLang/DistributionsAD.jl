@@ -260,13 +260,13 @@ Dirichlet(alpha::AbstractVector{<:TrackedReal}) = TuringDirichlet(alpha)
 Dirichlet(d::Integer, alpha::TrackedReal) = TuringDirichlet(d, alpha)
 
 function _logpdf(d::Dirichlet, x::AbstractVector{<:TrackedReal})
-    return _logpdf(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
+    return _logpdf(TuringDirichlet(d), x)
 end
 function logpdf(d::Dirichlet, x::AbstractMatrix{<:TrackedReal})
-    return logpdf(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
+    return logpdf(TuringDirichlet(d), x)
 end
 function loglikelihood(d::Dirichlet, x::AbstractMatrix{<:TrackedReal})
-    return loglikelihood(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
+    return loglikelihood(TuringDirichlet(d), x)
 end
 
 # default definition of `loglikelihood` yields gradients of zero?!

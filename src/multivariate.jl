@@ -1,51 +1,53 @@
 ## Dirichlet ##
 
-struct TuringDirichlet{T, TV <: AbstractVector} <: ContinuousMultivariateDistribution
+struct TuringDirichlet{T<:Real,TV<:AbstractVector,S<:Real} <: ContinuousMultivariateDistribution
     alpha::TV
     alpha0::T
-    lmnB::T
-end
-Base.length(d::TuringDirichlet) = length(d.alpha)
-function check(alpha)
-    all(ai -> ai > 0, alpha) || 
-        throw(ArgumentError("Dirichlet: alpha must be a positive vector."))
-end
-
-function Distributions._rand!(rng::Random.AbstractRNG,
-                d::TuringDirichlet,
-                x::AbstractVector{<:Real})
-    s = 0.0
-    n = length(x)
-    α = d.alpha
-    for i in 1:n
-        @inbounds s += (x[i] = rand(rng, Gamma(α[i])))
-    end
-    Distributions.multiply!(x, inv(s)) # this returns x
+    lmnB::S
 end
 
 function TuringDirichlet(alpha::AbstractVector)
-    check(alpha)
+    all(ai -> ai > 0, alpha) ||
+        throw(ArgumentError("Dirichlet: alpha must be a positive vector."))
+
     alpha0 = sum(alpha)
     lmnB = sum(loggamma, alpha) - loggamma(alpha0)
-    T = promote_type(typeof(alpha0), typeof(lmnB))
-    TV = typeof(alpha)
-    TuringDirichlet{T, TV}(alpha, alpha0, lmnB)
-end
 
-function TuringDirichlet(d::Integer, alpha::Real)
-    alpha0 = alpha * d
-    _alpha = fill(alpha, d)
-    lmnB = loggamma(alpha) * d - loggamma(alpha0)
-    T = promote_type(typeof(alpha0), typeof(lmnB))
-    TV = typeof(_alpha)
-    TuringDirichlet{T, TV}(_alpha, alpha0, lmnB)
+    return TuringDirichlet(alpha, alpha0, lmnB)
 end
-function TuringDirichlet(alpha::AbstractVector{T}) where {T <: Integer}
-    TuringDirichlet(float.(alpha))
-end
-TuringDirichlet(d::Integer, alpha::Integer) = TuringDirichlet(d, Float64(alpha))
+TuringDirichlet(d::Integer, alpha::Real) = TuringDirichlet(Fill(alpha, d))
 
+# TODO: remove?
+TuringDirichlet(alpha::AbstractVector{<:Integer}) = TuringDirichlet(float.(alpha))
+TuringDirichlet(d::Integer, alpha::Integer) = TuringDirichlet(d, float(alpha))
+
+# TODO: remove and use `Dirichlet` only for `Tracker.TrackedVector`
 Distributions.Dirichlet(alpha::AbstractVector) = TuringDirichlet(alpha)
+
+TuringDirichlet(d::Dirichlet) = TuringDirichlet(d.alpha, d.alpha0, d.lmnB)
+
+Base.length(d::TuringDirichlet) = length(d.alpha)
+
+# copied from Distributions
+# TODO: remove and use `Dirichlet`?
+function Distributions._rand!(
+    rng::Random.AbstractRNG,
+    d::TuringDirichlet,
+    x::AbstractVector{<:Real},
+)
+    @inbounds for (i, αi) in zip(eachindex(x), d.alpha)
+        x[i] = rand(rng, Gamma(αi))
+    end
+    Distributions.multiply!(x, inv(sum(x))) # this returns x
+end
+function Distributions._rand!(
+    rng::AbstractRNG,
+    d::TuringDirichlet{<:Real,<:FillArrays.AbstractFill},
+    x::AbstractVector{<:Real}
+)
+    rand!(rng, Gamma(FillArrays.getindex_value(d.alpha)), x)
+    Distributions.multiply!(x, inv(sum(x))) # this returns x
+end
 
 function Distributions._logpdf(d::TuringDirichlet, x::AbstractVector{<:Real})
     return simplex_logpdf(d.alpha, d.lmnB, x)

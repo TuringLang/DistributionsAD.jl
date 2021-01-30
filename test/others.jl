@@ -298,4 +298,42 @@
             end
         end
     end
+
+    @test "TuringDirichlet" begin
+        dim = 3
+        n = 4
+        for alpha in (2, rand())
+            d1 = TuringDirichlet(dim, alpha)
+            d2 = Dirichlet(dim, alpha)
+            d3 = TuringDirichlet(d2)
+            @test d1.alpha == d2.alpha == d3.alpha
+            @test d1.alpha0 == d2.alpha0 == d3.alpha0
+            @test d1.lmnB == d2.lmnB == d3.lmnB
+
+            s1 = rand(d1)
+            @test s1 isa Vector{Float64}
+            @test length(s1) == dim
+
+            s2 = rand(d1, n)
+            @test s2 isa Matrix{Float64}
+            @test size(s2) == (dim, n)
+        end
+
+        for alpha in (ones(Int, dim), rand(dim))
+            d1 = TuringDirichlet(alpha)
+            d2 = Dirichlet(alpha)
+            d3 = TuringDirichlet(d2)
+            @test d1.alpha == d2.alpha == d3.alpha
+            @test d1.alpha0 == d2.alpha0 == d3.alpha0
+            @test d1.lmnB == d2.lmnB == d3.lmnB
+
+            s1 = rand(d1)
+            @test s1 isa Vector{Float64}
+            @test length(s1) == dim
+
+            s2 = rand(d1, n)
+            @test s2 isa Matrix{Float64}
+            @test size(s2) == (dim, n)
+        end
+    end
 end

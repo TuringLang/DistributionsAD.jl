@@ -371,13 +371,13 @@ Distributions.Dirichlet(alpha::TrackedVector) = TuringDirichlet(alpha)
 Distributions.Dirichlet(d::Integer, alpha::TrackedReal) = TuringDirichlet(d, alpha)
 
 function Distributions._logpdf(d::Dirichlet, x::TrackedVector{<:Real})
-    return Distributions._logpdf(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
+    return Distributions._logpdf(TuringDirichlet(d), x)
 end
 function Distributions.logpdf(d::Dirichlet, x::TrackedMatrix{<:Real})
-    return logpdf(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
+    return logpdf(TuringDirichlet(d), x)
 end
 function Distributions.loglikelihood(d::Dirichlet, x::TrackedMatrix{<:Real})
-    return loglikelihood(TuringDirichlet(d.alpha, d.alpha0, d.lmnB), x)
+    return loglikelihood(TuringDirichlet(d), x)
 end
 
 # Fix ambiguities
@@ -615,4 +615,3 @@ Distributions.InverseWishart(df::TrackedReal, S::AbstractMatrix{<:Real}) = Turin
 Distributions.InverseWishart(df::Real, S::TrackedMatrix) = TuringInverseWishart(df, S)
 Distributions.InverseWishart(df::TrackedReal, S::TrackedMatrix) = TuringInverseWishart(df, S)
 Distributions.InverseWishart(df::TrackedReal, S::AbstractPDMat{<:TrackedReal}) = TuringInverseWishart(df, S)
-
