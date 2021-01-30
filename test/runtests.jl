@@ -10,7 +10,7 @@ using Random, LinearAlgebra, Test
 
 using Distributions: meanlogdet
 using DistributionsAD: TuringUniform, TuringMvNormal, TuringMvLogNormal,
-                       TuringPoissonBinomial
+                       TuringPoissonBinomial, TuringDirichlet
 using StatsBase: entropy
 using StatsFuns: binomlogpdf, logsumexp, logistic
 
