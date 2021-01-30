@@ -299,7 +299,7 @@
         end
     end
 
-    @test "TuringDirichlet" begin
+    @testset "TuringDirichlet" begin
         dim = 3
         n = 4
         for alpha in (2, rand())
