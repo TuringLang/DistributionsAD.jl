@@ -77,7 +77,7 @@ function Base.rand(rng::AbstractRNG, d::MvDiscreteNonParametric{T,P}) where {T,P
     p = probs(d)
     n, k = size(p)
     map(1:k) do j
-        draw = rand(rng, P)
+        draw = rand(rng, (P === Real ? Float64 : P))
         cp = zero(P)
         i = 0
         while cp < draw && i < n
@@ -87,7 +87,7 @@ function Base.rand(rng::AbstractRNG, d::MvDiscreteNonParametric{T,P}) where {T,P
     end
 end
 
-Base.rand(d::MvDiscreteNonParametric) = rand(GLOBAL_RNG, d)
+Base.rand(d::MvDiscreteNonParametric) = rand(Random.GLOBAL_RNG, d)
 
 # Override the method in testutils.jl since it assumes
 # an evenly-spaced integer support
