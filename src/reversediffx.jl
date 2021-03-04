@@ -8,8 +8,9 @@
 
 logsumexp(x::TrackedArray; dims=:) = track(logsumexp, x, dims = dims)
 @grad function logsumexp(x::AbstractArray; dims)
-    lse = logsumexp(value(x), dims = dims)
-    return lse, Δ -> (Δ .* exp.(x .- lse),)
+    x_value = value(x)
+    lse = logsumexp(x_value; dims=dims)
+    return lse, Δ -> (Δ .* exp.(x_value .- lse),)
 end
 
 ############
