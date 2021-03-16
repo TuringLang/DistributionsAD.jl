@@ -10,7 +10,9 @@ using PDMats,
       Requires,
       ZygoteRules,
       ChainRules,  # needed for `ChainRules.chol_blocked_rev`
-      FillArrays
+      ChainRulesCore,
+      FillArrays,
+      Adapt
 
 using SpecialFunctions: logabsgamma, digamma
 using LinearAlgebra: copytri!, AbstractTriangular
@@ -44,16 +46,20 @@ export TuringScalMvNormal,
        arraydist,
        filldist
 
+# check if Distributions >= 0.24 by checking if a generic implementation of `pdf` is defined
+const DISTRIBUTIONS_HAS_GENERIC_UNIVARIATE_PDF = hasmethod(pdf, Tuple{UnivariateDistribution,Real}) 
+
 include("common.jl")
+include("arraydist.jl")
+include("filldist.jl")
 include("univariate.jl")
 include("multivariate.jl")
 include("mixturemodels.jl")
 include("mvcategorical.jl")
 include("matrixvariate.jl")
 include("flatten.jl")
-include("arraydist.jl")
-include("filldist.jl")
 
+include("chainrules.jl")
 include("zygote.jl")
 
 @init begin
@@ -61,7 +67,7 @@ include("zygote.jl")
         using .ForwardDiff: @define_binary_dual_op # Needed for `eval`ing diffrules here
         include("forwarddiff.jl")
 
-        # loads adjoint for `poissonbinomial_pdf_fft`
+        # loads adjoint for `poissonbinomial_pdf` and `poissonbinomial_pdf_fft`
         include("zygote_forwarddiff.jl")
     end
 
@@ -76,6 +82,48 @@ include("zygote.jl")
         using .Tracker: Tracker, TrackedReal, TrackedVector, TrackedMatrix,
                         TrackedArray, TrackedVecOrMat, track, @grad, data
         include("tracker.jl")
+    end
+
+    @require LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02" begin
+        using .LazyArrays: BroadcastArray, BroadcastVector, LazyArray
+
+        const LazyVectorOfUnivariate{
+            S<:ValueSupport,
+            T<:UnivariateDistribution{S},
+            Tdists<:BroadcastVector{T},
+        } = VectorOfUnivariate{S,T,Tdists}
+
+        function Distributions._logpdf(
+            dist::LazyVectorOfUnivariate,
+            x::AbstractVector{<:Real},
+        )
+            return sum(copy(logpdf.(dist.v, x)))
+        end
+
+        function Distributions.logpdf(
+            dist::LazyVectorOfUnivariate,
+            x::AbstractMatrix{<:Real},
+        )
+            size(x, 1) == length(dist) ||
+                throw(DimensionMismatch("Inconsistent array dimensions."))
+            return vec(sum(copy(logpdf.(dists, x)), dims = 1))
+        end
+
+        const LazyMatrixOfUnivariate{
+            S<:ValueSupport,
+            T<:UnivariateDistribution{S},
+            Tdists<:BroadcastArray{T,2},
+        } = MatrixOfUnivariate{S,T,Tdists}
+
+        function Distributions._logpdf(
+            dist::LazyMatrixOfUnivariate,
+            x::AbstractMatrix{<:Real},
+        )
+            return sum(copy(logpdf.(dist.dists, x)))
+        end
+
+        lazyarray(f, x...) = LazyArray(Base.broadcasted(f, x...))
+        export lazyarray
     end
 end
 

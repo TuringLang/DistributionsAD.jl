@@ -13,19 +13,18 @@ function TuringUniform(a::Real, b::Real)
     return TuringUniform{T}(T(a), T(b))
 end
 Distributions.logpdf(d::TuringUniform, x::Real) = uniformlogpdf(d.a, d.b, x)
-Distributions.logpdf(d::TuringUniform, x::AbstractArray) = uniformlogpdf.(d.a, d.b, x)
+
 Base.minimum(d::TuringUniform) = d.a
 Base.maximum(d::TuringUniform) = d.b
 
 function uniformlogpdf(a, b, x)
-    c = -log(b - a)
+    diff = b - a
     if a <= x <= b
-        return c
+        return -log(diff)
     else
-        return oftype(c, -Inf)
+        return log(zero(diff))
     end
 end
-
 
 if VERSION < v"1.2"
     Base.inv(::Irrational{:π}) = 1/π
@@ -38,12 +37,17 @@ struct TuringPoissonBinomial{T<:Real, TV1<:AbstractVector{T}, TV2<:AbstractVecto
     p::TV1
     pmf::TV2
 end
-function TuringPoissonBinomial(p::AbstractArray{<:Real}; check_args = true)
-    pb = Distributions.poissonbinomial_pdf_fft(p)
-    ϵ = eps(eltype(pb))
-    check_args && @assert all(x -> x >= -ϵ, pb) && isapprox(sum(pb), 1, atol = ϵ)
-    return TuringPoissonBinomial(p, pb)
+
+# if available use the faster `poissonbinomial_pdf`
+@eval begin
+    function TuringPoissonBinomial(p::AbstractArray{<:Real}; check_args = true)
+        pb = $(isdefined(Distributions, :poissonbinomial_pdf) ? Distributions.poissonbinomial_pdf : Distributions.poissonbinomial_pdf_fft)(p)
+        ϵ = eps(eltype(pb))
+        check_args && @assert all(x -> x >= -ϵ, pb) && isapprox(sum(pb), 1; atol=ϵ)
+        return TuringPoissonBinomial(p, pb)
+    end
 end
+
 function logpdf(d::TuringPoissonBinomial{T}, k::Int) where T<:Real
     insupport(d, k) ? log(d.pmf[k + 1]) : -T(Inf)
 end

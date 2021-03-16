@@ -39,20 +39,23 @@
         @testset "$TD" for TD in [TuringDenseMvNormal, TuringDiagMvNormal, TuringScalMvNormal]
             m = rand(3)
             if TD <: TuringDenseMvNormal
-                C = Matrix{Float64}(I, 3, 3)
+                A = rand(3, 3)
+                C = A' * A + I
                 d1 = TuringMvNormal(m, C)
             elseif TD <: TuringDiagMvNormal
-                C = ones(3)
+                C = rand(3)
                 d1 = TuringMvNormal(m, C)
             else
-                C = 1.0
+                C = rand()
                 d1 = TuringMvNormal(m, C)
             end
             d2 = MvNormal(m, C)
 
-            @testset "$F" for F in (length, size)
+            @testset "$F" for F in (length, size, mean)
                 @test F(d1) == F(d2)
             end
+            @test cov(d1) ≈ cov(d2)
+            @test var(d1) ≈ var(d2)
 
             x1 = rand(d1)
             x2 = rand(d1, 3)
@@ -260,5 +263,77 @@
 
         d = TuringScalMvNormal(m, sigmas[1])
         @test params(d) == (m, sigmas[1])
+    end
+
+    @testset "adapt_randn" begin
+        rng = MersenneTwister()
+
+        xs = Any[(rng, T, n) -> rand(rng, T, n)]
+        if AD == "All" || AD == "ForwardDiff"
+            push!(xs, (rng, T, n) -> [ForwardDiff.Dual(rand(rng, T)) for _ in 1:n])
+        end
+        if AD == "All" || AD == "Tracker"
+            push!(xs, (rng, T, n) -> Tracker.TrackedArray(rand(rng, T, n)))
+        end
+        if AD == "All" || AD == "ReverseDiff"
+            push!(xs, (rng, T, n) -> begin
+                  v = rand(rng, T, n)
+                  d = rand(Int, n)
+                  tp = ReverseDiff.InstructionTape()
+                  ReverseDiff.TrackedArray(v, d, tp)
+                  end)
+        end
+
+        for T in (Float32, Float64)
+            for f in xs
+                x = f(rng, T, 50)
+
+                Random.seed!(rng, 100)
+                y = DistributionsAD.adapt_randn(rng, x, 10, 30)
+                @test y isa Matrix{T}
+                @test size(y) == (10, 30)
+
+                Random.seed!(rng, 100)
+                @test y == randn(rng, T, 10, 30)
+            end
+        end
+    end
+
+    @testset "TuringDirichlet" begin
+        dim = 3
+        n = 4
+        for alpha in (2, rand())
+            d1 = TuringDirichlet(dim, alpha)
+            d2 = Dirichlet(dim, alpha)
+            d3 = TuringDirichlet(d2)
+            @test d1.alpha == d2.alpha == d3.alpha
+            @test d1.alpha0 == d2.alpha0 == d3.alpha0
+            @test d1.lmnB == d2.lmnB == d3.lmnB
+
+            s1 = rand(d1)
+            @test s1 isa Vector{Float64}
+            @test length(s1) == dim
+
+            s2 = rand(d1, n)
+            @test s2 isa Matrix{Float64}
+            @test size(s2) == (dim, n)
+        end
+
+        for alpha in (ones(Int, dim), rand(dim))
+            d1 = TuringDirichlet(alpha)
+            d2 = Dirichlet(alpha)
+            d3 = TuringDirichlet(d2)
+            @test d1.alpha == d2.alpha == d3.alpha
+            @test d1.alpha0 == d2.alpha0 == d3.alpha0
+            @test d1.lmnB == d2.lmnB == d3.lmnB
+
+            s1 = rand(d1)
+            @test s1 isa Vector{Float64}
+            @test length(s1) == dim
+
+            s2 = rand(d1, n)
+            @test s2 isa Matrix{Float64}
+            @test size(s2) == (dim, n)
+        end
     end
 end

@@ -10,8 +10,10 @@
     B = rand(dim, dim)
     C = rand(dim, dim)
 
-    # Create a random number
+    # Create random numbers
     alpha = rand()
+    beta = rand()
+    gamma = rand()
 
     # Create matrix `X` such that `X` and `I - X` are positive definite if `A ≠ 0`.
     function to_beta_mat(A)
@@ -22,14 +24,7 @@
 
     # Create positive values.
     to_positive(x) = exp.(x)
-
-    # Create vectors in probability simplex.
-    # Custom implementation since `StatsFuns.softmax` is not compatible with Zygote.
-    function to_simplex(x::AbstractArray; dims=1)
-        maxx = maximum(x, dims=dims)
-        y = exp.(x .- maxx)
-        return y ./ sum(y, dims=dims)
-    end
+    to_positive(x::AbstractArray{<:AbstractArray}) = to_positive.(x)
 
     # Tests that have a `broken` field can be executed but, according to FiniteDifferences,
     # fail to produce the correct result. These tests can be checked with `@test_broken`.
@@ -59,8 +54,8 @@
         DistSpec(Poisson, (0.5,), 1),
         DistSpec(Poisson, (0.5,), [1, 1]),
 
-        DistSpec(Skellam, (1.0, 2.0), -2),
-        DistSpec(Skellam, (1.0, 2.0), [-2, -2]),
+        DistSpec(Skellam, (1.0, 2.0), -2; broken=(:Zygote,)),
+        DistSpec(Skellam, (1.0, 2.0), [-2, -2]; broken=(:Zygote,)),
 
         DistSpec(PoissonBinomial, ([0.5, 0.5],), 0),
         DistSpec(PoissonBinomial, ([0.5, 0.5],), [0, 0]),
@@ -168,9 +163,8 @@
 
         DistSpec(NormalCanon, (1.0, 2.0), 0.5),
 
-        DistSpec(NormalInverseGaussian, (1.0, 2.0, 1.0, 1.0), 0.5),
+        DistSpec(NormalInverseGaussian, (1.0, 2.0, 1.0, 1.0), 0.5; broken=(:Zygote,)),
 
-        DistSpec(Pareto, (), 1.5),
         DistSpec(Pareto, (1.0,), 1.5),
         DistSpec(Pareto, (1.0, 1.0), 1.5),
 
@@ -198,10 +192,10 @@
         ),
 
         DistSpec(Uniform, (), 0.5),
-        DistSpec(Uniform, (0.0, 1.0), 0.5),
+        DistSpec(Uniform, (alpha, alpha + beta), alpha + beta * gamma),
 
         DistSpec(TuringUniform, (), 0.5),
-        DistSpec(TuringUniform, (0.0, 1.0), 0.5),
+        DistSpec(TuringUniform, (alpha, alpha + beta), alpha + beta * gamma),
 
         DistSpec(VonMises, (), 1.0),
 
@@ -220,6 +214,9 @@
         # Stackoverflow caused by SpecialFunctions.besselix
         DistSpec(VonMises, (1.0,), 1.0),
         DistSpec(VonMises, (1, 1), 1),
+        
+        # Only some Zygote tests are broken and therefore this can not be checked
+        DistSpec(Pareto, (), 1.5; broken=(:Zygote,)),
     ]
 
     # Tests that have a `broken` field can be executed but, according to FiniteDifferences,
@@ -229,9 +226,7 @@
 
         # Vector x
         DistSpec(p -> Multinomial(2, p ./ sum(p)), (fill(0.5, 2),), [2, 0]),
-        DistSpec(p -> Multinomial(2, p ./ sum(p)), (fill(0.5, 2),), [2 1; 0 1],
-            broken=(:Tracker, :Zygote),
-        ),
+        DistSpec(p -> Multinomial(2, p ./ sum(p)), (fill(0.5, 2),), [2 1; 0 1]),
 
         # Vector x
         DistSpec((m, A) -> MvNormal(m, to_posdef(A)), (a, A), b),
@@ -395,6 +390,11 @@
             # Broken distributions
             d.f(d.θ...) isa Union{VonMises,TriangularDist} && continue
 
+            # Skellam only fails in these tests with ReverseDiff
+            # Ref: https://github.com/TuringLang/DistributionsAD.jl/issues/126
+            filldist_broken = d.f(d.θ...) isa Skellam ? (d.broken..., :ReverseDiff) : d.broken
+            arraydist_broken = d.broken
+
             # Create `filldist` distribution
             f_filldist = (θ...,) -> filldist(d.f(θ...), n)
             d_filldist = f_filldist(d.θ...)
@@ -419,8 +419,9 @@
                         Symbol(:filldist, " (", d.name, ", $sz)"),
                         f_filldist,
                         d.θ,
-                        x;
-                        broken=d.broken,
+                        x,
+                        d.xtrans;
+                        broken=filldist_broken,
                     )
                 )
                 test_ad(
@@ -428,8 +429,9 @@
                         Symbol(:arraydist, " (", d.name, ", $sz)"),
                         f_arraydist,
                         d.θ,
-                        x;
-                        broken=d.broken,
+                        x,
+                        d.xtrans;
+                        broken=arraydist_broken,
                     )
                 )
             end
@@ -467,7 +469,8 @@
                     Symbol(:filldist, " (", d.name, ", $n)"),
                     f_filldist,
                     d.θ,
-                    x_mat;
+                    x_mat,
+                    d.xtrans;
                     broken=d.broken,
                 )
             )
@@ -476,7 +479,8 @@
                     Symbol(:arraydist, " (", d.name, ", $n)"),
                     f_arraydist,
                     d.θ,
-                    x_mat;
+                    x_mat,
+                    d.xtrans;
                     broken=d.broken,
                 )
             )
@@ -490,7 +494,8 @@
                     Symbol(:filldist, " (", d.name, ", $n, 2)"),
                     f_filldist,
                     d.θ,
-                    x_vec_of_mat;
+                    x_vec_of_mat,
+                    d.xtrans;
                     broken=d.broken,
                 )
             )
@@ -499,7 +504,8 @@
                     Symbol(:arraydist, " (", d.name, ", $n, 2)"),
                     f_arraydist,
                     d.θ,
-                    x_vec_of_mat;
+                    x_vec_of_mat,
+                    d.xtrans;
                     broken=d.broken,
                 )
             )
@@ -538,7 +544,8 @@
                     Symbol(:filldist, " (", d.name, ", $n)"),
                     f_filldist,
                     d.θ,
-                    x_mat;
+                    x_mat,
+                    d.xtrans;
                     broken=d.broken,
                 )
             )
@@ -547,7 +554,8 @@
                     Symbol(:arraydist, " (", d.name, ", $n)"),
                     f_arraydist,
                     d.θ,
-                    x_mat;
+                    x_mat,
+                    d.xtrans;
                     broken=d.broken,
                 )
             )
@@ -561,7 +569,8 @@
                     Symbol(:filldist, " (", d.name, ", $n, 2)"),
                     f_filldist,
                     d.θ,
-                    x_vec_of_mat;
+                    x_vec_of_mat,
+                    d.xtrans;
                     broken=d.broken,
                 )
             )
@@ -570,7 +579,8 @@
                     Symbol(:arraydist, " (", d.name, ", $n, 2)"),
                     f_arraydist,
                     d.θ,
-                    x_vec_of_mat;
+                    x_vec_of_mat,
+                    d.xtrans;
                     broken=d.broken,
                 )
             )

@@ -1,59 +1,61 @@
 ## Dirichlet ##
 
-struct TuringDirichlet{T, TV <: AbstractVector} <: ContinuousMultivariateDistribution
+struct TuringDirichlet{T<:Real,TV<:AbstractVector,S<:Real} <: ContinuousMultivariateDistribution
     alpha::TV
     alpha0::T
-    lmnB::T
-end
-Base.length(d::TuringDirichlet) = length(d.alpha)
-function check(alpha)
-    all(ai -> ai > 0, alpha) || 
-        throw(ArgumentError("Dirichlet: alpha must be a positive vector."))
-end
-ZygoteRules.@adjoint function check(alpha)
-    return check(alpha), _ -> (nothing,)
-end
-function Distributions._rand!(rng::Random.AbstractRNG,
-                d::TuringDirichlet,
-                x::AbstractVector{<:Real})
-    s = 0.0
-    n = length(x)
-    α = d.alpha
-    for i in 1:n
-        @inbounds s += (x[i] = rand(rng, Gamma(α[i])))
-    end
-    Distributions.multiply!(x, inv(s)) # this returns x
+    lmnB::S
 end
 
 function TuringDirichlet(alpha::AbstractVector)
-    check(alpha)
+    all(ai -> ai > 0, alpha) ||
+        throw(ArgumentError("Dirichlet: alpha must be a positive vector."))
+
     alpha0 = sum(alpha)
     lmnB = sum(loggamma, alpha) - loggamma(alpha0)
-    T = promote_type(typeof(alpha0), typeof(lmnB))
-    TV = typeof(alpha)
-    TuringDirichlet{T, TV}(alpha, alpha0, lmnB)
-end
 
-function TuringDirichlet(d::Integer, alpha::Real)
-    alpha0 = alpha * d
-    _alpha = fill(alpha, d)
-    lmnB = loggamma(alpha) * d - loggamma(alpha0)
-    T = promote_type(typeof(alpha0), typeof(lmnB))
-    TV = typeof(_alpha)
-    TuringDirichlet{T, TV}(_alpha, alpha0, lmnB)
+    return TuringDirichlet(alpha, alpha0, lmnB)
 end
-function TuringDirichlet(alpha::AbstractVector{T}) where {T <: Integer}
-    TuringDirichlet(float.(alpha))
-end
-TuringDirichlet(d::Integer, alpha::Integer) = TuringDirichlet(d, Float64(alpha))
+TuringDirichlet(d::Integer, alpha::Real) = TuringDirichlet(Fill(alpha, d))
 
+# TODO: remove?
+TuringDirichlet(alpha::AbstractVector{<:Integer}) = TuringDirichlet(float.(alpha))
+TuringDirichlet(d::Integer, alpha::Integer) = TuringDirichlet(d, float(alpha))
+
+# TODO: remove and use `Dirichlet` only for `Tracker.TrackedVector`
 Distributions.Dirichlet(alpha::AbstractVector) = TuringDirichlet(alpha)
 
-function Distributions.logpdf(d::TuringDirichlet, x::AbstractVector)
-    simplex_logpdf(d.alpha, d.lmnB, x)
+TuringDirichlet(d::Dirichlet) = TuringDirichlet(d.alpha, d.alpha0, d.lmnB)
+
+Base.length(d::TuringDirichlet) = length(d.alpha)
+
+# copied from Distributions
+# TODO: remove and use `Dirichlet`?
+function Distributions._rand!(
+    rng::Random.AbstractRNG,
+    d::TuringDirichlet,
+    x::AbstractVector{<:Real},
+)
+    @inbounds for (i, αi) in zip(eachindex(x), d.alpha)
+        x[i] = rand(rng, Gamma(αi))
+    end
+    Distributions.multiply!(x, inv(sum(x))) # this returns x
 end
-function Distributions.logpdf(d::TuringDirichlet, x::AbstractMatrix)
-    simplex_logpdf(d.alpha, d.lmnB, x)
+function Distributions._rand!(
+    rng::AbstractRNG,
+    d::TuringDirichlet{<:Real,<:FillArrays.AbstractFill},
+    x::AbstractVector{<:Real}
+)
+    rand!(rng, Gamma(FillArrays.getindex_value(d.alpha)), x)
+    Distributions.multiply!(x, inv(sum(x))) # this returns x
+end
+
+function Distributions._logpdf(d::TuringDirichlet, x::AbstractVector{<:Real})
+    return simplex_logpdf(d.alpha, d.lmnB, x)
+end
+function Distributions.logpdf(d::TuringDirichlet, x::AbstractMatrix{<:Real})
+    size(x, 1) == length(d) ||
+        throw(DimensionMismatch("Inconsistent array dimensions."))
+    return simplex_logpdf(d.alpha, d.lmnB, x)
 end
 
 ZygoteRules.@adjoint function Distributions.Dirichlet(alpha)
@@ -63,14 +65,9 @@ ZygoteRules.@adjoint function Distributions.Dirichlet(d, alpha)
     return ZygoteRules.pullback(TuringDirichlet, d, alpha)
 end
 
-function simplex_logpdf(alpha, lmnB, x::AbstractVector)
-    sum((alpha .- 1) .* log.(x)) - lmnB
-end
+simplex_logpdf(alpha, lmnB, x::AbstractVector) = sum(xlogy.(alpha .- 1, x)) - lmnB
 function simplex_logpdf(alpha, lmnB, x::AbstractMatrix)
-    @views init = vcat(sum((alpha .- 1) .* log.(x[:,1])) - lmnB)
-    mapreduce(vcat, drop(eachcol(x), 1); init = init) do c
-        sum((alpha .- 1) .* log.(c)) - lmnB
-    end
+    return vec(sum(xlogy.(alpha .- 1, x); dims=1)) .- lmnB
 end
 
 ZygoteRules.@adjoint function simplex_logpdf(alpha, lmnB, x::AbstractVector)
@@ -100,7 +97,7 @@ end
 Base.length(d::TuringDenseMvNormal) = length(d.m)
 Distributions.rand(d::TuringDenseMvNormal, n::Int...) = rand(Random.GLOBAL_RNG, d, n...)
 function Distributions.rand(rng::Random.AbstractRNG, d::TuringDenseMvNormal, n::Int...)
-    return d.m .+ d.C.U' * randn(rng, length(d), n...)
+    return d.m .+ d.C.U' * adapt_randn(rng, d.m, length(d), n...)
 end
 
 """
@@ -118,7 +115,7 @@ Base.length(d::TuringDiagMvNormal) = length(d.m)
 Base.size(d::TuringDiagMvNormal) = (length(d),)
 Distributions.rand(d::TuringDiagMvNormal, n::Int...) = rand(Random.GLOBAL_RNG, d, n...)
 function Distributions.rand(rng::Random.AbstractRNG, d::TuringDiagMvNormal, n::Int...)
-    return d.m .+ d.σ .* randn(rng, length(d), n...)
+    return d.m .+ d.σ .* adapt_randn(rng, d.m, length(d), n...)
 end
 
 struct TuringScalMvNormal{Tm<:AbstractVector, Tσ<:Real} <: ContinuousMultivariateDistribution
@@ -131,34 +128,45 @@ Base.length(d::TuringScalMvNormal) = length(d.m)
 Base.size(d::TuringScalMvNormal) = (length(d),)
 Distributions.rand(d::TuringScalMvNormal, n::Int...) = rand(Random.GLOBAL_RNG, d, n...)
 function Distributions.rand(rng::Random.AbstractRNG, d::TuringScalMvNormal, n::Int...)
-    return d.m .+ d.σ .* randn(rng, length(d), n...)
+    return d.m .+ d.σ .* adapt_randn(rng, d.m, length(d), n...)
 end
 
-for T in (:AbstractVector, :AbstractMatrix)
-    @eval Distributions.logpdf(d::TuringScalMvNormal, x::$T) = _logpdf(d, x)
-    @eval Distributions.logpdf(d::TuringDiagMvNormal, x::$T) = _logpdf(d, x)
-    @eval Distributions.logpdf(d::TuringDenseMvNormal, x::$T) = _logpdf(d, x)
+function Distributions._logpdf(d::TuringScalMvNormal, x::AbstractVector)
+    σ2 = abs2(d.σ)
+    return -(length(x) * log(2π * σ2) + sum(abs2.(x .- d.m)) / σ2) / 2
 end
-
-function _logpdf(d::TuringScalMvNormal, x::AbstractVector)
-    return -(length(x) * log(2π * abs2(d.σ)) + sum(abs2.((x .- d.m) ./ d.σ))) / 2
-end
-function _logpdf(d::TuringScalMvNormal, x::AbstractMatrix)
+function Distributions.logpdf(d::TuringScalMvNormal, x::AbstractMatrix{<:Real})
+    size(x, 1) == length(d) ||
+        throw(DimensionMismatch("Inconsistent array dimensions."))
     return -(size(x, 1) * log(2π * abs2(d.σ)) .+ vec(sum(abs2.((x .- d.m) ./ d.σ), dims=1))) ./ 2
 end
+function Distributions.loglikelihood(d::TuringScalMvNormal, x::AbstractMatrix{<:Real})
+    σ2 = abs2(d.σ)
+    return -(length(x) * log(2π * σ2) + sum(abs2.(x .- d.m)) / σ2) / 2
+end
 
-function _logpdf(d::TuringDiagMvNormal, x::AbstractVector)
+function Distributions._logpdf(d::TuringDiagMvNormal, x::AbstractVector)
     return -(length(x) * log(2π) + 2 * sum(log.(d.σ)) + sum(abs2.((x .- d.m) ./ d.σ))) / 2
 end
-function _logpdf(d::TuringDiagMvNormal, x::AbstractMatrix)
+function Distributions.logpdf(d::TuringDiagMvNormal, x::AbstractMatrix{<:Real})
+    size(x, 1) == length(d) ||
+        throw(DimensionMismatch("Inconsistent array dimensions."))
     return -((size(x, 1) * log(2π) + 2 * sum(log.(d.σ))) .+ vec(sum(abs2.((x .- d.m) ./ d.σ), dims=1))) ./ 2
 end
+function Distributions.loglikelihood(d::TuringDiagMvNormal, x::AbstractMatrix{<:Real})
+    return -(length(x) * log(2π) + 2 * size(x, 2) * sum(log.(d.σ)) + sum(abs2.((x .- d.m) ./ d.σ))) / 2
+end
 
-function _logpdf(d::TuringDenseMvNormal, x::AbstractVector)
+function Distributions._logpdf(d::TuringDenseMvNormal, x::AbstractVector)
     return -(length(x) * log(2π) + logdet(d.C) + sum(abs2.(zygote_ldiv(d.C.U', x .- d.m)))) / 2
 end
-function _logpdf(d::TuringDenseMvNormal, x::AbstractMatrix)
+function Distributions.logpdf(d::TuringDenseMvNormal, x::AbstractMatrix{<:Real})
+    size(x, 1) == length(d) ||
+        throw(DimensionMismatch("Inconsistent array dimensions."))
     return -((size(x, 1) * log(2π) + logdet(d.C)) .+ vec(sum(abs2.(zygote_ldiv(d.C.U', x .- d.m)), dims=1))) ./ 2
+end
+function Distributions.loglikelihood(d::TuringDenseMvNormal, x::AbstractMatrix{<:Real})
+    return -(length(x) * log(2π) + size(x, 2) * logdet(d.C) + sum(abs2.(zygote_ldiv(d.C.U', x .- d.m)))) / 2
 end
 
 function StatsBase.entropy(d::TuringScalMvNormal)
@@ -194,6 +202,19 @@ function TuringMvNormal(m::AbstractVector{<:Real}, A::UniformScaling{<:Real})
     return TuringMvNormal(m, sqrt(A.λ))
 end
 
+# Mean and covariance
+Distributions.mean(d::TuringDiagMvNormal) = d.m
+Distributions.var(d::TuringDiagMvNormal) = abs2.(d.σ)
+Distributions.cov(d::TuringDiagMvNormal) = Diagonal(var(d))
+
+Distributions.mean(d::TuringScalMvNormal) = d.m
+Distributions.var(d::TuringScalMvNormal) = Fill(abs2(d.σ),length(d.m))
+Distributions.cov(d::TuringScalMvNormal) = Diagonal(var(d))
+
+Distributions.mean(d::TuringDenseMvNormal) = d.m
+Distributions.var(d::TuringDenseMvNormal) = diag(cov(d))
+Distributions.cov(d::TuringDenseMvNormal) = Matrix(d.C) # turns cholesky to matrix
+
 ## MvLogNormal ##
 
 struct TuringMvLogNormal{TD} <: AbstractMvLogNormal
@@ -209,23 +230,32 @@ end
 function Distributions.rand(rng::Random.AbstractRNG, d::TuringMvLogNormal, n::Int)
     return Distributions.exp!(rand(rng, d.normal, n))
 end
-for T in (:AbstractVector, :AbstractMatrix)
-    @eval Distributions.logpdf(d::TuringMvLogNormal, x::$T) = _logpdf(d, x)
-end
-function _logpdf(d::TuringMvLogNormal, x::AbstractVector{T}) where {T<:Real}
+
+function Distributions._logpdf(d::TuringMvLogNormal, x::AbstractVector{T}) where {T<:Real}
     if insupport(d, x)
-        logx = log.(x)        
-        return _logpdf(d.normal, logx) - sum(logx)
+        logx = log.(x)
+        return Distributions._logpdf(d.normal, logx) - sum(logx)
     else
         return -T(Inf)
     end
 end
-function _logpdf(d::TuringMvLogNormal, x::AbstractMatrix{<:Real})
+function Distributions.logpdf(d::TuringMvLogNormal, x::AbstractMatrix{<:Real})
+    size(x, 1) == length(d) ||
+        throw(DimensionMismatch("Inconsistent array dimensions."))
     if all(i -> DistributionsAD.insupport(d, view(x, :, i)), axes(x, 2))
         logx = log.(x)
-        return DistributionsAD._logpdf(d.normal, logx) - vec(sum(logx; dims = 1))
+        return Distributions.logpdf(d.normal, logx) .- vec(sum(logx; dims = 1))
     else
-        return [DistributionsAD._logpdf(d, view(x, :, i)) for i in axes(x, 2)]
+        return [Distributions._logpdf(d, view(x, :, i)) for i in axes(x, 2)]
+    end
+end
+function Distributions.loglikelihood(d::TuringMvLogNormal, x::AbstractMatrix{<:Real})
+    if all(i -> DistributionsAD.insupport(d, view(x, :, i)), axes(x, 2))
+        logx = log.(x)
+        return loglikelihood(d.normal, logx) - sum(logx)
+    else
+        r = Distributions._logpdf(d.normal, view(x, :, 1))
+        return oftype(r, -Inf)
     end
 end
 
@@ -256,62 +286,66 @@ ZygoteRules.@adjoint function Distributions.MvNormal(
     value, back = ZygoteRules.pullback(A -> TuringMvNormal(d, A), A)
     return value, x -> (nothing, back(x)[1])
 end
-for T in (:AbstractVector, :AbstractMatrix)
+for (f, T) in (
+    (:_logpdf, :AbstractVector),
+    (:logpdf, :AbstractMatrix),
+    (:loglikelihood, :AbstractMatrix),
+)
     @eval begin
-        ZygoteRules.@adjoint function Distributions.logpdf(
-            d::MvNormal{<:Any, <:PDMats.ScalMat},
-            x::$T
+        ZygoteRules.@adjoint function Distributions.$f(
+            d::MvNormal{<:Real,<:PDMats.ScalMat},
+            x::$T{<:Real},
         )
             return ZygoteRules.pullback(d, x) do d, x
-                logpdf(TuringScalMvNormal(d.μ, sqrt(d.Σ.value)), x)
+                Distributions.$f(TuringScalMvNormal(d.μ, sqrt(d.Σ.value)), x)
             end
         end
-        ZygoteRules.@adjoint function Distributions.logpdf(
-            d::MvNormal{<:Any, <:PDMats.PDiagMat},
-            x::$T
+        ZygoteRules.@adjoint function Distributions.$f(
+            d::MvNormal{<:Real,<:PDMats.PDiagMat},
+            x::$T{<:Real},
         )
             return ZygoteRules.pullback(d, x) do d, x
-                logpdf(TuringDiagMvNormal(d.μ, sqrt.(d.Σ.diag)), x)
+                Distributions.$f(TuringDiagMvNormal(d.μ, sqrt.(d.Σ.diag)), x)
             end
         end
-        ZygoteRules.@adjoint function Distributions.logpdf(
-            d::MvNormal{<:Any, <:PDMats.PDMat},
-            x::$T
+        ZygoteRules.@adjoint function Distributions.$f(
+            d::MvNormal{<:Real,<:PDMats.PDMat},
+            x::$T{<:Real},
         )
             return ZygoteRules.pullback(d, x) do d, x
-                logpdf(TuringDenseMvNormal(d.μ, d.Σ.chol), x)
+                Distributions.$f(TuringDenseMvNormal(d.μ, d.Σ.chol), x)
             end
         end
 
-        ZygoteRules.@adjoint function Distributions.logpdf(
-            d::MvLogNormal{<:Any, <:PDMats.ScalMat},
-            x::$T
+        ZygoteRules.@adjoint function Distributions.$f(
+            d::MvLogNormal{<:Real,<:PDMats.ScalMat},
+            x::$T{<:Real},
         )
             return ZygoteRules.pullback(d, x) do d, x
                 dist = TuringMvLogNormal(
                     TuringScalMvNormal(d.normal.μ, sqrt(d.normal.Σ.value)),
                 )
-                logpdf(dist, x)
+                Distributions.$f(dist, x)
             end
         end
-        ZygoteRules.@adjoint function Distributions.logpdf(
-            d::MvLogNormal{<:Any, <:PDMats.PDiagMat},
-            x::$T
+        ZygoteRules.@adjoint function Distributions.$f(
+            d::MvLogNormal{<:Real,<:PDMats.PDiagMat},
+            x::$T{<:Real},
         )
             return ZygoteRules.pullback(d, x) do d, x
                 dist = TuringMvLogNormal(
                     TuringDiagMvNormal(d.normal.μ, sqrt.(d.normal.Σ.diag)),
                 )
-                logpdf(dist, x)
+                Distributions.$f(dist, x)
             end
         end
-        ZygoteRules.@adjoint function Distributions.logpdf(
-            d::MvLogNormal{<:Any, <:PDMats.PDMat},
-            x::$T
+        ZygoteRules.@adjoint function Distributions.$f(
+            d::MvLogNormal{<:Real,<:PDMats.PDMat},
+            x::$T{<:Real},
         )
             return ZygoteRules.pullback(d, x) do d, x
                 dist = TuringMvLogNormal(TuringDenseMvNormal(d.normal.μ, d.normal.Σ.chol))
-                logpdf(dist, x)
+                Distributions.$f(dist, x)
             end
         end
     end
