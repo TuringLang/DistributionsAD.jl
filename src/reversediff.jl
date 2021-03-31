@@ -56,17 +56,6 @@ include("reversediffx.jl")
 
 adapt_randn(rng::Random.AbstractRNG, x::TrackedArray, dims...) = adapt_randn(rng, value(x), dims...)
 
-# without this definition tests of `VectorOfMultivariate` with `Dirichlet` fail
-# upstream bug caused by `view` + `track`: https://github.com/JuliaDiff/ReverseDiff.jl/pull/164
-function _logpdf(dist::VectorOfMultivariate, x::AbstractMatrix{<:TrackedReal})
-    return sum(i -> _logpdf(dist.dists[i], x[:, i]), axes(x, 2))
-end
-
-# fix method ambiguity
-function _logpdf(dist::FillVectorOfMultivariate, x::AbstractMatrix{<:TrackedReal})
-    return loglikelihood(dist.dists.value, x)
-end
-
 function PoissonBinomial(p::TrackedArray{<:Real}; check_args=true)
     return TuringPoissonBinomial(p; check_args = check_args)
 end
@@ -267,12 +256,6 @@ function logpdf(d::Dirichlet, x::AbstractMatrix{<:TrackedReal})
 end
 function loglikelihood(d::Dirichlet, x::AbstractMatrix{<:TrackedReal})
     return loglikelihood(TuringDirichlet(d), x)
-end
-
-# default definition of `loglikelihood` yields gradients of zero?!
-# upstream bug caused by `view` + `track`: https://github.com/JuliaDiff/ReverseDiff.jl/pull/164
-function loglikelihood(d::TuringDirichlet, x::AbstractMatrix{<:TrackedReal})
-    return sum(i -> logpdf(d, x[:, i]), axes(x, 2))
 end
 
 for func_header in [
