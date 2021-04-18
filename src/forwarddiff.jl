@@ -18,7 +18,10 @@ function poislogpdf(v::ForwardDiff.Dual{T}, x::Int) where {T}
     FD = ForwardDiff.Dual{T}
     val = ForwardDiff.value(v)
     Δ = ForwardDiff.partials(v)
-    return FD(poislogpdf(val, x), Δ * (x/val - 1))
+
+    r = poislogpdf(val, x)
+    dr_dv = !(val == zero(val) && x == 0) ? (x / val - 1) : (x / one(val) - 1)
+    return FD(r, Δ * dr_dv)
 end
 
 
