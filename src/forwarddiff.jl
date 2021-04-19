@@ -1,5 +1,5 @@
 function adapt_randn(rng::AbstractRNG, x::AbstractArray{<:ForwardDiff.Dual}, dims...)
-    adapt(typeof(x), randn(rng, ForwardDiff.valtype(eltype(x)), dims...))
+    return adapt_randn(rng, ForwardDiff.valtype(eltype(x)), x, dims...)
 end
 
 ## Binomial ##
