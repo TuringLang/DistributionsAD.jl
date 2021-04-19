@@ -32,9 +32,18 @@ end
 # Tracker's implementation of ldiv isn't good. We'll use Zygote's instead.
 zygote_ldiv(A::AbstractMatrix, B::AbstractVecOrMat) = A \ B
 
+# fixes `randn` on GPU (https://github.com/TuringLang/DistributionsAD.jl/pull/108)
 function adapt_randn(rng::AbstractRNG, x::AbstractArray, dims...)
-    adapt(typeof(x), randn(rng, eltype(x), dims...))
+    return adapt_randn(rng, eltype(x), x, dims...)
 end
+function adapt_randn(rng::AbstractRNG, ::Type{T}, x::AbstractArray, dims...) where {T}
+    return adapt(parameterless_type(x), randn(rng, T, dims...))
+end
+
+# required by Adapt >= 3.3.0: https://github.com/SciML/OrdinaryDiffEq.jl/issues/1369
+Base.@pure __parameterless_type(T) = Base.typename(T).wrapper
+parameterless_type(x) = parameterless_type(typeof(x))
+parameterless_type(x::Type) = __parameterless_type(x)
 
 # TODO: should be replaced by @non_differentiable when
 # https://github.com/JuliaDiff/ChainRulesCore.jl/issues/212 is fixed
