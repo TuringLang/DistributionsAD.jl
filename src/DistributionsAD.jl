@@ -9,7 +9,6 @@ using PDMats,
       Compat,
       Requires,
       ZygoteRules,
-      ChainRules,  # needed for `ChainRules.chol_blocked_rev`
       ChainRulesCore,
       FillArrays,
       Adapt

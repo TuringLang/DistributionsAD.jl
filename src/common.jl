@@ -45,11 +45,4 @@ Base.@pure __parameterless_type(T) = Base.typename(T).wrapper
 parameterless_type(x) = parameterless_type(typeof(x))
 parameterless_type(x::Type) = __parameterless_type(x)
 
-# TODO: should be replaced by @non_differentiable when
-# https://github.com/JuliaDiff/ChainRulesCore.jl/issues/212 is fixed
-function ChainRules.rrule(::typeof(adapt_randn), rng::AbstractRNG, x::AbstractArray, dims...)
-    function adapt_randn_pullback(ΔQ)
-        return (NO_FIELDS, Zero(), Zero(), map(_ -> Zero(), dims)...)
-    end
-    adapt_randn(rng, x, dims...), adapt_randn_pullback
-end
+ChainRulesCore.@non_differentiable adapt_randn(::Any...)
