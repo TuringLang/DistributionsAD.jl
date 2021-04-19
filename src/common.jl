@@ -45,4 +45,4 @@ Base.@pure __parameterless_type(T) = Base.typename(T).wrapper
 parameterless_type(x) = parameterless_type(typeof(x))
 parameterless_type(x::Type) = __parameterless_type(x)
 
-ChainRulesCore.@non_differentiable adapt_randn(::Any...)
+@non_differentiable adapt_randn(::Any...)
