@@ -400,7 +400,11 @@
             else
                 d.broken
             end
-            arraydist_broken = d.broken
+            arraydist_broken = if d.f(d.θ...) isa PoissonBinomial
+                (d.broken..., :Zygote)
+            else
+                d.broken
+            end
 
             # Create `filldist` distribution
             f_filldist = (θ...,) -> filldist(d.f(θ...), n)
