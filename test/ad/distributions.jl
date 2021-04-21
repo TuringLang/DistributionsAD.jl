@@ -58,7 +58,7 @@
         DistSpec(Skellam, (1.0, 2.0), [-2, -2]; broken=(:Zygote,)),
 
         DistSpec(PoissonBinomial, ([0.5, 0.5],), 0),
-        DistSpec(PoissonBinomial, ([0.5, 0.5],), [0, 0]; broken=(:Zygote,)),
+        DistSpec(PoissonBinomial, ([0.5, 0.5],), [0, 0]; broken=VERSION == v"1.3" ? (:Zygote,) : ()),
 
         DistSpec(TuringPoissonBinomial, ([0.5, 0.5],), 0),
         DistSpec(TuringPoissonBinomial, ([0.5, 0.5],), [0, 0]),
