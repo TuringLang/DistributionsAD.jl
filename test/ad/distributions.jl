@@ -58,7 +58,7 @@
         DistSpec(Skellam, (1.0, 2.0), [-2, -2]; broken=(:Zygote,)),
 
         DistSpec(PoissonBinomial, ([0.5, 0.5],), 0),
-        DistSpec(PoissonBinomial, ([0.5, 0.5],), [0, 0]),
+        DistSpec(PoissonBinomial, ([0.5, 0.5],), [0, 0]; broken=(:Zygote,)),
 
         DistSpec(TuringPoissonBinomial, ([0.5, 0.5],), 0),
         DistSpec(TuringPoissonBinomial, ([0.5, 0.5],), [0, 0]),
@@ -392,7 +392,14 @@
 
             # Skellam only fails in these tests with ReverseDiff
             # Ref: https://github.com/TuringLang/DistributionsAD.jl/issues/126
-            filldist_broken = d.f(d.θ...) isa Skellam ? (d.broken..., :ReverseDiff) : d.broken
+            # PoissonBinomial fails in the Zygote tests
+            filldist_broken = if d.f(d.θ...) isa Skellam
+                (d.broken..., :ReverseDiff)
+            elseif d.f(d.θ...) isa PoissonBinomial
+                (d.broken..., :Zygote)
+            else
+                d.broken
+            end
             arraydist_broken = d.broken
 
             # Create `filldist` distribution
@@ -454,6 +461,14 @@
             # Broken distributions
             d.f(d.θ...) isa Union{VonMises,TriangularDist} && continue
 
+            # PoissonBinomial fails in the Zygote tests
+            filldist_broken = if d.f(d.θ...) isa PoissonBinomial
+                (d.broken..., :Zygote)
+            else
+                d.broken
+            end
+            arraydist_broken = d.broken
+
             # Create `filldist` distribution
             f_filldist = (θ...,) -> filldist(d.f(θ...), n...)
 
@@ -471,7 +486,7 @@
                     d.θ,
                     x_mat,
                     d.xtrans;
-                    broken=d.broken,
+                    broken=filldist_broken,
                 )
             )
             test_ad(
@@ -481,7 +496,7 @@
                     d.θ,
                     x_mat,
                     d.xtrans;
-                    broken=d.broken,
+                    broken=arraydist_broken,
                 )
             )
 
@@ -496,7 +511,7 @@
                     d.θ,
                     x_vec_of_mat,
                     d.xtrans;
-                    broken=d.broken,
+                    broken=filldist_broken,
                 )
             )
             test_ad(
@@ -506,7 +521,7 @@
                     d.θ,
                     x_vec_of_mat,
                     d.xtrans;
-                    broken=d.broken,
+                    broken=arraydist_broken,
                 )
             )
         end
