@@ -12,14 +12,6 @@ ZygoteRules.@adjoint function Distributions.Uniform(args...)
     return ZygoteRules.pullback(TuringUniform, args...)
 end
 
-## PoissonBinomial ##
-
-# Zygote loads ForwardDiff, so this dummy adjoint should never be needed.
-# The adjoint that is used for `poissonbinomial_pdf_fft` is defined in `src/zygote_forwarddiff.jl`
-# ZygoteRules.@adjoint function poissonbinomial_pdf_fft(x::AbstractArray{T}) where T<:Real
-#     error("This needs ForwardDiff. `using ForwardDiff` should fix this error.")
-# end
-
 ## Product
 
 # Tests with `Kolmogorov` seem to fail otherwise?!
