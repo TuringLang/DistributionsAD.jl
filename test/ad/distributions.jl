@@ -394,8 +394,19 @@
 
             # Skellam only fails in these tests with ReverseDiff
             # Ref: https://github.com/TuringLang/DistributionsAD.jl/issues/126
-            filldist_broken = d.f(d.θ...) isa Skellam ? (d.broken..., :ReverseDiff) : d.broken
-            arraydist_broken = d.broken
+            # PoissonBinomial fails with Zygote
+            filldist_broken = if d.f(d.θ...) isa Skellam
+                (d.broken..., :ReverseDiff)
+            elseif d.f(d.θ...) isa PoissonBinomial
+                (d.broken..., :Zygote)
+            else
+                d.broken
+            end
+            arraydist_broken = if d.f(d.θ...) isa PoissonBinomial
+                (d.broken..., :Zygote)
+            else
+                d.broken
+            end
 
             # Create `filldist` distribution
             f_filldist = (θ...,) -> filldist(d.f(θ...), n)
