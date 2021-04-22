@@ -57,8 +57,7 @@
         DistSpec(Skellam, (1.0, 2.0), -2; broken=(:Zygote,)),
         DistSpec(Skellam, (1.0, 2.0), [-2, -2]; broken=(:Zygote,)),
 
-        DistSpec(PoissonBinomial, ([0.5, 0.5],), 0; broken=(:Zygote,)),
-        DistSpec(PoissonBinomial, ([0.5, 0.5],), [0, 0]; broken=(:Zygote,)),
+        DistSpec(PoissonBinomial, ([0.5, 0.5],), 0),
 
         DistSpec(TuringPoissonBinomial, ([0.5, 0.5],), 0),
         DistSpec(TuringPoissonBinomial, ([0.5, 0.5],), [0, 0]),
@@ -217,6 +216,9 @@
         
         # Only some Zygote tests are broken and therefore this can not be checked
         DistSpec(Pareto, (), 1.5; broken=(:Zygote,)),
+        
+        # Some tests are broken on some Julia versions, therefore it can't be checked reliably
+        DistSpec(PoissonBinomial, ([0.5, 0.5],), [0, 0]; broken=(:Zygote,)),
     ]
 
     # Tests that have a `broken` field can be executed but, according to FiniteDifferences,
