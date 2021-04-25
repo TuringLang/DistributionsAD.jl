@@ -467,14 +467,6 @@
             # Broken distributions
             d.f(d.θ...) isa Union{VonMises,TriangularDist} && continue
 
-            # PoissonBinomial fails in the Zygote tests
-            filldist_broken = if d.f(d.θ...) isa PoissonBinomial
-                (d.broken..., :Zygote)
-            else
-                d.broken
-            end
-            arraydist_broken = d.broken
-
             # Create `filldist` distribution
             f_filldist = (θ...,) -> filldist(d.f(θ...), n...)
 
@@ -492,7 +484,7 @@
                     d.θ,
                     x_mat,
                     d.xtrans;
-                    broken=filldist_broken,
+                    broken=d.broken,
                 )
             )
             test_ad(
@@ -502,7 +494,7 @@
                     d.θ,
                     x_mat,
                     d.xtrans;
-                    broken=arraydist_broken,
+                    broken=d.broken,
                 )
             )
 
@@ -517,7 +509,7 @@
                     d.θ,
                     x_vec_of_mat,
                     d.xtrans;
-                    broken=filldist_broken,
+                    broken=d.broken,
                 )
             )
             test_ad(
@@ -527,7 +519,7 @@
                     d.θ,
                     x_vec_of_mat,
                     d.xtrans;
-                    broken=arraydist_broken,
+                    broken=d.broken,
                 )
             )
         end
