@@ -1,5 +1,6 @@
 using DistributionsAD
 
+using ChainRulesCore
 using ChainRulesTestUtils
 using Combinatorics
 using Distributions
@@ -12,7 +13,7 @@ using Distributions: meanlogdet
 using DistributionsAD: TuringUniform, TuringMvNormal, TuringMvLogNormal,
                        TuringPoissonBinomial, TuringDirichlet
 using StatsBase: entropy
-using StatsFuns: binomlogpdf, logsumexp, logistic
+using StatsFuns: StatsFuns, logsumexp, logistic
 
 import NNlib
 

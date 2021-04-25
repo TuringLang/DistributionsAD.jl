@@ -261,26 +261,22 @@ end
 PoissonBinomial(p::TrackedArray{<:Real}; check_args=true) =
     TuringPoissonBinomial(p; check_args = check_args)
 
-# TODO: add adjoints without ForwardDiff
 poissonbinomial_pdf_fft(x::TrackedArray) = track(poissonbinomial_pdf_fft, x)
 @grad function poissonbinomial_pdf_fft(x::TrackedArray)
     x_data = data(x)
-    T = eltype(x_data)
-    fft = poissonbinomial_pdf_fft(x_data)
-    return  fft, Δ -> begin
-        ((ForwardDiff.jacobian(poissonbinomial_pdf_fft, x_data)::Matrix{T})' * Δ,)
-    end
+    value = poissonbinomial_pdf_fft(x_data)
+    A = poissonbinomial_partialderivatives(x_data)
+    poissonbinomial_pdf_fft_pullback(Δ) = (A * Δ,)
+    return value, poissonbinomial_pdf_fft_pullback
 end
 
 if isdefined(Distributions, :poissonbinomial_pdf)
     Distributions.poissonbinomial_pdf(x::TrackedArray) = track(Distributions.poissonbinomial_pdf, x)
     @grad function Distributions.poissonbinomial_pdf(x::TrackedArray)
         x_data = data(x)
-        T = eltype(x_data)
         value = Distributions.poissonbinomial_pdf(x_data)
-        function poissonbinomial_pdf_pullback(Δ)
-            return ((ForwardDiff.jacobian(Distributions.poissonbinomial_pdf, x_data)::Matrix{T})' * Δ,)
-        end
+        A = poissonbinomial_partialderivatives(x_data)
+        poissonbinomial_pdf_pullback(Δ) = (A * Δ,)
         return value, poissonbinomial_pdf_pullback
     end
 end

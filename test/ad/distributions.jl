@@ -58,7 +58,6 @@
         DistSpec(Skellam, (1.0, 2.0), [-2, -2]; broken=(:Zygote,)),
 
         DistSpec(PoissonBinomial, ([0.5, 0.5],), 0),
-        DistSpec(PoissonBinomial, ([0.5, 0.5],), [0, 0]; broken=VERSION == v"1.3" ? (:Zygote,) : ()),
 
         DistSpec(TuringPoissonBinomial, ([0.5, 0.5],), 0),
         DistSpec(TuringPoissonBinomial, ([0.5, 0.5],), [0, 0]),
@@ -217,6 +216,9 @@
         
         # Only some Zygote tests are broken and therefore this can not be checked
         DistSpec(Pareto, (), 1.5; broken=(:Zygote,)),
+        
+        # Some tests are broken on some Julia versions, therefore it can't be checked reliably
+        DistSpec(PoissonBinomial, ([0.5, 0.5],), [0, 0]; broken=(:Zygote,)),
     ]
 
     # Tests that have a `broken` field can be executed but, according to FiniteDifferences,
@@ -392,7 +394,7 @@
 
             # Skellam only fails in these tests with ReverseDiff
             # Ref: https://github.com/TuringLang/DistributionsAD.jl/issues/126
-            # PoissonBinomial fails in the Zygote tests
+            # PoissonBinomial fails with Zygote
             filldist_broken = if d.f(d.θ...) isa Skellam
                 (d.broken..., :ReverseDiff)
             elseif d.f(d.θ...) isa PoissonBinomial
