@@ -12,16 +12,6 @@ function binomlogpdf(n::Int, p::ForwardDiff.Dual{T}, x::Int) where {T}
 end
 
 
-## Poisson
-
-function poislogpdf(v::ForwardDiff.Dual{T}, x::Int) where {T}
-    FD = ForwardDiff.Dual{T}
-    val = ForwardDiff.value(v)
-    Δ = ForwardDiff.partials(v)
-    return FD(poislogpdf(val, x), Δ * (x/val - 1))
-end
-
-
 ## Integer dual ##
 
 function BetaBinomial(n::ForwardDiff.Dual{<:Any, <:Integer}, α::Real, β::Real; check_args = true)
