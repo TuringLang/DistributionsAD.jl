@@ -7,10 +7,10 @@ using ..ReverseDiff
 using StaticArrays
 using Distributions
 using PDMats
-using ForwardDiff
+using ..ForwardDiff
 
 using Base.Broadcast: BroadcastStyle, ArrayStyle, Broadcasted, broadcasted
-using ForwardDiff: Dual
+using ..ForwardDiff: Dual
 using ..ReverseDiff: SpecialInstruction, value, value!, deriv, track, record!,
                      tape, unseed!, @grad, TrackedReal, TrackedVector,
                      TrackedMatrix, TrackedArray
