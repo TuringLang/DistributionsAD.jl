@@ -349,18 +349,6 @@ function Distributions.logpdf(
     end
 end
 
-## Categorical ##
-
-function Distributions.DiscreteNonParametric{T,P,Ts,Ps}(
-    vs::Ts,
-    ps::Ps;
-    check_args=true,
-) where {T<:Real,P<:Real,Ts<:AbstractVector{T},Ps<:TrackedArray{P, 1, <:SubArray{P, 1}}}
-    cps = ps[:]
-    return DiscreteNonParametric{T,P,Ts,typeof(cps)}(vs, cps; check_args = check_args)
-end
-
-
 ## Dirichlet ##
 
 Distributions.Dirichlet(alpha::TrackedVector) = TuringDirichlet(alpha)
@@ -558,22 +546,6 @@ end
 
 # zero mean,, constant variance
 MvLogNormal(d::Int, σ::TrackedReal{<:Real}) = TuringMvLogNormal(TuringMvNormal(d, σ))
-
-
-## MvCategorical ##
-
-_mv_categorical_logpdf(ps::Tracker.TrackedMatrix, x) = Tracker.track(_mv_categorical_logpdf, ps, x)
-Tracker.@grad function _mv_categorical_logpdf(ps, x)
-    ps_data = Tracker.data(ps)
-    probs = view(ps_data, x, :)
-    ps_grad = zero(ps_data)
-    sum(log, probs), Δ -> begin
-        ps_grad .= 0
-        ps_grad[x,:] .= Δ ./ probs
-        return (ps_grad, nothing)
-    end
-end
-
 
 ## Wishart ##
 
