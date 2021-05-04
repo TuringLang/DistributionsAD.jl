@@ -54,23 +54,3 @@ end
 quantile(d::TuringPoissonBinomial, x::Float64) = quantile(Categorical(d.pmf), x) - 1
 Base.minimum(d::TuringPoissonBinomial) = 0
 Base.maximum(d::TuringPoissonBinomial) = length(d.p)
-
-
-## Categorical ##
-
-function Base.convert(
-    ::Type{Distributions.DiscreteNonParametric{T,P,Ts,Ps}},
-    d::Distributions.DiscreteNonParametric{T,P,Ts,Ps},
-) where {T<:Real,P<:Real,Ts<:AbstractVector{T},Ps<:AbstractVector{P}}
-    DiscreteNonParametric{T,P,Ts,Ps}(support(d), probs(d), check_args=false)
-end
-
-# Fix SubArray support
-function Distributions.DiscreteNonParametric{T,P,Ts,Ps}(
-    vs::Ts,
-    ps::Ps;
-    check_args=true,
-) where {T<:Real, P<:Real, Ts<:AbstractVector{T}, Ps<:SubArray{P, 1}}
-    cps = ps[:]
-    return DiscreteNonParametric{T,P,Ts,typeof(cps)}(vs, cps; check_args = check_args)
-end
