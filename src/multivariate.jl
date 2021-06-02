@@ -28,6 +28,13 @@ TuringDirichlet(d::Dirichlet) = TuringDirichlet(d.alpha, d.alpha0, d.lmnB)
 
 Base.length(d::TuringDirichlet) = length(d.alpha)
 
+function Distributions.insupport(d::TuringDirichlet, x::AbstractVector{<:Real})
+    return dirichlet_insupport(x, length(d))
+end
+function dirichlet_insupport(x::AbstractVector{<:Real}, d::Int)
+    return d == length(x) && all(x -> zero(x) <= x <= one(x), x) && sum(x) ≈ 1
+end
+
 # copied from Distributions
 # TODO: remove and use `Dirichlet`?
 function Distributions._rand!(
@@ -65,9 +72,23 @@ ZygoteRules.@adjoint function Distributions.Dirichlet(d, alpha)
     return ZygoteRules.pullback(TuringDirichlet, d, alpha)
 end
 
-simplex_logpdf(alpha, lmnB, x::AbstractVector) = sum(xlogy.(alpha .- 1, x)) - lmnB
+function xlogy_or_neginf(x, y)
+    z = zero(y)
+    return y >= z ? xlogy(x, y) : xlogy(one(x), z)
+end
+function identity_or_neginf(x::Real, insupport::Bool)
+    return insupport ? float(x) : log(zero(x))
+end
+
+function simplex_logpdf(alpha, lmnB, x::AbstractVector)
+    logp = sum(xlogy_or_neginf.(alpha .- 1, x)) - lmnB
+    return identity_or_neginf(logp, dirichlet_insupport(x, length(alpha)))
+end
 function simplex_logpdf(alpha, lmnB, x::AbstractMatrix)
-    return vec(sum(xlogy.(alpha .- 1, x); dims=1)) .- lmnB
+    return identity_or_neginf.(
+        vec(sum(xlogy_or_neginf.(alpha .- 1, x); dims=1)) .- lmnB,
+        dirichlet_insupport.(eachcol(x), length(alpha)),
+    )
 end
 
 ZygoteRules.@adjoint function simplex_logpdf(alpha, lmnB, x::AbstractVector)
