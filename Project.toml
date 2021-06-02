@@ -24,7 +24,7 @@ ZygoteRules = "700de1a5-db45-46bc-99cf-38207098b444"
 [compat]
 Adapt = "2, 3"
 ChainRules = "0.7"
-ChainRulesCore = "0.9.21"
+ChainRulesCore = "0.9.44, 0.10"
 Compat = "3.6"
 DiffRules = "0.1, 1.0"
 Distributions = "0.23.3, 0.24, 0.25"

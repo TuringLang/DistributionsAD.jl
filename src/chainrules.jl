@@ -118,7 +118,7 @@ function ChainRulesCore.rrule(
             @thunk(A * Δy),
             Δ -> LinearAlgebra.mul!(Δ, A, Δy, true, true),
         )
-        return (NO_FIELDS, p̄)
+        return (NoTangent(), p̄)
     end
     return y, poissonbinomial_pdf_fft_pullback
 end
@@ -134,7 +134,7 @@ if isdefined(Distributions, :poissonbinomial_pdf)
                 @thunk(A * Δy),
                 Δ -> LinearAlgebra.mul!(Δ, A, Δy, true, true),
             )
-            return (NO_FIELDS, p̄)
+            return (NoTangent(), p̄)
         end
         return y, poissonbinomial_pdf_pullback
     end
