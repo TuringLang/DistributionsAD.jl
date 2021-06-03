@@ -130,7 +130,7 @@
 
         # Use finite differencing to compute reverse-mode sensitivities.
         x̄s_fdm = FDM.j′vp(central_fdm(5, 1), f, ȳ, x...)
-        
+
         if AD == "All" || AD == "Zygote"
             # Use Zygote to compute reverse-mode sensitivities.
             y_zygote, back_zygote = Zygote.pullback(f, x...)
@@ -180,14 +180,14 @@
 
             # Check that Tracker forwards-pass produces the correct answer.
             @test isapprox(y, Tracker.data(y_tracker), atol=atol, rtol=rtol)
-    
+
             # Check that Tracker reverse-mode sensitivities are correct.
             @test all(zip(x̄s_tracker, x̄s_fdm)) do (x̄_tracker, x̄_fdm)
                 isapprox(Tracker.data(x̄_tracker), x̄_fdm; atol=atol, rtol=rtol)
             end
         end
     end
-    _to_cov(B) = B + B' + 2 * size(B, 1) * Matrix(I, size(B)...)    
+    _to_cov(B) = B + B' + 2 * size(B, 1) * Matrix(I, size(B)...)
 
     @testset "logsumexp" begin
         x, y = rand(3), rand()
@@ -257,7 +257,7 @@
     @testset "Params" begin
         m = rand(10)
         sigmas = randexp(10)
-        
+
         d = TuringDiagMvNormal(m, sigmas)
         @test params(d) == (m, sigmas)
 
@@ -334,6 +334,27 @@
             s2 = rand(d1, n)
             @test s2 isa Matrix{Float64}
             @test size(s2) == (dim, n)
+        end
+
+        # https://github.com/TuringLang/DistributionsAD.jl/issues/158
+        let
+            d = TuringDirichlet(rand(2))
+            z = rand(d)
+            logpdf_z = logpdf(d, z)
+            pdf_z = pdf(d, z)
+
+            for x in ([0.5, 0.8], [-0.5, 1.5])
+                @test logpdf(d, x) == -Inf
+                @test iszero(pdf(d, x))
+
+                xmat = hcat(x, x)
+                @test all(==(-Inf), logpdf(d, xmat))
+                @test all(iszero, pdf(d, xmat))
+
+                xzmat = hcat(x, z)
+                @test logpdf(d, xzmat) == [-Inf, logpdf_z]
+                @test pdf(d, xzmat) == [0, pdf_z]
+            end
         end
     end
 end
