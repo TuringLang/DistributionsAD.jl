@@ -395,17 +395,21 @@
             # Skellam only fails in these tests with ReverseDiff
             # Ref: https://github.com/TuringLang/DistributionsAD.jl/issues/126
             # PoissonBinomial fails with Zygote
+            # Matrix case does not work with Skellam:
+            # https://github.com/TuringLang/DistributionsAD.jl/pull/172#issuecomment-853721493
             filldist_broken = if d.f(d.θ...) isa Skellam
-                (d.broken..., :ReverseDiff)
+                ((d.broken..., :ReverseDiff), (d.broken..., :Zygote, :ReverseDiff))
             elseif d.f(d.θ...) isa PoissonBinomial
-                (d.broken..., :Zygote)
+                ((d.broken..., :Zygote), (d.broken..., :Zygote))
             else
-                d.broken
+                (d.broken, d.broken)
             end
-            arraydist_broken = if d.f(d.θ...) isa PoissonBinomial
-                (d.broken..., :Zygote)
+            arraydist_broken = if d.f(d.θ...) isa Skellam
+                (d.broken, (d.broken..., :Zygote))
+            elseif d.f(d.θ...) isa PoissonBinomial
+                ((d.broken..., :Zygote), (d.broken..., :Zygote))
             else
-                d.broken
+                (d.broken, d.broken)
             end
 
             # Create `filldist` distribution
@@ -416,7 +420,7 @@
             f_arraydist = (θ...,) -> arraydist([d.f(θ...) for _ in 1:n])
             d_arraydist = f_arraydist(d.θ...)
 
-            for sz in ((n,), (n, 2))
+            for (i, sz) in enumerate(((n,), (n, 2)))
                 # Matrix case doesn't work for continuous distributions for some reason
                 # now but not too important (?!)
                 if length(sz) == 2 && Distributions.value_support(typeof(d)) === Continuous
@@ -434,7 +438,7 @@
                         d.θ,
                         x,
                         d.xtrans;
-                        broken=filldist_broken,
+                        broken=filldist_broken[i],
                     )
                 )
                 test_ad(
@@ -444,7 +448,7 @@
                         d.θ,
                         x,
                         d.xtrans;
-                        broken=arraydist_broken,
+                        broken=arraydist_broken[i],
                     )
                 )
             end
