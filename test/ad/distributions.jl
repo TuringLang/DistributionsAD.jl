@@ -164,6 +164,7 @@
 
         DistSpec(NormalInverseGaussian, (1.0, 2.0, 1.0, 1.0), 0.5),
 
+        DistSpec(Pareto, (), 1.5),
         DistSpec(Pareto, (1.0,), 1.5),
         DistSpec(Pareto, (1.0, 1.0), 1.5),
 
@@ -213,10 +214,7 @@
         # Stackoverflow caused by SpecialFunctions.besselix
         DistSpec(VonMises, (1.0,), 1.0),
         DistSpec(VonMises, (1, 1), 1),
-        
-        # Only some Zygote tests are broken and therefore this can not be checked
-        DistSpec(Pareto, (), 1.5; broken=(:Zygote,)),
-        
+
         # Some tests are broken on some Julia versions, therefore it can't be checked reliably
         DistSpec(PoissonBinomial, ([0.5, 0.5],), [0, 0]; broken=(:Zygote,)),
     ]
