@@ -64,14 +64,14 @@ include("zygote.jl")
     @require ForwardDiff="f6369f11-7733-5829-9624-2563aa707210" begin
         using .ForwardDiff
         using .ForwardDiff: @define_binary_dual_op # Needed for `eval`ing diffrules here
-        include("forwarddiff.jl")
+        Requires.@include("forwarddiff.jl")
     end
 
     @require ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267" begin
         # ensures that we can load ForwardDiff without depending on it
         # (it is a dependency of ReverseDiff and therefore always available)
         @require ForwardDiff="f6369f11-7733-5829-9624-2563aa707210" begin
-            include("reversediff.jl")
+            Requires.@include("reversediff.jl")
         end
     end
 
@@ -81,7 +81,7 @@ include("zygote.jl")
         using LinearAlgebra: AbstractTriangular
         using .Tracker: Tracker, TrackedReal, TrackedVector, TrackedMatrix,
                         TrackedArray, TrackedVecOrMat, track, @grad, data
-        include("tracker.jl")
+        Requires.@include("tracker.jl")
     end
 
     @require LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02" begin
