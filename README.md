@@ -1,13 +1,7 @@
 # DistributionsAD.jl
 
-[![Tracker tests](https://github.com/TuringLang/DistributionsAD.jl/workflows/Tracker%20tests/badge.svg?branch=master)](https://github.com/TuringLang/DistributionsAD.jl/actions?query=workflow%3A%22Tracker+tests%22)
-
-[![ForwardDiff tests](https://github.com/TuringLang/DistributionsAD.jl/workflows/ForwardDiff%20tests/badge.svg?branch=master)](https://github.com/TuringLang/DistributionsAD.jl/actions?query=workflow%3A%22ForwardDiff+tests%22)
-
-[![Zygote tests](https://github.com/TuringLang/DistributionsAD.jl/workflows/Zygote%20tests/badge.svg?branch=master)](https://github.com/TuringLang/DistributionsAD.jl/actions?query=workflow%3A%22Zygote+tests%22)
-
-[![ReverseDiff tests](https://github.com/TuringLang/DistributionsAD.jl/workflows/ReverseDiff%20tests/badge.svg)](https://github.com/TuringLang/DistributionsAD.jl/actions?query=workflow%3A%22ReverseDiff+tests%22)
-
+[![AD tests](https://github.com/TuringLang/DistributionsAD.jl/actions/workflows/AD.yml/badge.svg?branch=master)](https://github.com/TuringLang/DistributionsAD.jl/actions/workflows/AD.yml?query=branch%3Amaster)
+[![Other tests](https://github.com/TuringLang/DistributionsAD.jl/actions/workflows/Others.yml/badge.svg?branch=master)](https://github.com/TuringLang/DistributionsAD.jl/actions/workflows/Others.yml?query=branch%3Amaster)
 
 This package defines the necessary functions to enable automatic differentiation (AD) of the `logpdf` function from [Distributions.jl](https://github.com/JuliaStats/Distributions.jl) using the packages [Tracker.jl](https://github.com/FluxML/Tracker.jl), [Zygote.jl](https://github.com/FluxML/Zygote.jl), [ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl) and [ReverseDiff.jl](https://github.com/JuliaDiff/ReverseDiff.jl). The goal of this package is to make the output of `logpdf` differentiable wrt all continuous parameters of a distribution as well as the random variable in the case of continuous distributions.
 
