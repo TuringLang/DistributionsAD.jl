@@ -53,7 +53,6 @@ include("arraydist.jl")
 include("filldist.jl")
 include("univariate.jl")
 include("multivariate.jl")
-include("mvcategorical.jl")
 include("matrixvariate.jl")
 include("flatten.jl")
 

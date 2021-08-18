@@ -342,17 +342,4 @@ function isprobvec(p::SubArray{<:TrackedReal, 1, <:TrackedArray{<:Real}})
     pdata = value(p)
     all(x -> x ≥ zero(x), pdata) && isapprox(sum(pdata), one(eltype(pdata)), atol = 1e-6)
 end
-
-_mv_categorical_logpdf(ps::TrackedMatrix, x) = track(_mv_categorical_logpdf, ps, x)
-@grad function _mv_categorical_logpdf(ps, x)
-    ps_data = value(ps)
-    probs = view(ps_data, x, :)
-    ps_grad = zero(ps_data)
-    sum(log, probs), Δ -> begin
-        ps_grad .= 0
-        ps_grad[x,:] .= Δ ./ probs
-        return (ps_grad, nothing)
-    end
-end
-
 end
