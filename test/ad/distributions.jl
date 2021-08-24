@@ -73,8 +73,8 @@
         DistSpec(Beta, (1.0, 2.0), 0.5),
 
         DistSpec(BetaPrime, (), 0.5),
-        DistSpec(BetaPrime, (1.0,), 0.5),
-        DistSpec(BetaPrime, (1.0, 2.0), 0.5),
+        DistSpec(BetaPrime, (1.5,), 0.5),
+        DistSpec(BetaPrime, (1.5, 2.0), 0.5),
 
         DistSpec(Biweight, (), 0.5),
         DistSpec(Biweight, (1.0,), 0.5),
