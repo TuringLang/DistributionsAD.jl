@@ -47,7 +47,7 @@ if GROUP == "All" || GROUP == "AD"
     # Create vectors in probability simplex.
     function to_simplex(x::AbstractArray)
         max = maximum(x; dims=1)
-        y .= exp.(x .- max)
+        y = exp.(x .- max)
         y ./= sum(y; dims=1)
         return y
     end
