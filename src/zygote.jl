@@ -53,7 +53,7 @@ ZygoteRules.@adjoint function Wishart(df::T, S::AbstractPDMat{T}, warn::Bool = t
 end
 
 _warn(msg) = @warn(msg)
-ZygoteRules.@adjoint _warn(msg) = _warn(msg), _ -> nothing
+@non_differentiable _warn(msg)
 
 ZygoteRules.@adjoint function Distributions.Wishart(df::Real, S::AbstractMatrix{<:Real})
     return ZygoteRules.pullback(TuringWishart, df, S)

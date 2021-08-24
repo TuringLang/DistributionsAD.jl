@@ -6,9 +6,8 @@
         insupport = a <= x <= b,
         diff = b - a,
         c = insupport ? inv(diff) : inv(one(diff)),
-        z = insupport ? zero(x) : oftype(x, NaN),
     ),
-    (c, -c, z),
+    (c, -c, ZeroTangent()),
 )
 
 # StatsFuns: https://github.com/JuliaStats/StatsFuns.jl/pull/106
@@ -115,10 +114,10 @@ function ChainRulesCore.rrule(
     A = poissonbinomial_partialderivatives(p)
     function poissonbinomial_pdf_fft_pullback(Δy)
         p̄ = InplaceableThunk(
-            @thunk(A * Δy),
             Δ -> LinearAlgebra.mul!(Δ, A, Δy, true, true),
+            @thunk(A * Δy),
         )
-        return (NO_FIELDS, p̄)
+        return (NoTangent(), p̄)
     end
     return y, poissonbinomial_pdf_fft_pullback
 end
@@ -131,10 +130,10 @@ if isdefined(Distributions, :poissonbinomial_pdf)
         A = poissonbinomial_partialderivatives(p)
         function poissonbinomial_pdf_pullback(Δy)
             p̄ = InplaceableThunk(
-                @thunk(A * Δy),
                 Δ -> LinearAlgebra.mul!(Δ, A, Δy, true, true),
+                @thunk(A * Δy),
             )
-            return (NO_FIELDS, p̄)
+            return (NoTangent(), p̄)
         end
         return y, poissonbinomial_pdf_pullback
     end
