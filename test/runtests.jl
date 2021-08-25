@@ -57,6 +57,11 @@ if GROUP == "All" || GROUP == "AD"
         x̄ .= x̄ .- y .* sum(x̄; dims=1)
         return x̄
     end
+    function ChainRulesCore.rrule(::typeof(to_simplex), x::AbstractArray{<:Real})
+        y = to_simplex(x)
+        pullback(ȳ) = (NoTangent(), to_simplex_pullback(ȳ, y))
+        return y, pullback
+    end
 
     if AD == "All" || AD == "ReverseDiff"
         @eval begin
