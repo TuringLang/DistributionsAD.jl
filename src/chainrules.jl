@@ -109,8 +109,12 @@ if !isdefined(StatsFuns, :ChainRulesCore)
 
 end
 
-## PoissonBinomial
 
+# The following rules should be moved to Distributions
+# To ensure that this transfer does not break DistributionsAD we check if Distributions uses CR
+if !isdefined(Distributions, :ChainRulesCore)
+
+## PoissonBinomial
 function ChainRulesCore.rrule(
     ::typeof(Distributions.poissonbinomial_pdf_fft), p::AbstractVector{<:Real}
 )
@@ -141,4 +145,6 @@ if isdefined(Distributions, :poissonbinomial_pdf)
         end
         return y, poissonbinomial_pdf_pullback
     end
+end
+
 end

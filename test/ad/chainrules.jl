@@ -61,9 +61,12 @@
 
     end
 
+    # Only check the following rules if Distributions does not use CR
+    if !isdefined(Distributions, :ChainRulesCore)
     # PoissonBinomial
     test_rrule(Distributions.poissonbinomial_pdf_fft, rand(50))
     if isdefined(Distributions, :poissonbinomial_pdf)
         test_rrule(Distributions.poissonbinomial_pdf, rand(50))
+    end
     end
 end
