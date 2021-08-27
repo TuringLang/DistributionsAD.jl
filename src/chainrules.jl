@@ -10,7 +10,9 @@
     (c, -c, ZeroTangent()),
 )
 
-# StatsFuns: https://github.com/JuliaStats/StatsFuns.jl/pull/106
+# Only define the following rules if they are not defined in StatsFuns
+# Ref: https://github.com/JuliaStats/StatsFuns.jl/pull/106
+if !isdefined(StatsFuns, :ChainRulesCore)
 
 ## Beta ##
 
@@ -104,6 +106,8 @@
     poislogpdf(λ::Number, x::Number),
     ((iszero(x) && iszero(λ) ? zero(x / λ) : x / λ) - 1, log(λ) - digamma(x + 1)),
 )
+
+end
 
 ## PoissonBinomial
 

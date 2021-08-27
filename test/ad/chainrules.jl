@@ -5,7 +5,10 @@
     test_frule(DistributionsAD.uniformlogpdf, x, y, z)
     test_rrule(DistributionsAD.uniformlogpdf, x, y, z)
 
-    # StatsFuns: https://github.com/JuliaStats/StatsFuns.jl/pull/106
+    # Only test the following rules if they are not defined in StatsFuns
+    # Ref: https://github.com/JuliaStats/StatsFuns.jl/pull/106
+    if !isdefined(StatsFuns, :ChainRulesCore)
+
     x = exp(randn())
     y = exp(randn())
     z = logistic(randn())
@@ -55,6 +58,8 @@
     _, pb = rrule(StatsFuns.poislogpdf, 0.0, 1.0)
     _, x̄1, _ = pb(1)
     @test x̄1 == Inf
+
+    end
 
     # PoissonBinomial
     test_rrule(Distributions.poissonbinomial_pdf_fft, rand(50))
