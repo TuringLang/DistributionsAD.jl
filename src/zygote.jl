@@ -29,6 +29,16 @@ ZygoteRules.@adjoint function Distributions._logpdf(
     end
 end
 
+# Loglikelihood of multivariate distributions: multiple samples
+# workaround for https://github.com/TuringLang/DistributionsAD.jl/pull/198#issuecomment-907474930
+ZygoteRules.@adjoint function Distributions.loglikelihood(
+    d::MultivariateDistribution, x::AbstractMatrix{<:Real}
+)
+    return ZygoteRules.pullback(d, x) do d, x
+        return sum(xi -> Distributions._logpdf(d, xi), eachcol(x))
+    end
+end
+
 ## Wishart ##
 
 # Custom adjoint since Zygote can't differentiate through `@warn`
