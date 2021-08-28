@@ -172,9 +172,13 @@ function test_ad(f, x, broken = (); rtol = 1e-6, atol = 1e-6)
 
     if AD == "All" || AD == "Zygote"
         if :Zygote in broken
-            @test_broken Zygote.gradient(f, x)[1] ≈ finitediff rtol=rtol atol=atol
+            @test_broken zygote_isapprox(
+                Zygote.gradient(f, x)[1], finitediff; rtol=rtol, atol=atol,
+            )
         else
-            @test Zygote.gradient(f, x)[1] ≈ finitediff rtol=rtol atol=atol
+            @test zygote_isapprox(
+                Zygote.gradient(f, x)[1], finitediff; rtol=rtol, atol=atol,
+            )
         end
     end
 
@@ -187,4 +191,10 @@ function test_ad(f, x, broken = (); rtol = 1e-6, atol = 1e-6)
     end
 
     return
+end
+
+# Handle Zygote's `nothing`
+zygote_isapprox(x, expected; kwargs...) = isapprox(x, expected; kwargs...)
+function zygote_isapprox(::Nothing, expected; kwargs...)
+    return isapprox(zero(expected), expected; kwargs...)
 end
