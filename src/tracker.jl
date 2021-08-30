@@ -264,10 +264,10 @@ PoissonBinomial(p::TrackedArray{<:Real}; check_args=true) =
 for f in (:poissonbinomial_pdf, :poissonbinomial_pdf_fft)
     pullback = Symbol(f, :_pullback)
     @eval begin
-        Distributions.$f(x::TrackedArray) = track($f, x)
+        Distributions.$f(x::TrackedArray) = track(Distributions.$f, x)
         @grad function Distributions.$f(x::TrackedArray)
             x_data = data(x)
-            value = $f(x_data)
+            value = Distributions.$f(x_data)
             A = Distributions.poissonbinomial_pdf_partialderivatives(x_data)
             $pullback(Δ) = (A * Δ,)
             return value, $pullback
