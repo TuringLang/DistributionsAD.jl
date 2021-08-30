@@ -214,24 +214,3 @@ function Distributions._rand!(rng::AbstractRNG, d::TuringInverseWishart, A::Abst
     X = Distributions._rand!(rng, TuringWishart(d.df, inv(cholesky(d.S))), A)
     A .= inv(cholesky!(X))
 end
-
-# Only needed in Distributions < 0.24
-if !DISTRIBUTIONS_HAS_GENERIC_UNIVARIATE_PDF
-    for T in (:MatrixBeta, :MatrixNormal, :Wishart, :InverseWishart,
-              :TuringWishart, :TuringInverseWishart,
-              :VectorOfMultivariate, :MatrixOfUnivariate)
-        @eval begin
-            Distributions.loglikelihood(d::$T, X::AbstractMatrix{<:Real}) = logpdf(d, X)
-            function Distributions.loglikelihood(d::$T, X::AbstractArray{<:Real,3})
-                (size(X, 1), size(X, 2)) == size(d) || throw(DimensionMismatch("Inconsistent array dimensions."))
-                return sum(i -> _logpdf(d, view(X, :, :, i)), axes(X, 3))
-            end
-            function Distributions.loglikelihood(
-                d::$T,
-                X::AbstractArray{<:AbstractMatrix{<:Real}},
-            )
-                return sum(x -> logpdf(d, x), X)
-            end
-        end
-    end
-end
