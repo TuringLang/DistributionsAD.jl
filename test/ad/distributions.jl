@@ -73,8 +73,8 @@
         DistSpec(Beta, (1.0, 2.0), 0.5),
 
         DistSpec(BetaPrime, (), 0.5),
-        DistSpec(BetaPrime, (1.0,), 0.5),
-        DistSpec(BetaPrime, (1.0, 2.0), 0.5),
+        DistSpec(BetaPrime, (1.5,), 0.5),
+        DistSpec(BetaPrime, (1.5, 2.0), 0.5),
 
         DistSpec(Biweight, (), 0.5),
         DistSpec(Biweight, (1.0,), 0.5),
@@ -396,15 +396,16 @@
             # Matrix case does not work with Skellam:
             # https://github.com/TuringLang/DistributionsAD.jl/pull/172#issuecomment-853721493
             filldist_broken = if d.f(d.θ...) isa Skellam
-                ((d.broken..., :ReverseDiff), (d.broken..., :Zygote, :ReverseDiff))
+                ((d.broken..., :Zygote, :ReverseDiff), (d.broken..., :Zygote, :ReverseDiff))
             elseif d.f(d.θ...) isa PoissonBinomial
                 ((d.broken..., :Zygote), (d.broken..., :Zygote))
+            elseif d.f(d.θ...) isa Chernoff
+                # Zygote is not broken with `filldist`
+                ((), ())
             else
                 (d.broken, d.broken)
             end
-            arraydist_broken = if d.f(d.θ...) isa Skellam
-                (d.broken, (d.broken..., :Zygote))
-            elseif d.f(d.θ...) isa PoissonBinomial
+            arraydist_broken = if d.f(d.θ...) isa PoissonBinomial
                 ((d.broken..., :Zygote), (d.broken..., :Zygote))
             else
                 (d.broken, d.broken)
@@ -478,6 +479,9 @@
             # Matrix `x`
             x_mat = fill(d.x, n)
 
+            # Zygote is not broken with `filldist` + Chernoff
+            filldist_broken = d.f(d.θ...) isa Chernoff ? () : d.broken
+
             # Test AD
             test_ad(
                 DistSpec(
@@ -486,7 +490,7 @@
                     d.θ,
                     x_mat,
                     d.xtrans;
-                    broken=d.broken,
+                    broken=filldist_broken,
                 )
             )
             test_ad(
@@ -511,7 +515,7 @@
                     d.θ,
                     x_vec_of_mat,
                     d.xtrans;
-                    broken=d.broken,
+                    broken=filldist_broken,
                 )
             )
             test_ad(

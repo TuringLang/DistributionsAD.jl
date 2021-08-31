@@ -15,8 +15,6 @@ using DistributionsAD: TuringUniform, TuringMvNormal, TuringMvLogNormal,
 using StatsBase: entropy
 using StatsFuns: StatsFuns, logsumexp, logistic
 
-import NNlib
-
 Random.seed!(1) # Set seed that all testsets should reset to.
 
 const FDM = FiniteDifferences
@@ -47,8 +45,23 @@ if GROUP == "All" || GROUP == "AD"
     to_posdef_diagonal(a::AbstractVector) = Diagonal(a.^2 .+ 1)
 
     # Create vectors in probability simplex.
-    to_simplex(x::AbstractArray) = NNlib.softmax(x; dims=1)
+    function to_simplex(x::AbstractArray)
+        max = maximum(x; dims=1)
+        y = exp.(x .- max)
+        y ./= sum(y; dims=1)
+        return y
+    end
     to_simplex(x::AbstractArray{<:AbstractArray}) = to_simplex.(x)
+    function to_simplex_pullback(ȳ::AbstractArray, y::AbstractArray)
+        x̄ = ȳ .* y
+        x̄ .= x̄ .- y .* sum(x̄; dims=1)
+        return x̄
+    end
+    function ChainRulesCore.rrule(::typeof(to_simplex), x::AbstractArray{<:Real})
+        y = to_simplex(x)
+        pullback(ȳ) = (NoTangent(), to_simplex_pullback(ȳ, y))
+        return y, pullback
+    end
 
     if AD == "All" || AD == "ReverseDiff"
         @eval begin
@@ -59,9 +72,7 @@ if GROUP == "All" || GROUP == "AD"
             ReverseDiff.@grad function to_simplex(x)
                 _x = ReverseDiff.value(x)
                 y = to_simplex(_x)
-                function pullback(∇)
-                    return (NNlib.∇softmax(∇, _x, y; dims=1),)
-                end
+                pullback(ȳ) = (to_simplex_pullback(ȳ, y),)
                 return y, pullback
             end
         end
@@ -78,6 +89,14 @@ if GROUP == "All" || GROUP == "AD"
                     return ((∇ + ∇') * data_A,)
                 end
                 return S, pullback
+            end
+
+            to_simplex(x::Tracker.TrackedArray) = Tracker.track(to_simplex, x)
+            Tracker.@grad function to_simplex(x::Tracker.TrackedArray)
+                data_x = Tracker.data(x)
+                y = to_simplex(data_x)
+                pullback(ȳ) = (to_simplex_pullback(ȳ, y),)
+                return y, pullback
             end
         end
     end

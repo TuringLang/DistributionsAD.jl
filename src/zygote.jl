@@ -29,6 +29,24 @@ ZygoteRules.@adjoint function Distributions._logpdf(
     end
 end
 
+# Loglikelihood of multi- and matrixvariate distributions: multiple samples
+# workaround for Zygote issues discussed in
+# https://github.com/TuringLang/DistributionsAD.jl/pull/198
+ZygoteRules.@adjoint function Distributions.loglikelihood(
+    d::MultivariateDistribution, x::AbstractMatrix{<:Real}
+)
+    return ZygoteRules.pullback(d, x) do d, x
+        return sum(xi -> Distributions._logpdf(d, xi), eachcol(x))
+    end
+end
+ZygoteRules.@adjoint function Distributions.loglikelihood(
+    d::MatrixDistribution, x::AbstractArray{<:Real,3}
+)
+    return ZygoteRules.pullback(d, x) do d, x
+        return sum(xi -> Distributions._logpdf(d, xi), eachslice(x; dims=3))
+    end
+end
+
 ## Wishart ##
 
 # Custom adjoint since Zygote can't differentiate through `@warn`
@@ -53,7 +71,7 @@ ZygoteRules.@adjoint function Wishart(df::T, S::AbstractPDMat{T}, warn::Bool = t
 end
 
 _warn(msg) = @warn(msg)
-ZygoteRules.@adjoint _warn(msg) = _warn(msg), _ -> nothing
+@non_differentiable _warn(msg)
 
 ZygoteRules.@adjoint function Distributions.Wishart(df::Real, S::AbstractMatrix{<:Real})
     return ZygoteRules.pullback(TuringWishart, df, S)
@@ -74,7 +92,7 @@ ZygoteRules.@adjoint function Distributions.logpdf(
     size(X, 1) == length(dist) ||
         throw(DimensionMismatch("Inconsistent array dimensions."))
     return ZygoteRules.pullback(dist, X) do dist, X
-        return map(i -> Distributions._logpdf(dist, view(X, :, i)), axes(X, 2))
+        return map(xi -> Distributions._logpdf(dist, xi), eachcol(X))
     end
 end
 
@@ -85,7 +103,7 @@ ZygoteRules.@adjoint function Distributions.logpdf(
     (size(X, 1), size(X, 2)) == size(dist) ||
         throw(DimensionMismatch("Inconsistent array dimensions."))
     return ZygoteRules.pullback(dist, X) do dist, X
-        return map(i -> Distributions._logpdf(dist, view(X, :, :, i)), axes(X, 3))
+        return map(xi -> Distributions._logpdf(dist, xi), eachslice(X; dims=3))
     end
 end
 

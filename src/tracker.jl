@@ -261,23 +261,17 @@ end
 PoissonBinomial(p::TrackedArray{<:Real}; check_args=true) =
     TuringPoissonBinomial(p; check_args = check_args)
 
-poissonbinomial_pdf_fft(x::TrackedArray) = track(poissonbinomial_pdf_fft, x)
-@grad function poissonbinomial_pdf_fft(x::TrackedArray)
-    x_data = data(x)
-    value = poissonbinomial_pdf_fft(x_data)
-    A = poissonbinomial_partialderivatives(x_data)
-    poissonbinomial_pdf_fft_pullback(Δ) = (A * Δ,)
-    return value, poissonbinomial_pdf_fft_pullback
-end
-
-if isdefined(Distributions, :poissonbinomial_pdf)
-    Distributions.poissonbinomial_pdf(x::TrackedArray) = track(Distributions.poissonbinomial_pdf, x)
-    @grad function Distributions.poissonbinomial_pdf(x::TrackedArray)
-        x_data = data(x)
-        value = Distributions.poissonbinomial_pdf(x_data)
-        A = poissonbinomial_partialderivatives(x_data)
-        poissonbinomial_pdf_pullback(Δ) = (A * Δ,)
-        return value, poissonbinomial_pdf_pullback
+for f in (:poissonbinomial_pdf, :poissonbinomial_pdf_fft)
+    pullback = Symbol(f, :_pullback)
+    @eval begin
+        Distributions.$f(x::TrackedArray) = track(Distributions.$f, x)
+        @grad function Distributions.$f(x::TrackedArray)
+            x_data = data(x)
+            value = Distributions.$f(x_data)
+            A = Distributions.poissonbinomial_pdf_partialderivatives(x_data)
+            $pullback(Δ) = (A * Δ,)
+            return value, $pullback
+        end
     end
 end
 

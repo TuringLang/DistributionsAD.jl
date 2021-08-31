@@ -42,14 +42,16 @@
                 A = rand(3, 3)
                 C = A' * A + I
                 d1 = TuringMvNormal(m, C)
+                d2 = MvNormal(m, C)
             elseif TD <: TuringDiagMvNormal
                 C = rand(3)
                 d1 = TuringMvNormal(m, C)
+                d2 = MvNormal(m, Diagonal(C .^ 2))
             else
                 C = rand()
                 d1 = TuringMvNormal(m, C)
+                d2 = MvNormal(m, C^2 * I)
             end
-            d2 = MvNormal(m, C)
 
             @testset "$F" for F in (length, size, mean)
                 @test F(d1) == F(d2)
@@ -239,12 +241,12 @@
     @testset "Entropy" begin
         sigma = exp(randn())
         d1 = TuringScalMvNormal(randn(10), sigma)
-        d2 = MvNormal(randn(10), sigma)
+        d2 = MvNormal(randn(10), sigma^2 * I)
         @test entropy(d1) ≈ entropy(d2) rtol=1e-6
 
         sigmas = exp.(randn(10))
         d1 = TuringDiagMvNormal(randn(10), sigmas)
-        d2 = MvNormal(randn(10), sigmas)
+        d2 = MvNormal(randn(10), Diagonal(sigmas .^ 2))
         @test entropy(d1) ≈ entropy(d2) rtol=1e-6
 
         A = randn(10)

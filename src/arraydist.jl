@@ -6,13 +6,6 @@ function arraydist(dists::AbstractVector{<:UnivariateDistribution})
     return Product(dists)
 end
 
-function Distributions.logpdf(dist::VectorOfUnivariate, x::AbstractMatrix{<:Real})
-    size(x, 1) == length(dist) ||
-        throw(DimensionMismatch("Inconsistent array dimensions."))
-    # `eachcol` breaks Zygote, so we use `view` directly
-    return map(i -> sum(map(logpdf, dist.v, view(x, :, i))), axes(x, 2))
-end
-
 struct MatrixOfUnivariate{
     S <: ValueSupport,
     Tdist <: UnivariateDistribution{S},
@@ -56,8 +49,7 @@ function arraydist(dists::AbstractVector{<:MultivariateDistribution})
 end
 
 function Distributions._logpdf(dist::VectorOfMultivariate, x::AbstractMatrix{<:Real})
-    # `eachcol` breaks Zygote, so we use `view` directly
-    return sum(i -> logpdf(dist.dists[i], view(x, :, i)), axes(x, 2))
+    return sum(((di, xi),) -> logpdf(di, xi), zip(dist.dists, eachcol(x)))
 end
 function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractArray{<:AbstractMatrix{<:Real}})
     return map(x -> logpdf(dist, x), x)

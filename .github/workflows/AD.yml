@@ -17,7 +17,6 @@ jobs:
           - '1'
         os:
           - ubuntu-latest
-          - macOS-latest
         arch:
           - x64
         AD:
@@ -25,6 +24,23 @@ jobs:
           - Tracker
           - ReverseDiff
           - Zygote
+        include:
+          - version: '1'
+            os: macOS-latest
+            arch: x64
+            AD: ForwardDiff
+          - version: '1'
+            os: macOS-latest
+            arch: x64
+            AD: Tracker
+          - version: '1'
+            os: macOS-latest
+            arch: x64
+            AD: ReverseDiff
+          - version: '1'
+            os: macOS-latest
+            arch: x64
+            AD: Zygote
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1

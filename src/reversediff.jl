@@ -18,7 +18,7 @@ using ..DistributionsAD: DistributionsAD
 
 
 import SpecialFunctions, NaNMath
-import ..DistributionsAD: turing_chol, symm_turing_chol, _mv_categorical_logpdf, adapt_randn,
+import ..DistributionsAD: turing_chol, symm_turing_chol, adapt_randn,
     simplex_logpdf
 import Base.Broadcast: materialize
 import StatsFuns: logsumexp
