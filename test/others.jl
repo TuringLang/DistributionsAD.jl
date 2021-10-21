@@ -72,21 +72,23 @@
             if TD <: TuringDenseMvNormal
                 C = Matrix{Float64}(I, 3, 3)
                 d1 = TuringMvLogNormal(TuringMvNormal(m, C))
+                d2 = MvLogNormal(MvNormal(m, C))
             elseif TD <: TuringDiagMvNormal
                 C = ones(3)
                 d1 = TuringMvLogNormal(TuringMvNormal(m, C))
+                d2 = MvLogNormal(MvNormal(m, Diagonal(C .^ 2)))
             else
                 C = 1.0
                 d1 = TuringMvLogNormal(TuringMvNormal(m, C))
+                d2 = MvLogNormal(MvNormal(m, C^2 * I))
             end
-            d2 = MvLogNormal(MvNormal(m, C))
 
             @test length(d1) == length(d2)
 
             x1 = rand(d1)
             x2 = rand(d1, 3)
-            @test isapprox(logpdf(d1, x1), logpdf(d2, x1), rtol = 1e-6)
-            @test isapprox(logpdf(d1, x2), logpdf(d2, x2), rtol = 1e-6)
+            @test logpdf(d1, x1) ≈ logpdf(d2, x1) rtol=1e-6
+            @test logpdf(d1, x2) ≈ logpdf(d2, x2) rtol=1e-6
 
             x2[:, 1] .= -1
             @test isinf(logpdf(d1, x2)[1])
