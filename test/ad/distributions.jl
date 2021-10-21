@@ -68,13 +68,13 @@
         DistSpec(Arcsine, (1.0,), 0.5),
         DistSpec(Arcsine, (0.0, 2.0), 0.5),
 
-        DistSpec(Beta, (), 0.5),
-        DistSpec(Beta, (1.0,), 0.5),
-        DistSpec(Beta, (1.0, 2.0), 0.5),
+        DistSpec(Beta, (), 0.4),
+        DistSpec(Beta, (1.5,), 0.4),
+        DistSpec(Beta, (1.5, 2.0), 0.4),
 
-        DistSpec(BetaPrime, (), 0.5),
-        DistSpec(BetaPrime, (1.5,), 0.5),
-        DistSpec(BetaPrime, (1.5, 2.0), 0.5),
+        DistSpec(BetaPrime, (), 0.4),
+        DistSpec(BetaPrime, (1.5,), 0.4),
+        DistSpec(BetaPrime, (1.5, 2.0), 0.4),
 
         DistSpec(Biweight, (), 0.5),
         DistSpec(Biweight, (1.0,), 0.5),
@@ -104,9 +104,9 @@
         DistSpec(Frechet, (1.0,), 0.5),
         DistSpec(Frechet, (1.0, 2.0), 0.5),
 
-        DistSpec(Gamma, (), 0.5),
-        DistSpec(Gamma, (1.0,), 0.5),
-        DistSpec(Gamma, (1.0, 2.0), 0.5),
+        DistSpec(Gamma, (), 0.4),
+        DistSpec(Gamma, (1.5,), 0.4),
+        DistSpec(Gamma, (1.5, 2.0), 0.4),
 
         DistSpec(GeneralizedExtremeValue, (1.0, 1.0, 1.0), 0.5),
 
