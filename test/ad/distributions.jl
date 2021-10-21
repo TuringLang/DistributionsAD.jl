@@ -462,7 +462,7 @@
         end
 
         # Test `filldist` and `arraydist` distributions of univariate distributions
-        n = (2, 2) # always use 2 x 2 distributions
+        n = (n1, n2) = (2, 2) # always use 2 x 2 distributions
         for d in univariate_distributions
             d.x isa Number || continue
             Distributions.value_support(typeof(d)) === Discrete && continue
@@ -471,10 +471,10 @@
             d.f(d.θ...) isa Union{VonMises,TriangularDist} && continue
 
             # Create `filldist` distribution
-            f_filldist = (θ...,) -> filldist(d.f(θ...), n...)
+            f_filldist = (θ...,) -> filldist(d.f(θ...), n1, n2)
 
             # Create `arraydist` distribution
-            f_arraydist = (θ...,) -> arraydist(fill(d.f(θ...), n...))
+            f_arraydist = (θ...,) -> arraydist([d.f(θ...) for _ in 1:n1, _ in 1:n2])
 
             # Matrix `x`
             x_mat = fill(d.x, n)
@@ -552,7 +552,7 @@
             f_filldist = (θ...,) -> filldist(d.f(θ...), n)
 
             # Create `arraydist` distribution
-            f_arraydist = (θ...,) -> arraydist(fill(d.f(θ...), n))
+            f_arraydist = (θ...,) -> arraydist([d.f(θ...) for _ in 1:n])
 
             # Matrix `x`
             x_mat = repeat(d.x, 1, n)
