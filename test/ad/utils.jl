@@ -81,6 +81,14 @@ function unpack_offset(x, offset, original::AbstractArray{<:AbstractArray})
     return val, newoffset
 end
 
+using DistributionsAD: ZygoteRules
+ZygoteRules.@adjoint function fill(x::Distribution, dims1::Int, dims2::Int...) where {T}
+    return ZygoteRules.pullback(x, dims1, dims2...) do x, dims1, dims2...
+        dims = (dims1, dims2...)
+        return reshape([x for i in 1:prod(dims)], dims)
+    end
+end
+
 # Run AD tests of a
 function test_ad(dist::DistSpec; kwargs...)
     @info "Testing: $(dist.name)"
