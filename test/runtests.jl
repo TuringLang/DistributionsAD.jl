@@ -21,17 +21,16 @@ const FDM = FiniteDifferences
 const GROUP = get(ENV, "GROUP", "All")
 
 # Figure out which AD backend to test
-const AD = get(ENV, "AD", "All")
-if AD == "All" || AD == "ForwardDiff"
+if GROUP == "All" || GROUP == "ForwardDiff"
     @eval using ForwardDiff
 end
-if AD == "All" || AD == "Zygote"
+if GROUP == "All" || GROUP == "Zygote"
     @eval using Zygote
 end
-if AD == "All" || AD == "ReverseDiff"
+if GROUP == "All" || GROUP == "ReverseDiff"
     @eval using ReverseDiff
 end
-if AD == "All" || AD == "Tracker"
+if GROUP == "All" || GROUP == "Tracker"
     @eval using Tracker
 end
 
@@ -39,7 +38,7 @@ if GROUP == "All" || GROUP == "Others"
     include("others.jl")
 end
 
-if GROUP == "All" || GROUP == "AD"
+if GROUP == "All" || GROUP in ("ForwardDiff", "Zygote", "ReverseDiff", "Tracker")
     # Create positive definite matrix
     to_posdef(A::AbstractMatrix) = A * A' + I
     to_posdef_diagonal(a::AbstractVector) = Diagonal(a.^2 .+ 1)
@@ -63,7 +62,7 @@ if GROUP == "All" || GROUP == "AD"
         return y, pullback
     end
 
-    if AD == "All" || AD == "ReverseDiff"
+    if GROUP == "All" || GROUP == "ReverseDiff"
         @eval begin
             # Define adjoint for ReverseDiff
             function to_simplex(x::AbstractArray{<:ReverseDiff.TrackedReal})
@@ -78,7 +77,7 @@ if GROUP == "All" || GROUP == "AD"
         end
     end
 
-    if AD == "All" || AD == "Tracker"
+    if GROUP == "All" || GROUP == "Tracker"
         @eval begin
             # Define adjoints for Tracker
             to_posdef(A::Tracker.TrackedMatrix) = Tracker.track(to_posdef, A)
