@@ -70,13 +70,13 @@
             if GROUP == "All" || GROUP == "ForwardDiff"
                 let
                     x = [ForwardDiff.Dual(rand(rng, T)) for _ in 1:n]
-                    test_adapt_randn(rng, x, dims...)
+                    test_adapt_randn(rng, x, T, dims...)
                 end
             end
             if GROUP == "All" || GROUP == "Tracker"
                 let
                     x = Tracker.TrackedArray(rand(rng, T, 50))
-                    test_adapt_randn(rng, x, dims...)
+                    test_adapt_randn(rng, x, T, dims...)
                 end
             end
             if GROUP == "All" || GROUP == "ReverseDiff"
@@ -85,7 +85,7 @@
                     d = rand(Int, n)
                     tp = ReverseDiff.InstructionTape()
                     x = ReverseDiff.TrackedArray(v, d, tp) 
-                    test_adapt_randn(rng, x, dims...)
+                    test_adapt_randn(rng, x, T, dims...)
                 end
             end
         end

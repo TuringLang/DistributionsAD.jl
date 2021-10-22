@@ -157,7 +157,7 @@
     @testset "adapt_randn" begin
         rng = MersenneTwister()
         for T in (Float32, Float64)
-            test_adapt_randn(rng, rand(rng, T, 50), 10, 30)
+            test_adapt_randn(rng, rand(rng, T, 50), T, 10, 30)
         end
     end
 
