@@ -4,7 +4,6 @@ using ChainRulesCore
 using ChainRulesTestUtils
 using Combinatorics
 using Distributions
-using FillArrays
 using FiniteDifferences
 using PDMats
 
