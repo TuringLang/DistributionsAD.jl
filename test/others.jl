@@ -98,12 +98,12 @@
 
     @testset "TuringUniform" begin
         @test logpdf(TuringUniform(), 0.5) == 0
-        if AD == "All" || AD == "Tracker"
+        if GROUP == "All" || GROUP == "Tracker"
             @test logpdf(TuringUniform(), param(0.5)) == 0
         end
     end
 
-    if AD == "All" || AD == "Tracker"
+    if GROUP == "All" || GROUP == "Tracker"
         @testset "Semicircle" begin
             @test Tracker.data(logpdf(Semicircle(1.0), param(0.5))) == logpdf(Semicircle(1.0), 0.5)
         end
@@ -135,7 +135,7 @@
         # Use finite differencing to compute reverse-mode sensitivities.
         x̄s_fdm = FDM.j′vp(central_fdm(5, 1), f, ȳ, x...)
 
-        if AD == "All" || AD == "Zygote"
+        if GROUP == "All" || GROUP == "Zygote"
             # Use Zygote to compute reverse-mode sensitivities.
             y_zygote, back_zygote = Zygote.pullback(f, x...)
             x̄s_zygote = back_zygote(ȳ)
@@ -149,7 +149,7 @@
             end
         end
 
-        if AD == "All" || AD == "ReverseDiff"
+        if GROUP == "All" || GROUP == "ReverseDiff"
             test_rd = length(x) == 1 && y isa Number
             if test_rd
                 # Use ReverseDiff to compute reverse-mode sensitivities.
@@ -177,7 +177,7 @@
             end
         end
 
-        if AD == "All" || AD == "Tracker"
+        if GROUP == "All" || GROUP == "Tracker"
             # Use Tracker to compute reverse-mode sensitivities.
             y_tracker, back_tracker = Tracker.forward(f, x...)
             x̄s_tracker = back_tracker(ȳ)
@@ -214,7 +214,7 @@
     end
 
     @testset "fill" begin
-        if AD == "All" || AD == "Tracker"
+        if GROUP == "All" || GROUP == "Tracker"
             @test fill(param(1.0), 3) isa TrackedArray
         end
         rng = MersenneTwister(123456)
@@ -273,13 +273,13 @@
         rng = MersenneTwister()
 
         xs = Any[(rng, T, n) -> rand(rng, T, n)]
-        if AD == "All" || AD == "ForwardDiff"
+        if GROUP == "All" || GROUP == "ForwardDiff"
             push!(xs, (rng, T, n) -> [ForwardDiff.Dual(rand(rng, T)) for _ in 1:n])
         end
-        if AD == "All" || AD == "Tracker"
+        if GROUP == "All" || GROUP == "Tracker"
             push!(xs, (rng, T, n) -> Tracker.TrackedArray(rand(rng, T, n)))
         end
-        if AD == "All" || AD == "ReverseDiff"
+        if GROUP == "All" || GROUP == "ReverseDiff"
             push!(xs, (rng, T, n) -> begin
                   v = rand(rng, T, n)
                   d = rand(Int, n)

@@ -38,19 +38,19 @@ jobs:
           - version: '1'
             os: macOS-latest
             arch: x64
-            AD: ForwardDiff
+            group: ForwardDiff
           - version: '1'
             os: macOS-latest
             arch: x64
-            AD: Tracker
+            group: Tracker
           - version: '1'
             os: macOS-latest
             arch: x64
-            AD: ReverseDiff
+            group: ReverseDiff
           - version: '1'
             os: macOS-latest
             arch: x64
-            AD: Zygote
+            group: Zygote
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1

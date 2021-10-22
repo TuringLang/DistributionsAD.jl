@@ -154,7 +154,7 @@ end
 function test_ad(f, x, broken = (); rtol = 1e-6, atol = 1e-6)
     finitediff = FDM.grad(central_fdm(5, 1), f, x)[1]
 
-    if AD == "All" || AD == "Tracker"
+    if GROUP == "All" || GROUP == "Tracker"
         if :Tracker in broken
             @test_broken Tracker.data(Tracker.gradient(f, x)[1]) ≈ finitediff rtol=rtol atol=atol
         else
@@ -162,7 +162,7 @@ function test_ad(f, x, broken = (); rtol = 1e-6, atol = 1e-6)
         end
     end
 
-    if AD == "All" || AD == "ForwardDiff"
+    if GROUP == "All" || GROUP == "ForwardDiff"
         if :ForwardDiff in broken
             @test_broken ForwardDiff.gradient(f, x) ≈ finitediff rtol=rtol atol=atol
         else
@@ -170,7 +170,7 @@ function test_ad(f, x, broken = (); rtol = 1e-6, atol = 1e-6)
         end
     end
 
-    if AD == "All" || AD == "Zygote"
+    if GROUP == "All" || GROUP == "Zygote"
         if :Zygote in broken
             @test_broken zygote_isapprox(
                 Zygote.gradient(f, x)[1], finitediff; rtol=rtol, atol=atol,
@@ -182,7 +182,7 @@ function test_ad(f, x, broken = (); rtol = 1e-6, atol = 1e-6)
         end
     end
 
-    if AD == "All" || AD == "ReverseDiff"
+    if GROUP == "All" || GROUP == "ReverseDiff"
         if :ReverseDiff in broken
             @test_broken ReverseDiff.gradient(f, x) ≈ finitediff rtol=rtol atol=atol
         else
