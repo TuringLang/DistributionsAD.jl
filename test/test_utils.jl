@@ -12,7 +12,7 @@ end
 to_simplex(x::AbstractArray{<:AbstractArray}) = to_simplex.(x)
 
 # Utility for testing `adapt_randn`
-function test_adapt_randn(rng, x::Vector, ::Type{T}, dims::Int...) where {T}
+function test_adapt_randn(rng, x::AbstractVector, ::Type{T}, dims::Int...) where {T}
     Random.seed!(rng, 100)
     y = DistributionsAD.adapt_randn(rng, x, dims...)
     @test y isa Array{T}
