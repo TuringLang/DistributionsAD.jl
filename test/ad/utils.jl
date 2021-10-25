@@ -318,7 +318,7 @@ function test_ad(dist::DistSpec{D}; kwargs...) where {D}
                 )
             end
         catch
-            :Zygote in test_broken || rethrow()
+            :Zygote in broken || rethrow()
         end
     end
 
