@@ -285,7 +285,7 @@ end
 # Function that computes arrays of `logpdf` values
 # `logpdf` does not handle arrays of samples for univariate distributions
 _logpdf(d::Distribution, x) = logpdf(d, x)
-_logpdf(d::UnivariateDistribution, x::AbstractArray) = _logpdf.((d,), x)
+_logpdf(d::UnivariateDistribution, x::AbstractArray) = logpdf.((d,), x)
 
 # Run AD tests
 function test_ad(dist::DistSpec{D}; kwargs...) where {D}
