@@ -177,65 +177,55 @@ end
 
 dist_type(::DistSpec{D}) where {D} = D
 
-# Auxiliary method for vectorizing parameters and samples
-vectorize(v::Number) = [v]
-vectorize(v::Diagonal) = v.diag
-vectorize(v::AbstractVector{<:AbstractMatrix}) = mapreduce(vectorize, vcat, v)
-vectorize(v) = vec(v)
+# Auxiliary methods for vectorizing parameters and samples and unflattening them
+# We fall back to `FDM.to_vec`
+# However, some implementations of it don't work with overload AD such as Tracker,
+# ForwardDiff, and ReverseDiff
+# Therefore we add a `_to_vec` function
+_to_vec(x) = FDM.to_vec(x)
 
-"""
-    unpack(x, inds, original...)
-
-Return a tuple of unpacked parameters and samples in vector `x`.
-
-Here `original` are the original full set of parameters and samples, and
-`inds` contains the indices of the original parameters and samples for which
-a possibly different value is given in `x`. If no value is provided in `x`,
-the original value of the parameter is returned. The values are returned
-in the same order as the original parameters.
-"""
-function unpack(x, inds, original...)
-    offset = 0
-    newvals = ntuple(length(original)) do i
-        if i in inds
-            v, offset = unpack_offset(x, offset, original[i])
-        else
-            v = original[i]
+# Copied from FDM without type conversions and with `to_vec` replaced with `_to_vec`
+function _to_vec(x::DenseVector)
+    x_vecs_and_backs = map(_to_vec, x)
+    x_vecs, x_backs = first.(x_vecs_and_backs), last.(x_vecs_and_backs)
+    lengths = map(length, x_vecs)
+    sz = cumsum(map(length, x_vecs))
+    function Vector_from_vec(v)
+        map(x_backs, lengths, sz) do x_back, l, s
+            return x_back(v[s - l + 1:s])
         end
-        return v
     end
-    offset == length(x) || throw(ArgumentError())
-
-    return newvals
+    # handle empty x
+    x_vec = isempty(x_vecs) ? eltype(eltype(x_vecs))[] : reduce(vcat, x_vecs)
+    return x_vec, Vector_from_vec
 end
-
-# Auxiliary methods for unpacking numbers and arrays
-function unpack_offset(x, offset, original::Number)
-    newoffset = offset + 1
-    val = x[newoffset]
-    return val, newoffset
-end
-function unpack_offset(x, offset, original::AbstractArray)
-    newoffset = offset + length(original)
-    val = reshape(x[(offset + 1):newoffset], size(original))
-    return val, newoffset
-end
-function unpack_offset(x, offset, original::AbstractArray{<:AbstractArray})
-    newoffset = offset
-    val = map(original) do orig
-        out, newoffset = unpack_offset(x, newoffset, orig)
-        return out
+function _to_vec(x::DenseArray)
+    x_vec, from_vec = _to_vec(vec(x))
+    function Array_from_vec(x_vec)
+        return reshape(from_vec(x_vec), size(x))
     end
-    return val, newoffset
+    return x_vec, Array_from_vec
+end
+function _to_vec(x::Tuple)
+    x_vecs_and_backs = map(_to_vec, x)
+    x_vecs, x_backs = first.(x_vecs_and_backs), last.(x_vecs_and_backs)
+    lengths = map(length, x_vecs)
+    sz = typeof(lengths)(cumsum(collect(lengths)))
+    function Tuple_from_vec(v)
+        map(x_backs, lengths, sz) do x_back, l, s
+            return x_back(v[s - l + 1:s])
+        end
+    end
+    return reduce(vcat, x_vecs), Tuple_from_vec
 end
 
-# functor that fixes non-differentiable location `x` for discrete distributions
+# Functor that fixes non-differentiable location `x` for discrete distributions
 struct FixedLocation{X}
     x::X
 end
 (f::FixedLocation)(args...) = f.x, args
 
-# functor that transforms differentiable location `x` for continuous distributions
+# Functor that transforms differentiable location `x` for continuous distributions
 # from unconstrained to constrained space
 struct TransformedLocation{F}
     trans::F
@@ -243,10 +233,37 @@ end
 (f::TransformedLocation)(x, args...) = f.trans(x), args
 (f::TransformedLocation{Nothing})(x, args...) = x, args
 
-# convenience function that returns the correct functor for
+# Convenience function that returns the correct functor for
 # discrete and continuous distributions
 make_unpack_x_θ(_, x, ::Type{<:DiscreteDistribution}) = FixedLocation(x)
 make_unpack_x_θ(trans, _, ::Type{<:ContinuousDistribution}) = TransformedLocation(trans)
+
+# "Unignore" arguments, i.e., add default arguments if they were ignored
+struct Unignore{A}
+    args::A
+    ignores::BitVector
+end
+
+function Unignore(args, ignores::BitVector)
+    n = length(args)
+    @assert length(ignores) == n
+    return Unignore{typeof(args)}(args, ignores)
+end
+
+function (f::Unignore)(x...)
+    j = Ref(0)
+    newx = map(f.args, f.ignores) do argsi, ignoresi
+        return if ignoresi
+            argsi
+        else
+            x[(j[] += 1)]
+        end
+    end
+
+    @assert length(x) == j[] || error("wrong number of arguments")
+
+    return newx
+end
 
 # we define the following two functions to be able to tell Zygote that it should not
 # compute derivatives for the fields of the functors `unpack_x_θ`
@@ -292,7 +309,6 @@ function test_ad(dist::DistSpec{D}; kwargs...) where {D}
     f = dist.f
     θ = dist.θ
     x = dist.x
-    g = dist.xtrans
     broken = dist.broken
 
     # combine all arguments
@@ -300,7 +316,7 @@ function test_ad(dist::DistSpec{D}; kwargs...) where {D}
     args = D <: ContinuousDistribution ? (x, θ...) : θ
 
     # Create function that splits arguments and transforms location x if needed
-    unpack_x_θ = make_unpack_x_θ(g, x, D)
+    unpack_x_θ = make_unpack_x_θ(dist.xtrans, x, D)
 
     # short cut: since Zygote does not use special number types with
     # different dispatches etc., it is suffiient to just test derivatives of
@@ -325,26 +341,38 @@ function test_ad(dist::DistSpec{D}; kwargs...) where {D}
     # Early exit
     GROUP !== "Zygote" || return
 
+    # Define functions for computing the log-likelihood that ignore some arguments
+    # (i.e., set them to their default values)
+    # This is used to check if we can differentiate with respect to a subset of arguments
+    # with ForwardDiff, Tracker, and ReverseDiff
+    n = length(args)
+    ignores = falses(n)
+    unignore = Unignore(args, ignores)
+    function loglikelihood_test(x...)
+        return sum_logpdf_parameterized(unpack_x_θ, f, unignore(x...)...)
+    end
+    sum_logpdf_test(x...) = sum_logpdf_parameterized(unpack_x_θ, f, unignore(x...)...)
+
+    # Quick sanity check
+    @test loglikelihood_test(args...) ≈ sum_logpdf_test(args...)
+
     # For all combinations of arguments
-    for inds in powerset(1:length(args))
-        if !isempty(inds)
-            argstest = mapreduce(vcat, inds) do i
-                vectorize(args[i])
-            end
-
-            # Make functions with vectorized to-be-differentiated arguments for ForwardDiff, Tracker, and ReverseDiff
-            loglikelihood_test = let l=loglikelihood_parameterized, g=unpack_x_θ, f=f, args=args, inds=inds
-                x -> l(g, f, unpack(x, inds, args...)...)
-            end
-            sum_logpdf_test = let l=sum_logpdf_parameterized, g=unpack_x_θ, f=f, args=args, inds=inds
-                x -> l(g, f, unpack(x, inds, args...)...)
-            end
-
-            @test loglikelihood_test(argstest) ≈ sum_logpdf_test(argstest)
-
-            test_ad(loglikelihood_test, argstest, broken; kwargs...)
-            test_ad(sum_logpdf_test, argstest, broken; kwargs...)
+    for inds in powerset(1:n, 1, n)
+        # Update boolean vector of ignored arguments
+        fill!(ignores, true)
+        for i in inds
+            @inbounds ignores[i] = false
         end
+
+        # Vectorize to-be-differentiated arguments for ForwardDiff, Tracker, and ReverseDiff
+        args_vec, args_unflatten = _to_vec(args[inds])
+        loglik_test(x) = loglikelihood_test(args_unflatten(x)...)
+        logpdf_test(x) = sum_logpdf_test(args_unflatten(x)...)
+
+        @test loglik_test(args_vec) ≈ logpdf_test(args_vec)
+
+        test_ad(loglik_test, args_vec, broken; kwargs...)
+        test_ad(logpdf_test, args_vec, broken; kwargs...)
     end
 
     return
