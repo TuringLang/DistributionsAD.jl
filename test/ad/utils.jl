@@ -12,16 +12,19 @@ if GROUP == "All" || GROUP == "Zygote"
     @eval using Zygote
 
     # Workaround for nested `nothing`
+    # Partly copied from https://github.com/FluxML/Zygote.jl/pull/1104
+    # TODO: Remove if https://github.com/FluxML/Zygote.jl/pull/1104 is merged
     Zygote.z2d(::NTuple{<:Any,Nothing}, ::Tuple) = NoTangent()
-    function Zygote.z2d(t::NamedTuple, primal::T) where T
+    function Zygote.z2d(delta::NamedTuple, primal::T) where T
         fnames = fieldnames(T)
-        complete_t = map(n -> get(t, n, nothing), fnames)
+        deltas = map(n -> get(delta, n, nothing), fnames)
         primals = map(n -> getfield(primal, n), fnames)
-        tp = map(Zygote.z2d, complete_t, primals)
-        return if tp isa NTuple{<:Any,NoTangent}
+        inner = map(Zygote.z2d, deltas, primals)
+        return if inner isa Tuple{Vararg{AbstractZero}}
             NoTangent()
         else
-            canonicalize(Tangent{T, typeof(tp)}(tp))
+            backing = NamedTuple{fnames}(inner)
+            canonicalize(Tangent{T, typeof(backing)}(backing))
         end
     end
 end
@@ -147,8 +150,7 @@ if GROUP == "All" || GROUP == "Tracker"
 end
 
 # Struct of distribution, corresponding parameters, and a sample.
-struct DistSpec{VF<:VariateForm,VS<:ValueSupport,F,T,X,G,B<:Tuple}
-    name::Symbol
+struct DistSpec{D,F,T,X,G,B<:Tuple}
     f::F
     "Distribution parameters."
     θ::T
@@ -158,24 +160,22 @@ struct DistSpec{VF<:VariateForm,VS<:ValueSupport,F,T,X,G,B<:Tuple}
     xtrans::G
     "Broken backends"
     broken::B
+
+    function DistSpec{D}(f::F, θ, x, xtrans::T, broken) where {D,F,T}
+        return new{D,F,typeof(θ),typeof(x),T,typeof(broken)}(f, θ, x, xtrans, broken)
+    end
 end
 
-function DistSpec(f, θ, x, xtrans=nothing; broken=())
-    name = f isa Distribution ? nameof(typeof(f)) : nameof(typeof(f(θ...)))
-    return DistSpec(name, f, θ, x, xtrans; broken=broken)
+function DistSpec(d::Distribution, θ, x, xtrans=nothing; broken=())
+    return DistSpec{typeof(d)}(d, θ, x, xtrans, broken)
 end
 
-function DistSpec(name::Symbol, f, θ, x, xtrans=nothing; broken=())
-    F = f isa Distribution ? typeof(f) : typeof(f(θ...))
-    VF = Distributions.variate_form(F)
-    VS = Distributions.value_support(F)
-    return DistSpec{VF,VS,typeof(f),typeof(θ),typeof(x),typeof(xtrans),typeof(broken)}(
-        name, f, θ, x, xtrans, broken,
-    )
+function DistSpec(f::F, θ, x, xtrans=nothing; broken=()) where {F}
+    D = typeof(f(θ...))
+    return DistSpec{D}(f, θ, x, xtrans, broken)
 end
 
-Distributions.variate_form(::Type{<:DistSpec{VF}}) where VF = VF
-Distributions.value_support(::Type{<:DistSpec{VF,VS}}) where {VF,VS} = VS
+dist_type(::DistSpec{D}) where {D} = D
 
 # Auxiliary method for vectorizing parameters and samples
 vectorize(v::Number) = [v]
@@ -229,10 +229,66 @@ function unpack_offset(x, offset, original::AbstractArray{<:AbstractArray})
     return val, newoffset
 end
 
-# Run AD tests of a
-function test_ad(dist::DistSpec; kwargs...)
-    @info "Testing: $(dist.name)"
+# functor that fixes non-differentiable location `x` for discrete distributions
+struct FixedLocation{X}
+    x::X
+end
+(f::FixedLocation)(args...) = f.x, args
 
+# functor that transforms differentiable location `x` for continuous distributions
+# from unconstrained to constrained space
+struct TransformedLocation{F}
+    trans::F
+end
+(f::TransformedLocation)(x, args...) = f.trans(x), args
+(f::TransformedLocation{Nothing})(x, args...) = x, args
+
+# convenience function that returns the correct functor for
+# discrete and continuous distributions
+make_unpack_x_θ(_, x, ::Type{<:DiscreteDistribution}) = FixedLocation(x)
+make_unpack_x_θ(trans, _, ::Type{<:ContinuousDistribution}) = TransformedLocation(trans)
+
+# we define the following two functions to be able to tell Zygote that it should not
+# compute derivatives for the fields of the functors `unpack_x_θ`
+"""
+    loglikelihood_parameterized(unpack_x_θ, dist, args...)
+
+Compute the log-likelihood of distribution `dist(θ...)` for `x` where
+`x, θ = unpack_x_θ(args...)` are extracted from the arguments `args` with `unpack_x_θ`.
+
+Internally, computations are performed with `loglikelihood`.
+
+See also: [`sum_logpdf_parameterized`](@ref)
+"""
+function loglikelihood_parameterized(unpack_x_θ, f, args...)
+    x, θ = ignore_derivatives(unpack_x_θ)(args...)
+    return loglikelihood(f(θ...), x)
+end
+
+"""
+    sum_logpdf_parameterized(unpack_x_θ, dist, args...)
+
+Compute the log-likelihood of distribution `dist(θ...)` for `x` where
+`x, θ = unpack_x_θ(args...)` are extracted from the arguments `args` with `unpack_x_θ`.
+
+Internally, the log pdf of individual data points is computed with `logpdf` which are then
+summed up.
+
+See also: [`loglikelihood_parameterized`](@ref)
+"""
+function sum_logpdf_parameterized(unpack_x_θ, f, args...)
+    x, θ = ignore_derivatives(unpack_x_θ)(args...)
+    # we use `_logpdf` to be able to handle univariate distributions correctly (see below)
+    return sum(_logpdf(f(θ...), x))
+end
+
+# Function that computes arrays of `logpdf` values
+# `logpdf` does not handle arrays of samples for univariate distributions
+_logpdf(d::Distribution, x) = logpdf(d, x)
+_logpdf(d::UnivariateDistribution, x::AbstractArray) = _logpdf.((d,), x)
+
+# Run AD tests
+function test_ad(dist::DistSpec{D}; kwargs...) where {D}
     f = dist.f
     θ = dist.θ
     x = dist.x
@@ -241,63 +297,23 @@ function test_ad(dist::DistSpec; kwargs...)
 
     # combine all arguments
     # point `x` is not differentiable if the distribution is discrete
-    args = if Distributions.value_support(typeof(dist)) === Continuous
-        (x, θ...)
-    else
-        θ
-    end
+    args = D <: ContinuousDistribution ? (x, θ...) : θ
 
-    # Create functions with all arguments
-    if Distributions.value_support(typeof(dist)) === Continuous
-        f_loglik_allargs = let f=f, g=g
-            function (x, θ...)
-                dist = f(θ...)
-                xtilde = g === nothing ? x : g(x)
-                return loglikelihood(dist, xtilde)
-            end
-        end
-        f_logpdf_allargs = let f=f, g=g
-            function (x, θ...)
-                dist = f(θ...)
-                xtilde = g === nothing ? x : g(x)
-                if dist isa UnivariateDistribution && xtilde isa AbstractArray
-                    return sum(logpdf.(dist, xtilde))
-                else
-                    return sum(logpdf(dist, xtilde))
-                end
-            end
-        end
-    else
-        gx = g === nothing ? x : g(x)
-        f_loglik_allargs = let f=f, gx=gx
-            function (θ...)
-                dist = f(θ...)
-                return loglikelihood(dist, gx)
-            end
-        end
-        f_logpdf_allargs = let f=f, gx=gx
-            function (θ...)
-                dist = f(θ...)
-                return if dist isa UnivariateDistribution && gx isa AbstractArray
-                    sum(logpdf.(dist, gx))
-                else
-                    sum(logpdf(dist, gx))
-                end
-            end
-        end
-    end
+    # Create function that splits arguments and transforms location x if needed
+    unpack_x_θ = make_unpack_x_θ(g, x, D)
 
     # short cut: since Zygote does not use special number types with
     # different dispatches etc., it is suffiient to just test derivatives of
     # all differentiable arguments at once
     if GROUP === "All" || GROUP === "Zygote"
-        @test f_loglik_allargs(args...) ≈ f_logpdf_allargs(args...)
+        @test loglikelihood_parameterized(unpack_x_θ, f, args...) ≈
+            sum_logpdf_parameterized(unpack_x_θ, f, args...)
 
         # Zygote has type inference problems so we don't check it
         try
-            for f in (f_loglik_allargs, f_logpdf_allargs)
+            for l in (loglikelihood_parameterized, sum_logpdf_parameterized)
                 test_rrule(
-                    Zygote.ZygoteRuleConfig(), f ⊢ NoTangent(), args...;
+                    Zygote.ZygoteRuleConfig(), l, unpack_x_θ, f, args...;
                     rrule_f=rrule_via_ad, check_inferred=false, kwargs...
                 )
             end
@@ -306,8 +322,8 @@ function test_ad(dist::DistSpec; kwargs...)
         end
     end
 
-    # early exit
-    GROUP !== "Zygote" || return 
+    # Early exit
+    GROUP !== "Zygote" || return
 
     # For all combinations of arguments
     for inds in powerset(1:length(args))
@@ -315,19 +331,23 @@ function test_ad(dist::DistSpec; kwargs...)
             argstest = mapreduce(vcat, inds) do i
                 vectorize(args[i])
             end
-            f_loglik_test = let args=args, inds=inds
-                x -> f_loglik_allargs(unpack(x, inds, args...)...)
+
+            # Make functions with vectorized to-be-differentiated arguments for ForwardDiff, Tracker, and ReverseDiff
+            loglikelihood_test = let l=loglikelihood_parameterized, g=unpack_x_θ, f=f, args=args, inds=inds
+                x -> l(g, f, unpack(x, inds, args...)...)
             end
-            f_logpdf_test = let args=args, inds=inds
-                x -> f_logpdf_allargs(unpack(x, inds, args...)...)
+            sum_logpdf_test = let l=sum_logpdf_parameterized, g=unpack_x_θ, f=f, args=args, inds=inds
+                x -> l(g, f, unpack(x, inds, args...)...)
             end
 
-            @test f_loglik_test(argstest) ≈ f_logpdf_test(argstest)
+            @test loglikelihood_test(argstest) ≈ sum_logpdf_test(argstest)
 
-            test_ad(f_loglik_test, argstest, broken; kwargs...)
-            test_ad(f_logpdf_test, argstest, broken; kwargs...)
+            test_ad(loglikelihood_test, argstest, broken; kwargs...)
+            test_ad(sum_logpdf_test, argstest, broken; kwargs...)
         end
     end
+
+    return
 end
 
 function test_ad(f, x, broken = (); rtol = 1e-6, atol = 1e-6)

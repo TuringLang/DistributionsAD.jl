@@ -364,6 +364,7 @@
         println("\nTesting: Univariate distributions\n")
 
         for d in univariate_distributions
+            @info "Testing: $(nameof(dist_type(d)))"
             test_ad(d)
         end
     end
@@ -372,6 +373,7 @@
         println("\nTesting: Multivariate distributions\n")
 
         for d in multivariate_distributions
+            @info "Testing: $(nameof(dist_type(d)))"
             test_ad(d)
         end
 
@@ -381,41 +383,43 @@
             d.x isa Number || continue
 
             # Broken distributions
-            d.f(d.θ...) isa Union{VonMises,TriangularDist} && continue
+            D = dist_type(d)
+            D <: Union{VonMises,TriangularDist} && continue
 
             # Skellam only fails in these tests with ReverseDiff
             # Ref: https://github.com/TuringLang/DistributionsAD.jl/issues/126
             # PoissonBinomial fails with Zygote
             # Matrix case does not work with Skellam:
             # https://github.com/TuringLang/DistributionsAD.jl/pull/172#issuecomment-853721493
-            filldist_broken = if d.f(d.θ...) isa Skellam
+            filldist_broken = if D <: Skellam
                 ((d.broken..., :Zygote, :ReverseDiff), (d.broken..., :Zygote, :ReverseDiff))
-            elseif d.f(d.θ...) isa PoissonBinomial
+            elseif D <: PoissonBinomial
                 ((d.broken..., :Zygote), (d.broken..., :Zygote))
-            elseif d.f(d.θ...) isa Chernoff
+            elseif D <: Chernoff
                 # Zygote is not broken with `filldist`
                 ((), ())
             else
                 (d.broken, d.broken)
             end
-            arraydist_broken = if d.f(d.θ...) isa PoissonBinomial
+            arraydist_broken = if D <: PoissonBinomial
                 ((d.broken..., :Zygote), (d.broken..., :Zygote))
             else
                 (d.broken, d.broken)
             end
 
             # Create `filldist` distribution
-            f_filldist = (θ...,) -> filldist(d.f(θ...), n)
+            f = d.f
+            f_filldist = (θ...,) -> filldist(f(θ...), n)
             d_filldist = f_filldist(d.θ...)
 
             # Create `arraydist` distribution
-            f_arraydist = (θ...,) -> arraydist([d.f(θ...) for _ in 1:n])
+            f_arraydist = (θ...,) -> arraydist([f(θ...) for _ in 1:n])
             d_arraydist = f_arraydist(d.θ...)
 
             for (i, sz) in enumerate(((n,), (n, 2)))
                 # Matrix case doesn't work for continuous distributions for some reason
                 # now but not too important (?!)
-                if length(sz) == 2 && Distributions.value_support(typeof(d)) === Continuous
+                if length(sz) == 2 && D isa ContinuousDistribution
                     continue
                 end
 
@@ -423,9 +427,9 @@
                 x = fill(d.x, sz)
 
                 # Test AD
+                @info "Testing: filldist($(nameof(D)), $sz)"
                 test_ad(
                     DistSpec(
-                        Symbol(:filldist, " (", d.name, ", $sz)"),
                         f_filldist,
                         d.θ,
                         x,
@@ -433,9 +437,10 @@
                         broken=filldist_broken[i],
                     )
                 )
+
+                @info "Testing: arraydist($(nameof(D)), $sz)"
                 test_ad(
                     DistSpec(
-                        Symbol(:arraydist, " (", d.name, ", $sz)"),
                         f_arraydist,
                         d.θ,
                         x,
@@ -451,6 +456,7 @@
         println("\nTesting: Matrixvariate distributions\n")
 
         for d in matrixvariate_distributions
+            @info "Testing: $(nameof(dist_type(d)))"
             test_ad(d)
         end
 
@@ -458,28 +464,30 @@
         n = (2, 2) # always use 2 x 2 distributions
         for d in univariate_distributions
             d.x isa Number || continue
-            Distributions.value_support(typeof(d)) === Discrete && continue
+            D = dist_type(d)
+            D isa DiscreteDistribution && continue
 
             # Broken distributions
-            d.f(d.θ...) isa Union{VonMises,TriangularDist} && continue
+            D <: Union{VonMises,TriangularDist} && continue
 
             # Create `filldist` distribution
-            f_filldist = (θ...,) -> filldist(d.f(θ...), n...)
+            f = d.f
+            f_filldist = (θ...,) -> filldist(f(θ...), n...)
 
             # Create `arraydist` distribution
             # Zygote's fill definition does not like non-numbers, so we use a workaround
-            f_arraydist = (θ...,) -> arraydist(reshape([d.f(θ...) for _ in 1:prod(n)], n))
+            f_arraydist = (θ...,) -> arraydist(reshape([f(θ...) for _ in 1:prod(n)], n))
 
             # Matrix `x`
             x_mat = fill(d.x, n)
 
             # Zygote is not broken with `filldist` + Chernoff
-            filldist_broken = d.f(d.θ...) isa Chernoff ? () : d.broken
+            filldist_broken = D <: Chernoff ? () : d.broken
 
             # Test AD
+            @info "Testing: filldist($(nameof(D)), $n)"
             test_ad(
                 DistSpec(
-                    Symbol(:filldist, " (", d.name, ", $n)"),
                     f_filldist,
                     d.θ,
                     x_mat,
@@ -487,9 +495,9 @@
                     broken=filldist_broken,
                 )
             )
+            @info "Testing: arraydist($(nameof(D)), $n)"
             test_ad(
                 DistSpec(
-                    Symbol(:arraydist, " (", d.name, ", $n)"),
                     f_arraydist,
                     d.θ,
                     x_mat,
@@ -502,9 +510,9 @@
             x_vec_of_mat = [fill(d.x, n) for _ in 1:2]
 
             # Test AD
+            @info "Testing: filldist($(nameof(D)), $n, 2)"
             test_ad(
                 DistSpec(
-                    Symbol(:filldist, " (", d.name, ", $n, 2)"),
                     f_filldist,
                     d.θ,
                     x_vec_of_mat,
@@ -512,9 +520,9 @@
                     broken=filldist_broken,
                 )
             )
+            @info "Testing: arraydist($(nameof(D)), $n, 2)"
             test_ad(
                 DistSpec(
-                    Symbol(:arraydist, " (", d.name, ", $n, 2)"),
                     f_arraydist,
                     d.θ,
                     x_vec_of_mat,
@@ -524,15 +532,15 @@
             )
         end
 
-
         # test `filldist` and `arraydist` distributions of multivariate distributions
         n = 2 # always use two distributions
         for d in multivariate_distributions
             d.x isa AbstractVector || continue
-            Distributions.value_support(typeof(d)) === Discrete && continue
+            D = dist_type(d)
+            D isa DiscreteDistribution && continue
 
             # Tests are failing for matrix covariance vectorized MvNormal
-            if d.f(d.θ...) isa Union{
+            if D <: Union{
                 MvNormal,MvLogNormal,
                 DistributionsAD.TuringDenseMvNormal,
                 DistributionsAD.TuringDiagMvNormal,
@@ -543,18 +551,19 @@
             end
 
             # Create `filldist` distribution
-            f_filldist = (θ...,) -> filldist(d.f(θ...), n)
+            f = d.f
+            f_filldist = (θ...,) -> filldist(f(θ...), n)
 
             # Create `arraydist` distribution
-            f_arraydist = (θ...,) -> arraydist([d.f(θ...) for _ in 1:n])
+            f_arraydist = (θ...,) -> arraydist([f(θ...) for _ in 1:n])
 
             # Matrix `x`
             x_mat = repeat(d.x, 1, n)
 
             # Test AD
+            @info "Testing: filldist($(nameof(D)), $n)"
             test_ad(
                 DistSpec(
-                    Symbol(:filldist, " (", d.name, ", $n)"),
                     f_filldist,
                     d.θ,
                     x_mat,
@@ -562,9 +571,9 @@
                     broken=d.broken,
                 )
             )
+            @info "Testing: arraydist($(nameof(D)), $n)"
             test_ad(
                 DistSpec(
-                    Symbol(:arraydist, " (", d.name, ", $n)"),
                     f_arraydist,
                     d.θ,
                     x_mat,
@@ -577,9 +586,9 @@
             x_vec_of_mat = [repeat(d.x, 1, n) for _ in 1:2]
 
             # Test AD
+            @info "Testing: filldist($(nameof(D)), $n, 2)"
             test_ad(
                 DistSpec(
-                    Symbol(:filldist, " (", d.name, ", $n, 2)"),
                     f_filldist,
                     d.θ,
                     x_vec_of_mat,
@@ -587,9 +596,9 @@
                     broken=d.broken,
                 )
             )
+            @info "Testing: arraydist($(nameof(D)), $n, 2)"
             test_ad(
                 DistSpec(
-                    Symbol(:arraydist, " (", d.name, ", $n, 2)"),
                     f_arraydist,
                     d.θ,
                     x_vec_of_mat,
