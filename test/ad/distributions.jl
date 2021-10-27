@@ -465,7 +465,7 @@
         for d in univariate_distributions
             d.x isa Number || continue
             D = dist_type(d)
-            D isa DiscreteDistribution && continue
+            D <: DiscreteDistribution && continue
 
             # Broken distributions
             D <: Union{VonMises,TriangularDist} && continue
@@ -537,7 +537,7 @@
         for d in multivariate_distributions
             d.x isa AbstractVector || continue
             D = dist_type(d)
-            D isa DiscreteDistribution && continue
+            D <: DiscreteDistribution && continue
 
             # Tests are failing for matrix covariance vectorized MvNormal
             if D <: Union{
