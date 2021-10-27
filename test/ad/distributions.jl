@@ -419,7 +419,7 @@
             for (i, sz) in enumerate(((n,), (n, 2)))
                 # Matrix case doesn't work for continuous distributions for some reason
                 # now but not too important (?!)
-                if length(sz) == 2 && D isa ContinuousDistribution
+                if length(sz) == 2 && D <: ContinuousDistribution
                     continue
                 end
 
