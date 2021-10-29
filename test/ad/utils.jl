@@ -295,6 +295,22 @@ end
 _logpdf(d::Distribution, x) = logpdf(d, x)
 _logpdf(d::UnivariateDistribution, x::AbstractArray) = logpdf.((d,), x)
 
+# change test errors and failures to broken results
+function errors_to_broken!(ts::Test.DefaultTestSet)
+    results = ts.results
+    efs = 0
+    for i in eachindex(results)
+        @inbounds t = results[i]
+        if t isa Test.DefaultTestSet
+            efs += errors_to_broken!(t)
+        elseif t isa Union{Test.Fail, Test.Error}
+            efs += 1
+            results[i] = Test.Broken(t.test_type, t.orig_expr)
+        end
+    end
+    return efs
+end
+
 # Run AD tests
 function test_ad(dist::DistSpec{D}; kwargs...) where {D}
     f = dist.f
@@ -313,19 +329,35 @@ function test_ad(dist::DistSpec{D}; kwargs...) where {D}
     # different dispatches etc., it is suffiient to just test derivatives of
     # all differentiable arguments at once
     if GROUP === "All" || GROUP === "Zygote"
-        @test loglikelihood_parameterized(unpack_x_θ, f, args...) ≈
-            sum_logpdf_parameterized(unpack_x_θ, f, args...)
+        # is Zygote broken?
+        zygote_broken = :Zygote in broken
 
-        # Zygote has type inference problems so we don't check it
-        try
+        # do not print errors immediately if tests are broken
+        print_state = Test.TESTSET_PRINT_ENABLE[]
+        Test.TESTSET_PRINT_ENABLE[] = !zygote_broken
+
+        testset =  @testset "Zygote: $(f(θ...)) at x=$x" begin
+            @test loglikelihood_parameterized(unpack_x_θ, f, args...) ≈
+                sum_logpdf_parameterized(unpack_x_θ, f, args...)
+
             for l in (loglikelihood_parameterized, sum_logpdf_parameterized)
+                # Zygote has type inference problems so we don't check it
                 test_rrule(
                     Zygote.ZygoteRuleConfig(), l, unpack_x_θ, f, args...;
                     rrule_f=rrule_via_ad, check_inferred=false, kwargs...
                 )
             end
-        catch
-            :Zygote in broken || rethrow()
+        end
+
+        # reset print setting
+        Test.TESTSET_PRINT_ENABLE[] = print_state
+
+        # ensure that passing tests are not marked as broken
+        if zygote_broken
+            efs = errors_to_broken!(testset)
+            if iszero(efs)
+                error("Zygote tests of $(f(θ...)) at x=$x passed unexpectedly, please mark not as broken")
+            end
         end
     end
 
