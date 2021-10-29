@@ -178,45 +178,36 @@ end
 dist_type(::DistSpec{D}) where {D} = D
 
 # Auxiliary methods for vectorizing parameters and samples and unflattening them
-# We fall back to `FDM.to_vec`
-# However, some implementations of it don't work with overload AD such as Tracker,
+# similar to `FDM.to_vec`
+# However, some implementations in FDM don't work with overload AD such as Tracker,
 # ForwardDiff, and ReverseDiff
 # Therefore we add a `_to_vec` function
-_to_vec(x) = FDM.to_vec(x)
 
-# Copied from FDM without type conversions and with `to_vec` replaced with `_to_vec`
-function _to_vec(x::DenseVector)
-    x_vecs_and_backs = map(_to_vec, x)
-    x_vecs, x_backs = first.(x_vecs_and_backs), last.(x_vecs_and_backs)
-    lengths = map(length, x_vecs)
-    sz = cumsum(map(length, x_vecs))
-    function Vector_from_vec(v)
-        map(x_backs, lengths, sz) do x_back, l, s
-            return x_back(v[s - l + 1:s])
-        end
+function _to_vec(x::Real)
+    function Real_from_vec(v)
+        length(v) == 1 || error("vector has incorrect number of elements")
+        return first(v)
     end
-    # handle empty x
-    x_vec = isempty(x_vecs) ? eltype(eltype(x_vecs))[] : reduce(vcat, x_vecs)
-    return x_vec, Vector_from_vec
+    return [x], Real_from_vec
 end
-function _to_vec(x::DenseArray)
-    x_vec, from_vec = _to_vec(vec(x))
-    function Array_from_vec(x_vec)
-        return reshape(from_vec(x_vec), size(x))
-    end
-    return x_vec, Array_from_vec
+
+function _to_vec(x::AbstractArray{<:Real})
+    sz = size(x)
+    Array_from_vec(v) = reshape(v, sz)
+    return vec(x), Array_from_vec
 end
-function _to_vec(x::Tuple)
+
+function _to_vec(x::Union{Tuple,AbstractVector{<:AbstractArray}})
     x_vecs_and_backs = map(_to_vec, x)
-    x_vecs, x_backs = first.(x_vecs_and_backs), last.(x_vecs_and_backs)
+    x_vecs, x_backs = map(first, x_vecs_and_backs), map(last, x_vecs_and_backs)
     lengths = map(length, x_vecs)
     sz = typeof(lengths)(cumsum(collect(lengths)))
-    function Tuple_from_vec(v)
+    function Tuple_or_Array_of_Array_from_vec(v)
         map(x_backs, lengths, sz) do x_back, l, s
-            return x_back(v[s - l + 1:s])
+            return x_back(v[(s - l + 1):s])
         end
     end
-    return reduce(vcat, x_vecs), Tuple_from_vec
+    return reduce(vcat, x_vecs), Tuple_or_Array_of_Array_from_vec
 end
 
 # Functor that fixes non-differentiable location `x` for discrete distributions
