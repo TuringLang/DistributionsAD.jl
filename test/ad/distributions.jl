@@ -26,6 +26,13 @@
     to_positive(x) = exp.(x)
     to_positive(x::AbstractArray{<:AbstractArray}) = to_positive.(x)
 
+    # The following definition should not be needed
+    # It seems there is a bug in the default `rand_tangent` that causes a
+    # StackOverflowError though
+    function ChainRulesTestUtils.rand_tangent(::Random.AbstractRNG, ::typeof(to_positive))
+        return NoTangent()
+    end
+
     # Tests that have a `broken` field can be executed but, according to FiniteDifferences,
     # fail to produce the correct result. These tests can be checked with `@test_broken`.
     univariate_distributions = DistSpec[
@@ -294,7 +301,11 @@
     # fail to produce the correct result. These tests can be checked with `@test_broken`.
     matrixvariate_distributions = DistSpec[
         # Matrix x
-        DistSpec((n1, n2) -> MatrixBeta(dim, n1, n2), (3.0, 3.0), A, to_beta_mat),
+        # We should use
+        # DistSpec((n1, n2) -> MatrixBeta(dim, n1, n2), (3.0, 3.0), A, to_beta_mat),
+        # but the default implementation of `rand_tangent` causes a StackOverflowError
+        # Thus we use the following workaround
+        DistSpec((n1, n2) -> MatrixBeta(3, n1, n2), (3.0, 3.0), A, to_beta_mat),
         DistSpec(() -> MatrixNormal(dim, dim), (), A, to_posdef, broken=(:Zygote,)),
         DistSpec((df, A) -> Wishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
         DistSpec((df, A) -> InverseWishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
@@ -302,8 +313,17 @@
         DistSpec((df, A) -> TuringInverseWishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
 
         # Vector of matrices x
+        # Also here we should use
+        # DistSpec(
+        #    (n1, n2) -> MatrixBeta(dim, n1, n2),
+        #    (3.0, 3.0),
+        #    [A, B],
+        #    x -> map(to_beta_mat, x),
+        #),
+        # but the default implementation of `rand_tangent` causes a StackOverflowError
+        # Thus we use the following workaround
         DistSpec(
-            (n1, n2) -> MatrixBeta(dim, n1, n2),
+            (n1, n2) -> MatrixBeta(3, n1, n2),
             (3.0, 3.0),
             [A, B],
             x -> map(to_beta_mat, x),
