@@ -295,21 +295,6 @@ end
 _logpdf(d::Distribution, x) = logpdf(d, x)
 _logpdf(d::UnivariateDistribution, x::AbstractArray) = logpdf.((d,), x)
 
-# change test errors and failures to broken results
-function errors_to_broken!(ts::Test.DefaultTestSet)
-    results = ts.results
-    efs = 0
-    for i in eachindex(results)
-        @inbounds t = results[i]
-        if t isa Test.DefaultTestSet
-            efs += errors_to_broken!(t)
-        elseif t isa Union{Test.Fail, Test.Error}
-            efs += 1
-            results[i] = Test.Broken(t.test_type, t.orig_expr)
-        end
-    end
-    return efs
-end
 
 # Run AD tests
 function test_ad(dist::DistSpec{D}; kwargs...) where {D}
@@ -332,32 +317,10 @@ function test_ad(dist::DistSpec{D}; kwargs...) where {D}
         # is Zygote broken?
         zygote_broken = :Zygote in broken
 
-        # do not print errors immediately if tests are broken
-        print_state = Test.TESTSET_PRINT_ENABLE[]
-        Test.TESTSET_PRINT_ENABLE[] = !zygote_broken
-
-        testset =  @testset "Zygote: $(f(θ...)) at x=$x" begin
-            @test loglikelihood_parameterized(unpack_x_θ, f, args...) ≈
-                sum_logpdf_parameterized(unpack_x_θ, f, args...)
-
-            for l in (loglikelihood_parameterized, sum_logpdf_parameterized)
-                # Zygote has type inference problems so we don't check it
-                test_rrule(
-                    Zygote.ZygoteRuleConfig(), l, unpack_x_θ, f, args...;
-                    rrule_f=rrule_via_ad, check_inferred=false, kwargs...
-                )
-            end
-        end
-
-        # reset print setting
-        Test.TESTSET_PRINT_ENABLE[] = print_state
-
-        # ensure that passing tests are not marked as broken
         if zygote_broken
-            efs = errors_to_broken!(testset)
-            if iszero(efs)
-                error("Zygote tests of $(f(θ...)) at x=$x passed unexpectedly, please mark not as broken")
-            end
+            testset_zygote_broken(dist, unpack_x_θ, args...; kwargs...)
+        else
+            testset_zygote(dist, unpack_x_θ, args...; kwargs...)
         end
     end
 
@@ -429,4 +392,67 @@ function test_ad(f, x, broken = (); rtol = 1e-6, atol = 1e-6)
     end
 
     return
+end
+
+function testset_zygote(distspec, unpack_x_θ, args...; kwargs...)
+    f = distspec.f
+    θ = distspec.θ
+    x = distspec.x
+
+    @testset "Zygote: $(f(θ...)) at x=$x" begin
+        @test loglikelihood_parameterized(unpack_x_θ, f, args...) ≈
+            sum_logpdf_parameterized(unpack_x_θ, f, args...)
+
+        for l in (loglikelihood_parameterized, sum_logpdf_parameterized)
+            # Zygote has type inference problems so we don't check it
+            test_rrule(
+                Zygote.ZygoteRuleConfig(), l, unpack_x_θ, f, args...;
+                rrule_f=rrule_via_ad, check_inferred=false, kwargs...
+            )
+        end
+    end
+end
+
+function testset_zygote_broken(args...; kwargs...)
+    # don't show test errors - tests are known to be broken :)
+    testset = suppress_stdout() do
+        testset_zygote(args...; kwargs...)
+    end
+
+    # change errors and fails to broken results, and count number of errors and fails
+    efs = errors_to_broken!(testset)
+
+    # ensure that passing tests are not marked as broken
+    if iszero(efs)
+        error("Zygote tests of $(f(θ...)) at x=$x passed unexpectedly, please mark not as broken")
+    end
+
+    return testset
+end
+
+# `redirect_stdout(f, devnull)` is only available in Julia >= 1.6
+function suppress_stdout(f)
+    @static if VERSION < v"1.6"
+        open((@static Sys.iswindows() ? "NUL" : "/dev/null"), "w") do devnull
+            redirect_stdout(f, devnull)
+        end
+    else
+        redirect_stdout(f, devnull)
+    end
+end
+
+# change test errors and failures to broken results
+function errors_to_broken!(ts::Test.DefaultTestSet)
+    results = ts.results
+    efs = 0
+    for i in eachindex(results)
+        @inbounds t = results[i]
+        if t isa Test.DefaultTestSet
+            efs += errors_to_broken!(t)
+        elseif t isa Union{Test.Fail, Test.Error}
+            efs += 1
+            results[i] = Test.Broken(t.test_type, t.orig_expr)
+        end
+    end
+    return efs
 end
