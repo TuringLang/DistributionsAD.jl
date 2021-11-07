@@ -10,23 +10,6 @@ if GROUP == "All" || GROUP == "ForwardDiff"
 end
 if GROUP == "All" || GROUP == "Zygote"
     @eval using Zygote
-
-    # Workaround for nested `nothing`
-    # Partly copied from https://github.com/FluxML/Zygote.jl/pull/1104
-    # TODO: Remove if https://github.com/FluxML/Zygote.jl/pull/1104 is merged
-    Zygote.z2d(::NTuple{<:Any,Nothing}, ::Tuple) = NoTangent()
-    function Zygote.z2d(delta::NamedTuple, primal::T) where T
-        fnames = fieldnames(T)
-        deltas = map(n -> get(delta, n, nothing), fnames)
-        primals = map(n -> getfield(primal, n), fnames)
-        inner = map(Zygote.z2d, deltas, primals)
-        return if inner isa Tuple{Vararg{AbstractZero}}
-            NoTangent()
-        else
-            backing = NamedTuple{fnames}(inner)
-            canonicalize(Tangent{T, typeof(backing)}(backing))
-        end
-    end
 end
 if GROUP == "All" || GROUP == "ReverseDiff"
     @eval using ReverseDiff
