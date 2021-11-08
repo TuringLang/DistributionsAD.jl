@@ -26,6 +26,13 @@
     to_positive(x) = exp.(x)
     to_positive(x::AbstractArray{<:AbstractArray}) = to_positive.(x)
 
+    # The following definition should not be needed
+    # It seems there is a bug in the default `rand_tangent` that causes a
+    # StackOverflowError though
+    function ChainRulesTestUtils.rand_tangent(::Random.AbstractRNG, ::typeof(to_positive))
+        return NoTangent()
+    end
+
     # Tests that have a `broken` field can be executed but, according to FiniteDifferences,
     # fail to produce the correct result. These tests can be checked with `@test_broken`.
     univariate_distributions = DistSpec[
@@ -68,13 +75,13 @@
         DistSpec(Arcsine, (1.0,), 0.5),
         DistSpec(Arcsine, (0.0, 2.0), 0.5),
 
-        DistSpec(Beta, (), 0.5),
-        DistSpec(Beta, (1.0,), 0.5),
-        DistSpec(Beta, (1.0, 2.0), 0.5),
+        DistSpec(Beta, (), 0.4),
+        DistSpec(Beta, (1.5,), 0.4),
+        DistSpec(Beta, (1.5, 2.0), 0.4),
 
-        DistSpec(BetaPrime, (), 0.5),
-        DistSpec(BetaPrime, (1.5,), 0.5),
-        DistSpec(BetaPrime, (1.5, 2.0), 0.5),
+        DistSpec(BetaPrime, (), 0.4),
+        DistSpec(BetaPrime, (1.5,), 0.4),
+        DistSpec(BetaPrime, (1.5, 2.0), 0.4),
 
         DistSpec(Biweight, (), 0.5),
         DistSpec(Biweight, (1.0,), 0.5),
@@ -104,9 +111,9 @@
         DistSpec(Frechet, (1.0,), 0.5),
         DistSpec(Frechet, (1.0, 2.0), 0.5),
 
-        DistSpec(Gamma, (), 0.5),
-        DistSpec(Gamma, (1.0,), 0.5),
-        DistSpec(Gamma, (1.0, 2.0), 0.5),
+        DistSpec(Gamma, (), 0.4),
+        DistSpec(Gamma, (1.5,), 0.4),
+        DistSpec(Gamma, (1.5, 2.0), 0.4),
 
         DistSpec(GeneralizedExtremeValue, (1.0, 1.0, 1.0), 0.5),
 
@@ -230,52 +237,45 @@
 
         # Vector x
         DistSpec((m, A) -> MvNormal(m, to_posdef(A)), (a, A), b),
-        DistSpec(MvNormal, (a, b), c),
         DistSpec((m, s) -> MvNormal(m, to_posdef_diagonal(s)), (a, b), c),
-        DistSpec(MvNormal, (a, alpha), b),
         DistSpec((m, s) -> MvNormal(m, s^2 * I), (a, alpha), b),
         DistSpec(A -> MvNormal(to_posdef(A)), (A,), a),
-        DistSpec(MvNormal, (a,), b),
         DistSpec(s -> MvNormal(to_posdef_diagonal(s)), (a,), b),
-        DistSpec(s -> MvNormal(dim, s), (alpha,), a),
+        DistSpec(s -> MvNormal(zeros(dim), s^2 * I), (alpha,), a),
         DistSpec((m, A) -> TuringMvNormal(m, to_posdef(A)), (a, A), b),
-        DistSpec(TuringMvNormal, (a, b), c),
         DistSpec((m, s) -> TuringMvNormal(m, to_posdef_diagonal(s)), (a, b), c),
-        DistSpec(TuringMvNormal, (a, alpha), b),
         DistSpec((m, s) -> TuringMvNormal(m, s^2 * I), (a, alpha), b),
         DistSpec(A -> TuringMvNormal(to_posdef(A)), (A,), a),
-        DistSpec(TuringMvNormal, (a,), b),
         DistSpec(s -> TuringMvNormal(to_posdef_diagonal(s)), (a,), b),
-        DistSpec(s -> TuringMvNormal(dim, s), (alpha,), a),
+        DistSpec(s -> TuringMvNormal(zeros(dim), s^2 * I), (alpha,), a),
         DistSpec((m, A) -> MvLogNormal(m, to_posdef(A)), (a, A), b, to_positive),
-        DistSpec(MvLogNormal, (a, b), c, to_positive),
         DistSpec((m, s) -> MvLogNormal(m, to_posdef_diagonal(s)), (a, b), c, to_positive),
-        DistSpec(MvLogNormal, (a, alpha), b, to_positive),
+        DistSpec((m, s) -> MvLogNormal(m, s^2 * I), (a, alpha), b, to_positive),
         DistSpec(A -> MvLogNormal(to_posdef(A)), (A,), a, to_positive),
-        DistSpec(MvLogNormal, (a,), b, to_positive),
         DistSpec(s -> MvLogNormal(to_posdef_diagonal(s)), (a,), b, to_positive),
-        DistSpec(s -> MvLogNormal(dim, s), (alpha,), a, to_positive),
+        DistSpec(s -> MvLogNormal(zeros(dim), s^2 * I), (alpha,), a, to_positive),
 
         DistSpec(alpha -> Dirichlet(to_positive(alpha)), (a,), b, to_simplex),
 
         # Matrix case
-        DistSpec(MvNormal, (a, b), A),
-        DistSpec((m, s) -> MvNormal(m, to_posdef_diagonal(s)), (a, b), A),
-        DistSpec(MvNormal, (a, alpha), A),
-        DistSpec((m, s) -> MvNormal(m, s^2 * I), (a, alpha), A),
-        DistSpec(MvNormal, (a,), A),
-        DistSpec(s -> MvNormal(to_posdef_diagonal(s)), (a,), A),
-        DistSpec(s -> MvNormal(dim, s), (alpha,), A),
         DistSpec((m, A) -> MvNormal(m, to_posdef(A)), (a, A), B),
+        DistSpec((m, s) -> MvNormal(m, to_posdef_diagonal(s)), (a, b), A),
+        DistSpec((m, s) -> MvNormal(m, s^2 * I), (a, alpha), A),
         DistSpec(A -> MvNormal(to_posdef(A)), (A,), B),
-        DistSpec(MvLogNormal, (a, b), A, to_positive),
-        DistSpec((m, s) -> MvLogNormal(m, to_posdef_diagonal(s)), (a, b), A, to_positive),
-        DistSpec(MvLogNormal, (a, alpha), A, to_positive),
-        DistSpec(MvLogNormal, (a,), A, to_positive),
-        DistSpec(s -> MvLogNormal(to_posdef_diagonal(s)), (a,), A, to_positive),
-        DistSpec(s -> MvLogNormal(dim, s), (alpha,), A, to_positive),
+        DistSpec(s -> MvNormal(to_posdef_diagonal(s)), (a,), A),
+        DistSpec(s -> MvNormal(zeros(dim), s^2 * I), (alpha,), A),
+        DistSpec((m, A) -> TuringMvNormal(m, to_posdef(A)), (a, A), B),
+        DistSpec((m, s) -> TuringMvNormal(m, to_posdef_diagonal(s)), (a, b), A),
+        DistSpec((m, s) -> TuringMvNormal(m, s^2 * I), (a, alpha), A),
+        DistSpec(A -> TuringMvNormal(to_posdef(A)), (A,), B),
+        DistSpec(s -> TuringMvNormal(to_posdef_diagonal(s)), (a,), A),
+        DistSpec(s -> TuringMvNormal(zeros(dim), s^2 * I), (alpha,), A),
         DistSpec((m, A) -> MvLogNormal(m, to_posdef(A)), (a, A), B, to_positive),
+        DistSpec((m, s) -> MvLogNormal(m, to_posdef_diagonal(s)), (a, b), A, to_positive),
+        DistSpec((m, s) -> MvLogNormal(m, s^2 * I), (a, alpha), A, to_positive),
         DistSpec(A -> MvLogNormal(to_posdef(A)), (A,), B, to_positive),
+        DistSpec(s -> MvLogNormal(to_posdef_diagonal(s)), (a,), A, to_positive),
+        DistSpec(s -> MvLogNormal(zeros(dim), s^2 * I), (alpha,), A, to_positive),
 
         DistSpec(alpha -> Dirichlet(to_positive(alpha)), (a,), A, to_simplex),
     ]
@@ -284,24 +284,28 @@
     broken_multivariate_distributions = DistSpec[
         # Dispatch error
         DistSpec((m, A) -> MvNormalCanon(m, to_posdef(A)), (a, A), b),
-        DistSpec(MvNormalCanon, (a, b), c),
-        DistSpec(MvNormalCanon, (a, alpha), b),
+        DistSpec((m, p) -> MvNormalCanon(m, to_posdef_diagonal(p)), (a, b), c),
+        DistSpec((m, p) -> MvNormalCanon(m, p^2 * I), (a, alpha), b),
         DistSpec(A -> MvNormalCanon(to_posdef(A)), (A,), a),
-        DistSpec(MvNormalCanon, (a,), b),
-        DistSpec(s -> MvNormalCanon(dim, s), (alpha,), a),
+        DistSpec(p -> MvNormalCanon(to_posdef_diagonal(p)), (a,), b),
+        DistSpec(p -> MvNormalCanon(zeros(dim), p^2 * I), (alpha,), a),
         DistSpec((m, A) -> MvNormalCanon(m, to_posdef(A)), (a, A), B),
-        DistSpec(MvNormalCanon, (a, b), A),
-        DistSpec(MvNormalCanon, (a, alpha), A),
+        DistSpec((m, p) -> MvNormalCanon(m, to_posdef_diagonal(p)), (a, b), A),
+        DistSpec((m, p) -> MvNormalCanon(m, p^2 * I), (a, alpha), A),
         DistSpec(A -> MvNormalCanon(to_posdef(A)), (A,), B),
-        DistSpec(MvNormalCanon, (a,), A),
-        DistSpec(s -> MvNormalCanon(dim, s), (alpha,), A),
+        DistSpec(p -> MvNormalCanon(to_posdef_diagonal(p)), (a,), A),
+        DistSpec(p -> MvNormalCanon(zeros(dim), p^2 * I), (alpha,), A),
     ]
 
     # Tests that have a `broken` field can be executed but, according to FiniteDifferences,
     # fail to produce the correct result. These tests can be checked with `@test_broken`.
     matrixvariate_distributions = DistSpec[
         # Matrix x
-        DistSpec((n1, n2) -> MatrixBeta(dim, n1, n2), (3.0, 3.0), A, to_beta_mat),
+        # We should use
+        # DistSpec((n1, n2) -> MatrixBeta(dim, n1, n2), (3.0, 3.0), A, to_beta_mat),
+        # but the default implementation of `rand_tangent` causes a StackOverflowError
+        # Thus we use the following workaround
+        DistSpec((n1, n2) -> MatrixBeta(3, n1, n2), (3.0, 3.0), A, to_beta_mat),
         DistSpec(() -> MatrixNormal(dim, dim), (), A, to_posdef, broken=(:Zygote,)),
         DistSpec((df, A) -> Wishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
         DistSpec((df, A) -> InverseWishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
@@ -309,8 +313,17 @@
         DistSpec((df, A) -> TuringInverseWishart(df, to_posdef(A)), (3.0, A), B, to_posdef),
 
         # Vector of matrices x
+        # Also here we should use
+        # DistSpec(
+        #    (n1, n2) -> MatrixBeta(dim, n1, n2),
+        #    (3.0, 3.0),
+        #    [A, B],
+        #    x -> map(to_beta_mat, x),
+        #),
+        # but the default implementation of `rand_tangent` causes a StackOverflowError
+        # Thus we use the following workaround
         DistSpec(
-            (n1, n2) -> MatrixBeta(dim, n1, n2),
+            (n1, n2) -> MatrixBeta(3, n1, n2),
             (3.0, 3.0),
             [A, B],
             x -> map(to_beta_mat, x),
@@ -371,6 +384,7 @@
         println("\nTesting: Univariate distributions\n")
 
         for d in univariate_distributions
+            @info "Testing: $(nameof(dist_type(d)))"
             test_ad(d)
         end
     end
@@ -379,6 +393,7 @@
         println("\nTesting: Multivariate distributions\n")
 
         for d in multivariate_distributions
+            @info "Testing: $(nameof(dist_type(d)))"
             test_ad(d)
         end
 
@@ -388,41 +403,43 @@
             d.x isa Number || continue
 
             # Broken distributions
-            d.f(d.θ...) isa Union{VonMises,TriangularDist} && continue
+            D = dist_type(d)
+            D <: Union{VonMises,TriangularDist} && continue
 
             # Skellam only fails in these tests with ReverseDiff
             # Ref: https://github.com/TuringLang/DistributionsAD.jl/issues/126
             # PoissonBinomial fails with Zygote
             # Matrix case does not work with Skellam:
             # https://github.com/TuringLang/DistributionsAD.jl/pull/172#issuecomment-853721493
-            filldist_broken = if d.f(d.θ...) isa Skellam
+            filldist_broken = if D <: Skellam
                 ((d.broken..., :Zygote, :ReverseDiff), (d.broken..., :Zygote, :ReverseDiff))
-            elseif d.f(d.θ...) isa PoissonBinomial
+            elseif D <: PoissonBinomial
                 ((d.broken..., :Zygote), (d.broken..., :Zygote))
-            elseif d.f(d.θ...) isa Chernoff
+            elseif D <: Chernoff
                 # Zygote is not broken with `filldist`
                 ((), ())
             else
                 (d.broken, d.broken)
             end
-            arraydist_broken = if d.f(d.θ...) isa PoissonBinomial
+            arraydist_broken = if D <: PoissonBinomial
                 ((d.broken..., :Zygote), (d.broken..., :Zygote))
             else
                 (d.broken, d.broken)
             end
 
             # Create `filldist` distribution
-            f_filldist = (θ...,) -> filldist(d.f(θ...), n)
+            f = d.f
+            f_filldist = (θ...,) -> filldist(f(θ...), n)
             d_filldist = f_filldist(d.θ...)
 
             # Create `arraydist` distribution
-            f_arraydist = (θ...,) -> arraydist([d.f(θ...) for _ in 1:n])
+            f_arraydist = (θ...,) -> arraydist([f(θ...) for _ in 1:n])
             d_arraydist = f_arraydist(d.θ...)
 
             for (i, sz) in enumerate(((n,), (n, 2)))
                 # Matrix case doesn't work for continuous distributions for some reason
                 # now but not too important (?!)
-                if length(sz) == 2 && Distributions.value_support(typeof(d)) === Continuous
+                if length(sz) == 2 && D <: ContinuousDistribution
                     continue
                 end
 
@@ -430,9 +447,9 @@
                 x = fill(d.x, sz)
 
                 # Test AD
+                @info "Testing: filldist($(nameof(D)), $sz)"
                 test_ad(
                     DistSpec(
-                        Symbol(:filldist, " (", d.name, ", $sz)"),
                         f_filldist,
                         d.θ,
                         x,
@@ -440,9 +457,10 @@
                         broken=filldist_broken[i],
                     )
                 )
+
+                @info "Testing: arraydist($(nameof(D)), $sz)"
                 test_ad(
                     DistSpec(
-                        Symbol(:arraydist, " (", d.name, ", $sz)"),
                         f_arraydist,
                         d.θ,
                         x,
@@ -458,6 +476,7 @@
         println("\nTesting: Matrixvariate distributions\n")
 
         for d in matrixvariate_distributions
+            @info "Testing: $(nameof(dist_type(d)))"
             test_ad(d)
         end
 
@@ -465,27 +484,30 @@
         n = (2, 2) # always use 2 x 2 distributions
         for d in univariate_distributions
             d.x isa Number || continue
-            Distributions.value_support(typeof(d)) === Discrete && continue
+            D = dist_type(d)
+            D <: DiscreteDistribution && continue
 
             # Broken distributions
-            d.f(d.θ...) isa Union{VonMises,TriangularDist} && continue
+            D <: Union{VonMises,TriangularDist} && continue
 
             # Create `filldist` distribution
-            f_filldist = (θ...,) -> filldist(d.f(θ...), n...)
+            f = d.f
+            f_filldist = (θ...,) -> filldist(f(θ...), n...)
 
             # Create `arraydist` distribution
-            f_arraydist = (θ...,) -> arraydist(fill(d.f(θ...), n...))
+            # Zygote's fill definition does not like non-numbers, so we use a workaround
+            f_arraydist = (θ...,) -> arraydist(reshape([f(θ...) for _ in 1:prod(n)], n))
 
             # Matrix `x`
             x_mat = fill(d.x, n)
 
             # Zygote is not broken with `filldist` + Chernoff
-            filldist_broken = d.f(d.θ...) isa Chernoff ? () : d.broken
+            filldist_broken = D <: Chernoff ? () : d.broken
 
             # Test AD
+            @info "Testing: filldist($(nameof(D)), $n)"
             test_ad(
                 DistSpec(
-                    Symbol(:filldist, " (", d.name, ", $n)"),
                     f_filldist,
                     d.θ,
                     x_mat,
@@ -493,9 +515,9 @@
                     broken=filldist_broken,
                 )
             )
+            @info "Testing: arraydist($(nameof(D)), $n)"
             test_ad(
                 DistSpec(
-                    Symbol(:arraydist, " (", d.name, ", $n)"),
                     f_arraydist,
                     d.θ,
                     x_mat,
@@ -508,9 +530,9 @@
             x_vec_of_mat = [fill(d.x, n) for _ in 1:2]
 
             # Test AD
+            @info "Testing: filldist($(nameof(D)), $n, 2)"
             test_ad(
                 DistSpec(
-                    Symbol(:filldist, " (", d.name, ", $n, 2)"),
                     f_filldist,
                     d.θ,
                     x_vec_of_mat,
@@ -518,9 +540,9 @@
                     broken=filldist_broken,
                 )
             )
+            @info "Testing: arraydist($(nameof(D)), $n, 2)"
             test_ad(
                 DistSpec(
-                    Symbol(:arraydist, " (", d.name, ", $n, 2)"),
                     f_arraydist,
                     d.θ,
                     x_vec_of_mat,
@@ -530,15 +552,15 @@
             )
         end
 
-
         # test `filldist` and `arraydist` distributions of multivariate distributions
         n = 2 # always use two distributions
         for d in multivariate_distributions
             d.x isa AbstractVector || continue
-            Distributions.value_support(typeof(d)) === Discrete && continue
+            D = dist_type(d)
+            D <: DiscreteDistribution && continue
 
             # Tests are failing for matrix covariance vectorized MvNormal
-            if d.f(d.θ...) isa Union{
+            if D <: Union{
                 MvNormal,MvLogNormal,
                 DistributionsAD.TuringDenseMvNormal,
                 DistributionsAD.TuringDiagMvNormal,
@@ -549,18 +571,19 @@
             end
 
             # Create `filldist` distribution
-            f_filldist = (θ...,) -> filldist(d.f(θ...), n)
+            f = d.f
+            f_filldist = (θ...,) -> filldist(f(θ...), n)
 
             # Create `arraydist` distribution
-            f_arraydist = (θ...,) -> arraydist(fill(d.f(θ...), n))
+            f_arraydist = (θ...,) -> arraydist([f(θ...) for _ in 1:n])
 
             # Matrix `x`
             x_mat = repeat(d.x, 1, n)
 
             # Test AD
+            @info "Testing: filldist($(nameof(D)), $n)"
             test_ad(
                 DistSpec(
-                    Symbol(:filldist, " (", d.name, ", $n)"),
                     f_filldist,
                     d.θ,
                     x_mat,
@@ -568,9 +591,9 @@
                     broken=d.broken,
                 )
             )
+            @info "Testing: arraydist($(nameof(D)), $n)"
             test_ad(
                 DistSpec(
-                    Symbol(:arraydist, " (", d.name, ", $n)"),
                     f_arraydist,
                     d.θ,
                     x_mat,
@@ -583,9 +606,9 @@
             x_vec_of_mat = [repeat(d.x, 1, n) for _ in 1:2]
 
             # Test AD
+            @info "Testing: filldist($(nameof(D)), $n, 2)"
             test_ad(
                 DistSpec(
-                    Symbol(:filldist, " (", d.name, ", $n, 2)"),
                     f_filldist,
                     d.θ,
                     x_vec_of_mat,
@@ -593,9 +616,9 @@
                     broken=d.broken,
                 )
             )
+            @info "Testing: arraydist($(nameof(D)), $n, 2)"
             test_ad(
                 DistSpec(
-                    Symbol(:arraydist, " (", d.name, ", $n, 2)"),
                     f_arraydist,
                     d.θ,
                     x_vec_of_mat,

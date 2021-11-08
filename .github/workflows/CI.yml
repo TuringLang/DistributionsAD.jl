@@ -1,4 +1,4 @@
-name: AD tests
+name: CI
 
 on:
   push:
@@ -6,10 +6,15 @@ on:
       - master
   pull_request:
 
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
 jobs:
   test:
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.version == 'nightly' }}
     strategy:
       matrix:
         version:
@@ -19,7 +24,8 @@ jobs:
           - ubuntu-latest
         arch:
           - x64
-        AD:
+        group:
+          - Others
           - ForwardDiff
           - Tracker
           - ReverseDiff
@@ -28,27 +34,42 @@ jobs:
           - version: '1'
             os: macOS-latest
             arch: x64
-            AD: ForwardDiff
+            group: Others
           - version: '1'
             os: macOS-latest
             arch: x64
-            AD: Tracker
+            group: ForwardDiff
           - version: '1'
             os: macOS-latest
             arch: x64
-            AD: ReverseDiff
+            group: Tracker
           - version: '1'
             os: macOS-latest
             arch: x64
-            AD: Zygote
+            group: ReverseDiff
+          - version: '1'
+            os: macOS-latest
+            arch: x64
+            group: Zygote
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
+      - uses: actions/cache@v1
+        env:
+          cache-name: cache-artifacts
+        with:
+          path: ~/.julia/artifacts
+          key: ${{ runner.os }}-test-${{ env.cache-name }}-${{ hashFiles('**/Project.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-test-${{ env.cache-name }}-
+            ${{ runner.os }}-test-
+            ${{ runner.os }}-
       - uses: julia-actions/julia-buildpkg@latest
       - uses: julia-actions/julia-runtest@latest
+        with:
+          coverage: false
         env:
-          GROUP: AD
-          AD: ${{ matrix.AD }}
+          GROUP: ${{ matrix.group }}

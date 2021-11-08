@@ -1,11 +1,3 @@
-# Zygote fill has issues with non-numbers
-ZygoteRules.@adjoint function fill(x::T, dims...) where {T}
-    return ZygoteRules.pullback(x, dims...) do x, dims...
-        return reshape([x for i in 1:prod(dims)], dims)
-    end
-end
-
-
 ## Uniform ##
 
 ZygoteRules.@adjoint function Distributions.Uniform(args...)
