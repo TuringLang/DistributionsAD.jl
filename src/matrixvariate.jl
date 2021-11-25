@@ -109,7 +109,7 @@ end
 
 #### Sampling
 function Distributions._rand!(rng::AbstractRNG, d::TuringWishart, A::AbstractMatrix)
-    Distributions._wishart_genA!(rng, Distributions.dim(d), d.df, A)
+    Distributions._wishart_genA!(rng, A, d.df)
     unwhiten!(d.chol, A)
     A .= A * A'
 end
