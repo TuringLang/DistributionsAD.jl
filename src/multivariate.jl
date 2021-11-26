@@ -45,7 +45,7 @@ function Distributions._rand!(
     @inbounds for (i, αi) in zip(eachindex(x), d.alpha)
         x[i] = rand(rng, Gamma(αi))
     end
-    Distributions.multiply!(x, inv(sum(x))) # this returns x
+    lmul!(inv(sum(x)), x) # this returns x
 end
 function Distributions._rand!(
     rng::AbstractRNG,
@@ -53,7 +53,7 @@ function Distributions._rand!(
     x::AbstractVector{<:Real}
 )
     rand!(rng, Gamma(FillArrays.getindex_value(d.alpha)), x)
-    Distributions.multiply!(x, inv(sum(x))) # this returns x
+    lmul!(inv(sum(x)), x) # this returns x
 end
 
 function Distributions._logpdf(d::TuringDirichlet, x::AbstractVector{<:Real})
@@ -246,10 +246,14 @@ MvLogNormal(d::TuringDiagMvNormal) = TuringMvLogNormal(d)
 MvLogNormal(d::TuringScalMvNormal) = TuringMvLogNormal(d)
 Distributions.length(d::TuringMvLogNormal) = length(d.normal)
 function Distributions.rand(rng::Random.AbstractRNG, d::TuringMvLogNormal)
-    return Distributions.exp!(rand(rng, d.normal))
+    x = rand(rng, d.normal)
+    map!(exp, x, x)
+    return x
 end
 function Distributions.rand(rng::Random.AbstractRNG, d::TuringMvLogNormal, n::Int)
-    return Distributions.exp!(rand(rng, d.normal, n))
+    x = rand(rng, d.normal, n)
+    map!(exp, x, x)
+    return x
 end
 
 function Distributions._logpdf(d::TuringMvLogNormal, x::AbstractVector{T}) where {T<:Real}
