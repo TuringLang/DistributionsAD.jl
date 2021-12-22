@@ -1,6 +1,6 @@
 name = "DistributionsAD"
 uuid = "ced4e74d-a319-5a8a-b0ac-84af2272839c"
-version = "0.6.33"
+version = "0.6.35"
 
 [deps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
@@ -27,7 +27,7 @@ ChainRules = "1"
 ChainRulesCore = "1"
 Compat = "3.6"
 DiffRules = "0.1, 1.0"
-Distributions = "0.25.15"
+Distributions = "0.25.32"
 FillArrays = "0.8, 0.9, 0.10, 0.11, 0.12"
 NaNMath = "0.3"
 PDMats = "0.9, 0.10, 0.11"

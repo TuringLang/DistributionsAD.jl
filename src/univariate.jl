@@ -26,11 +26,6 @@ function uniformlogpdf(a, b, x)
     end
 end
 
-if VERSION < v"1.2"
-    Base.inv(::Irrational{:π}) = 1/π
-end
-
-
 ## PoissonBinomial ##
 
 struct TuringPoissonBinomial{T<:Real, TV1<:AbstractVector{T}, TV2<:AbstractVector} <: DiscreteUnivariateDistribution
