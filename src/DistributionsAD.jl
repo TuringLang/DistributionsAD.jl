@@ -2,7 +2,6 @@ module DistributionsAD
 
 using PDMats, 
       LinearAlgebra, 
-      Distributions, 
       Random, 
       SpecialFunctions,
       StatsFuns,
@@ -12,7 +11,8 @@ using PDMats,
       ChainRules,  # needed for `ChainRules.chol_blocked_rev`
       ChainRulesCore,
       FillArrays,
-      Adapt
+      Adapt,
+      Reexport
 
 using SpecialFunctions: logabsgamma, digamma
 using LinearAlgebra: copytri!, AbstractTriangular
@@ -34,6 +34,8 @@ import Distributions: MvNormal,
                       Binomial,
                       BetaBinomial,
                       Erlang
+
+@reexport using Distributions
 
 export TuringScalMvNormal,
        TuringDiagMvNormal,
