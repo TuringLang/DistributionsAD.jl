@@ -1,7 +1,6 @@
 using DistributionsAD
 
 using Combinatorics
-using Distributions
 using PDMats
 
 using Random, LinearAlgebra, Test
