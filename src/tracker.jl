@@ -208,35 +208,32 @@ adapt_randn(rng::AbstractRNG, x::TrackedArray, dims...) = adapt_randn(rng, data(
 
 ## Uniform ##
 
-Distributions.Uniform(a::TrackedReal, b::Real) = TuringUniform{TrackedReal}(a, b)
-Distributions.Uniform(a::Real, b::TrackedReal) = TuringUniform{TrackedReal}(a, b)
-Distributions.Uniform(a::TrackedReal, b::TrackedReal) = TuringUniform{TrackedReal}(a, b)
-Distributions.logpdf(d::Uniform, x::TrackedReal) = uniformlogpdf(d.a, d.b, x)
+logpdf(d::Uniform, x::TrackedReal) = track(uniformlogpdf, d.a, d.b, x)
+logpdf(d::Uniform{<:TrackedReal}, x::Real) = track(uniformlogpdf, d.a, d.b, x)
+logpdf(d::Uniform{<:TrackedReal}, x::TrackedReal) = track(uniformlogpdf, d.a, d.b, x)
 
-uniformlogpdf(a::Real, b::Real, x::TrackedReal) = track(uniformlogpdf, a, b, x)
-uniformlogpdf(a::TrackedReal, b::TrackedReal, x::Real) = track(uniformlogpdf, a, b, x)
-uniformlogpdf(a::TrackedReal, b::TrackedReal, x::TrackedReal) = track(uniformlogpdf, a, b, x)
-@grad function uniformlogpdf(a, b, x)
-    # compute log pdf
-    diff = data(b) - data(a)
-    insupport = a <= data(x) <= b
-    lp = insupport ? -log(diff) : log(zero(diff))
+# avoid any possible promotions of the outer constructor
+uniformlogpdf(a::T, b::T, x::Real) where {T<:Real} = logpdf(Uniform{T}(a, b), x)
+@grad function uniformlogpdf(_a::T, _b::T, _x::Real) where {T<:Real}
+    # Compute log probability
+    a = data(_a)
+    b = data(_b)
+    x = data(_x)
+    insupport = a <= x <= b
+    diff = b - a
+    Ω = insupport ? -log(diff) : log(zero(diff))
 
-    function pullback(Δ)
-        z = zero(x) * Δ
-        if insupport
-            c = Δ / diff
-            return c, -c, z
-        else
-            c = Δ / one(diff)
-            cNaN = oftype(c, NaN)
-            return cNaN, cNaN, oftype(z, NaN)
+    # Define pullback
+    function uniformlogpdf_pullback(Δ)
+        Δa = Δ / diff
+        if !insupport
+            Δa = zero(Δa)
         end
+        return Δa, -Δa, zero(x)
     end
 
-    return lp, pullback
+    return Ω, uniformlogpdf_pullback
 end
-
 
 ## Binomial ##
 

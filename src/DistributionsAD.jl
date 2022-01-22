@@ -1,9 +1,9 @@
 module DistributionsAD
 
-using PDMats, 
-      LinearAlgebra, 
-      Distributions, 
-      Random, 
+using PDMats,
+      LinearAlgebra,
+      Distributions,
+      Random,
       SpecialFunctions,
       StatsFuns,
       Compat,
@@ -16,20 +16,20 @@ using PDMats,
 
 using SpecialFunctions: logabsgamma, digamma
 using LinearAlgebra: copytri!, AbstractTriangular
-using Distributions: AbstractMvLogNormal, 
+using Distributions: AbstractMvLogNormal,
                      ContinuousMultivariateDistribution
 using Base.Iterators: drop
 
 import StatsBase
-import StatsFuns: logsumexp, 
-                  binomlogpdf, 
-                  nbinomlogpdf, 
-                  poislogpdf, 
+import StatsFuns: logsumexp,
+                  binomlogpdf,
+                  nbinomlogpdf,
+                  poislogpdf,
                   nbetalogpdf
-import Distributions: MvNormal, 
-                      MvLogNormal, 
-                      logpdf, 
-                      quantile, 
+import Distributions: MvNormal,
+                      MvLogNormal,
+                      logpdf,
+                      quantile,
                       PoissonBinomial,
                       Binomial,
                       BetaBinomial,
@@ -53,7 +53,6 @@ include("multivariate.jl")
 include("matrixvariate.jl")
 include("flatten.jl")
 
-include("chainrules.jl")
 include("zygote.jl")
 
 @init begin

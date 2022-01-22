@@ -8,8 +8,8 @@ function getexpr(Tdist)
     x = gensym()
     fnames = fieldnames(Tdist)
     flattened_args = Expr(:tuple, [:(dist.$f) for f in fnames]...)
-    func = Expr(:->, 
-                Expr(:tuple, fnames..., x), 
+    func = Expr(:->,
+                Expr(:tuple, fnames..., x),
                 Expr(:block,
                     Expr(:call, :logpdf,
                         Expr(:call, :($Tdist), fnames...),
@@ -58,7 +58,6 @@ const flattened_dists = [   Bernoulli,
                             TDist,
                             TriangularDist,
                             Triweight,
-                            TuringUniform,
                         ]
 for T in flattened_dists
     @eval toflatten(::$T) = true

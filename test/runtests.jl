@@ -7,7 +7,7 @@ using PDMats
 using Random, LinearAlgebra, Test
 
 using Distributions: meanlogdet
-using DistributionsAD: TuringUniform, TuringMvNormal, TuringMvLogNormal,
+using DistributionsAD: TuringMvNormal, TuringMvLogNormal,
                        TuringPoissonBinomial, TuringDirichlet
 using StatsBase: entropy
 using StatsFuns: StatsFuns, logsumexp, logistic
@@ -25,6 +25,5 @@ end
 if GROUP == "All" || GROUP in ("ForwardDiff", "Zygote", "ReverseDiff", "Tracker")
     include("ad/utils.jl")
     include("ad/others.jl")
-    include("ad/chainrules.jl")
     include("ad/distributions.jl")
 end
