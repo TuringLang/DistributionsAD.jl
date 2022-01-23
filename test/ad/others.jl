@@ -1,9 +1,5 @@
 @testset "AD: Others" begin
     if GROUP == "All" || GROUP == "Tracker"
-        @testset "TuringUniform" begin
-            @test logpdf(TuringUniform(), param(0.5)) == 0
-        end
-
         @testset "Semicircle" begin
             @test Tracker.data(logpdf(Semicircle(1.0), param(0.5))) == logpdf(Semicircle(1.0), 0.5)
         end
@@ -17,7 +13,7 @@
     @testset "zygote_ldiv" begin
         A = to_posdef(rand(3, 3))
         B = to_posdef(rand(3, 3))
-        
+
         test_reverse_mode_ad(randn(3, 3), A, B) do A, B
             return DistributionsAD.zygote_ldiv(A, B)
         end
@@ -84,7 +80,7 @@
                     v = rand(rng, T, n)
                     d = rand(Int, n)
                     tp = ReverseDiff.InstructionTape()
-                    x = ReverseDiff.TrackedArray(v, d, tp) 
+                    x = ReverseDiff.TrackedArray(v, d, tp)
                     test_adapt_randn(rng, x, T, dims...)
                 end
             end

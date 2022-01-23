@@ -1,31 +1,3 @@
-## Uniform ##
-
-struct TuringUniform{T} <: ContinuousUnivariateDistribution
-    a::T
-    b::T
-end
-TuringUniform() = TuringUniform(0.0, 1.0)
-function TuringUniform(a::Int, b::Int)
-    return TuringUniform{Float64}(Float64(a), Float64(b))
-end
-function TuringUniform(a::Real, b::Real)
-    T = promote_type(typeof(a), typeof(b))
-    return TuringUniform{T}(T(a), T(b))
-end
-Distributions.logpdf(d::TuringUniform, x::Real) = uniformlogpdf(d.a, d.b, x)
-
-Base.minimum(d::TuringUniform) = d.a
-Base.maximum(d::TuringUniform) = d.b
-
-function uniformlogpdf(a, b, x)
-    diff = b - a
-    if a <= x <= b
-        return -log(diff)
-    else
-        return log(zero(diff))
-    end
-end
-
 ## PoissonBinomial ##
 
 struct TuringPoissonBinomial{T<:Real, TV1<:AbstractVector{T}, TV2<:AbstractVector} <: DiscreteUnivariateDistribution

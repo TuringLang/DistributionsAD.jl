@@ -201,9 +201,6 @@
         DistSpec(Uniform, (), 0.5),
         DistSpec(Uniform, (alpha, alpha + beta), alpha + beta * gamma),
 
-        DistSpec(TuringUniform, (), 0.5),
-        DistSpec(TuringUniform, (alpha, alpha + beta), alpha + beta * gamma),
-
         DistSpec(VonMises, (), 1.0),
 
         DistSpec(Weibull, (), 1.0),

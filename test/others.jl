@@ -96,10 +96,6 @@
         end
     end
 
-    @testset "TuringUniform" begin
-        @test logpdf(TuringUniform(), 0.5) == 0
-    end
-
     @testset "TuringPoissonBinomial" begin
         d1 = TuringPoissonBinomial([0.5, 0.5])
         d2 = PoissonBinomial([0.5, 0.5])

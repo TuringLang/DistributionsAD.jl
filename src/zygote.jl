@@ -1,9 +1,3 @@
-## Uniform ##
-
-ZygoteRules.@adjoint function Distributions.Uniform(args...)
-    return ZygoteRules.pullback(TuringUniform, args...)
-end
-
 ## Product
 
 # Tests with `Kolmogorov` seem to fail otherwise?!
