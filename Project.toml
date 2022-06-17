@@ -23,7 +23,7 @@ ZygoteRules = "700de1a5-db45-46bc-99cf-38207098b444"
 
 [compat]
 Adapt = "2, 3"
-ChainRules = "1"
+ChainRules = "1.35.3"
 ChainRulesCore = "1"
 Compat = "3.6, 4"
 DiffRules = "0.1, 1.0"
