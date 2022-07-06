@@ -30,21 +30,18 @@ end
 function _flat_logpdf(dist, x)
     if toflatten(dist)
         f, args = flatten(dist)
-        return sum(f.(args..., x))
+        return mapreduce(xi -> f(args..., xi), +, x)
     else
-        return sum(map(x) do x
-            logpdf(dist, x)
-        end)
+        return mapreduce(xi -> logpdf(dist, xi), +, x)
     end
 end
 
 function _flat_logpdf_mat(dist, x)
     if toflatten(dist)
         f, args = flatten(dist)
-        return vec(sum(f.(args..., x), dims = 1))
+        return vec(mapreduce(xi -> f(args..., xi), +, x, dims = 1))
     else
-        temp = map(x -> logpdf(dist, x), x)
-        return vec(sum(temp, dims = 1))
+        return vec(mapreduce(xi -> logpdf(dist, xi), +, x, dims = 1))
     end
 end
 
