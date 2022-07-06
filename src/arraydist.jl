@@ -18,9 +18,7 @@ function arraydist(dists::AbstractMatrix{<:UnivariateDistribution})
     return MatrixOfUnivariate(dists)
 end
 function Distributions._logpdf(dist::MatrixOfUnivariate, x::AbstractMatrix{<:Real})
-    # return sum(((d, xi),) -> logpdf(d, xi), zip(dist.dists, x))
-    # Broadcasting here breaks Tracker for some reason
-    return sum(map(logpdf, dist.dists, x))
+    return mapreduce((disti, xi) -> logpdf(disti, xi), +, dist.dists, x)
 end
 function Distributions.logpdf(dist::MatrixOfUnivariate, x::AbstractArray{<:AbstractMatrix{<:Real}})
     return map(x -> logpdf(dist, x), x)
