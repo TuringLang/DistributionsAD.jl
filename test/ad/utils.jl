@@ -396,11 +396,15 @@ function testset_zygote(distspec, unpack_x_θ, args...; kwargs...)
     end
 end
 
-function testset_zygote_broken(args...; kwargs...)
+function testset_zygote_broken(distspec, args...; kwargs...)
     # don't show test errors - tests are known to be broken :)
     testset = suppress_stdout() do
-        testset_zygote(args...; kwargs...)
+        testset_zygote(distspec, args...; kwargs...)
     end
+
+    f = distspec.f
+    θ = distspec.θ
+    x = distspec.x
 
     # change errors and fails to broken results, and count number of errors and fails
     efs = errors_to_broken!(testset)
