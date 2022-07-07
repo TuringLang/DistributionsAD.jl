@@ -32,7 +32,7 @@ function _flat_logpdf(dist, x)
         f, args = flatten(dist)
         return mapreduce(xi -> f(args..., xi), +, x)
     else
-        return mapreduce(xi -> logpdf(dist, xi), +, x)
+        return mapreduce(Base.Fix1(logpdf, dist), +, x)
     end
 end
 
@@ -41,7 +41,7 @@ function _flat_logpdf_mat(dist, x)
         f, args = flatten(dist)
         return vec(mapreduce(xi -> f(args..., xi), +, x, dims = 1))
     else
-        return vec(mapreduce(xi -> logpdf(dist, xi), +, x, dims = 1))
+        return vec(mapreduce(Base.Fix1(logpdf, dist), +, x; dims = 1))
     end
 end
 
