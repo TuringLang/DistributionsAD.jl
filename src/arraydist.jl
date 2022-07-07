@@ -18,7 +18,7 @@ function arraydist(dists::AbstractMatrix{<:UnivariateDistribution})
     return MatrixOfUnivariate(dists)
 end
 function Distributions._logpdf(dist::MatrixOfUnivariate, x::AbstractMatrix{<:Real})
-    return mapreduce((disti, xi) -> logpdf(disti, xi), +, dist.dists, x)
+    return mapreduce(logpdf, +, dist.dists, x)
 end
 function Distributions.logpdf(dist::MatrixOfUnivariate, x::AbstractArray{<:AbstractMatrix{<:Real}})
     return map(x -> logpdf(dist, x), x)
