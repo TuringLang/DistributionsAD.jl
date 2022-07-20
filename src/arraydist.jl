@@ -18,7 +18,9 @@ function arraydist(dists::AbstractMatrix{<:UnivariateDistribution})
     return MatrixOfUnivariate(dists)
 end
 function Distributions._logpdf(dist::MatrixOfUnivariate, x::AbstractMatrix{<:Real})
-    return mapreduce(logpdf, +, dist.dists, x)
+    # Lazy broadcast to avoid allocations and use pairwise summation
+    y = Broadcast.instantiate(Broadcast.broadcasted(logpdf, dist.dists, x))
+    return sum(y)
 end
 function Distributions.logpdf(dist::MatrixOfUnivariate, x::AbstractArray{<:AbstractMatrix{<:Real}})
     return map(x -> logpdf(dist, x), x)
