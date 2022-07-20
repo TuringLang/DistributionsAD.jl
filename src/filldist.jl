@@ -30,7 +30,7 @@ end
 function _flat_logpdf(dist, x)
     if toflatten(dist)
         f, args = flatten(dist)
-        return mapreduce(xi -> f(args..., xi), +, x)
+        return sum(xi -> f(args..., xi), x)
     else
         return mapreduce(Base.Fix1(logpdf, dist), +, x)
     end
