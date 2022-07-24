@@ -3,7 +3,7 @@
 const VectorOfUnivariate = Distributions.Product
 
 function arraydist(dists::AbstractVector{<:UnivariateDistribution})
-    return Product(dists)
+    return product_distribution(dists)
 end
 
 struct MatrixOfUnivariate{
