@@ -408,9 +408,7 @@
             # PoissonBinomial fails with Zygote
             # Matrix case does not work with Skellam:
             # https://github.com/TuringLang/DistributionsAD.jl/pull/172#issuecomment-853721493
-            filldist_broken = if D <: Skellam
-                ((d.broken..., :ReverseDiff), (d.broken..., :ReverseDiff))
-            elseif D <: PoissonBinomial
+            filldist_broken = if D <: PoissonBinomial
                 ((d.broken..., :Zygote), (d.broken..., :Zygote))
             elseif D <: Chernoff
                 ((d.broken..., :Zygote), (d.broken..., :Zygote))
