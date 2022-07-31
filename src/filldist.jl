@@ -30,9 +30,10 @@ end
 function _flat_logpdf(dist, x)
     if toflatten(dist)
         f, args = flatten(dist)
-        return sum(xi -> f(args..., xi), x)
+        # Lazy broadcast to avoid allocations and use pairwise summation
+        return sum(Broadcast.instantiate(Broadcast.broadcasted(xi -> f(args..., xi), x)))
     else
-        return mapreduce(Base.Fix1(logpdf, dist), +, x)
+        return sum(Broadcast.instantiate(Broadcast.broadcasted(Base.Fix1(logpdf, dist), x)))
     end
 end
 
