@@ -48,7 +48,7 @@ function arraydist(dists::AbstractVector{<:MultivariateDistribution})
 end
 
 function Distributions._logpdf(dist::VectorOfMultivariate, x::AbstractMatrix{<:Real})
-    return sum(((di, xi),) -> logpdf(di, xi), zip(dist.dists, eachcol(x)))
+    return sum(Broadcast.instantiate(Broadcast.broadcasted(logpdf, dist.dists, eachcol(x))))
 end
 function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractArray{<:AbstractMatrix{<:Real}})
     return map(Base.Fix1(logpdf, dist), x)
