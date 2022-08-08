@@ -21,15 +21,14 @@ function arraydist(dists::AbstractMatrix{<:UnivariateDistribution})
     return MatrixOfUnivariate(dists)
 end
 function Distributions._logpdf(dist::MatrixOfUnivariate, x::AbstractMatrix{<:Real})
-    # return sum(((d, xi),) -> logpdf(d, xi), zip(dist.dists, x))
-    # Broadcasting here breaks Tracker for some reason
-    return sum(map(logpdf, dist.dists, x))
+    # Lazy broadcast to avoid allocations and use pairwise summation
+    return sum(Broadcast.instantiate(Broadcast.broadcasted(logpdf, dist.dists, x)))
 end
 function Distributions.logpdf(dist::MatrixOfUnivariate, x::AbstractArray{<:AbstractMatrix{<:Real}})
-    return map(x -> logpdf(dist, x), x)
+    return map(Base.Fix1(logpdf, dist), x)
 end
 function Distributions.logpdf(dist::MatrixOfUnivariate, x::AbstractArray{<:Matrix{<:Real}})
-    return map(x -> logpdf(dist, x), x)
+    return map(Base.Fix1(logpdf, dist), x)
 end
 
 function Distributions.rand(rng::Random.AbstractRNG, dist::MatrixOfUnivariate)
@@ -52,16 +51,16 @@ function arraydist(dists::AbstractVector{<:MultivariateDistribution})
 end
 
 function Distributions._logpdf(dist::VectorOfMultivariate, x::AbstractMatrix{<:Real})
-    return sum(((di, xi),) -> logpdf(di, xi), zip(dist.dists, eachcol(x)))
+    return sum(Broadcast.instantiate(Broadcast.broadcasted(logpdf, dist.dists, eachcol(x))))
 end
 function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractArray{<:AbstractMatrix{<:Real}})
-    return map(x -> logpdf(dist, x), x)
+    return map(Base.Fix1(logpdf, dist), x)
 end
 function Distributions.logpdf(dist::VectorOfMultivariate, x::AbstractArray{<:Matrix{<:Real}})
-    return map(x -> logpdf(dist, x), x)
+    return map(Base.Fix1(logpdf, dist), x)
 end
 
 function Distributions.rand(rng::Random.AbstractRNG, dist::VectorOfMultivariate)
     init = reshape(rand(rng, dist.dists[1]), :, 1)
-    return mapreduce(i -> rand(rng, dist.dists[i]), hcat, 2:length(dist); init = init)
+    return mapreduce(Base.Fix1(rand, rng), hcat, view(dist.dists, 2:length(dist)); init = init)
 end
