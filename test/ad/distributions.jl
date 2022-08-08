@@ -411,7 +411,8 @@
             filldist_broken = if D <: PoissonBinomial
                 ((d.broken..., :Zygote), (d.broken..., :Zygote))
             elseif D <: Chernoff
-                ((d.broken..., :Zygote), (d.broken..., :Zygote))
+                # Zygote is not broken with `filldist`
+                ((), ())
             else
                 (d.broken, d.broken)
             end
