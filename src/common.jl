@@ -1,11 +1,13 @@
 ## Linear Algebra ##
 
+const CHOLESKY_NoPivot = VERSION >= v"1.8.0-rc1" ? LinearAlgebra.NoPivot() : Val(false)
+
 function turing_chol(A::AbstractMatrix, check)
     chol = cholesky(A, check=check)
     (chol.factors, chol.info)
 end
 function turing_chol_back(A::AbstractMatrix, check)
-    C, chol_pullback = rrule(cholesky, A, Val(false), check=check)
+    C, chol_pullback = rrule(cholesky, A, CHOLESKY_NoPivot; check=check)
     function back(Δ)
         Ȳ = Tangent{typeof(C)}(; factors=Δ[1])
         ∂C = chol_pullback(Ȳ)[2]
@@ -19,7 +21,7 @@ function symm_turing_chol(A::AbstractMatrix, check, uplo)
     (chol.factors, chol.info)
 end
 function symm_turing_chol_back(A::AbstractMatrix, check, uplo)
-    C, chol_pullback = rrule(cholesky, Symmetric(A,uplo), Val(false), check=check)
+    C, chol_pullback = rrule(cholesky, Symmetric(A,uplo), CHOLESKY_NoPivot; check=check)
     function back(Δ)
         Ȳ = Tangent{typeof(C)}(; factors=Δ[1])
         ∂C = chol_pullback(Ȳ)[2]

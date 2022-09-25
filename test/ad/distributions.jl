@@ -143,7 +143,7 @@
         DistSpec(Levy, (0.0,), 0.5),
         DistSpec(Levy, (0.0, 2.0), 0.5),
 
-        DistSpec((a, b) -> LocationScale(a, b, Normal()), (1.0, 2.0), 0.5),
+        DistSpec((a, b) -> a + b * Beta(), (1.0, 2.0), 0.5),
 
         DistSpec(Logistic, (), 0.5),
         DistSpec(Logistic, (1.0,), 0.5),
