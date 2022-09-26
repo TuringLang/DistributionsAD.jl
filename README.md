@@ -24,6 +24,7 @@ AD of `logpdf` is fully supported and tested for the following distributions wrt
     - `Chi`
     - `Chisq`
     - `Cosine`
+    - `Distributions.AffineDistribution`
     - `Epanechnikov`
     - `Erlang`
     - `Exponential`
@@ -38,7 +39,6 @@ AD of `logpdf` is fully supported and tested for the following distributions wrt
     - `Kolmogorov`
     - `Laplace`
     - `Levy`
-    - `LocationScale`
     - `Logistic`
     - `LogitNormal`
     - `LogNormal`

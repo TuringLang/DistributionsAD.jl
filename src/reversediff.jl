@@ -148,14 +148,14 @@ function Gamma(α::T, θ::T; check_args=true) where {T <: TrackedReal}
 end
 
 # Work around to stop TrackedReal of Inf and -Inf from producing NaN in the derivative
-function Base.minimum(d::LocationScale{T}) where {T <: TrackedReal}
+function Base.minimum(d::Distributions.AffineDistribution{T}) where {T <: TrackedReal}
     if isfinite(minimum(d.ρ))
         return d.μ + d.σ * minimum(d.ρ)
     else
         return convert(T, ReverseDiff.@skip(minimum)(d.ρ))
     end
 end
-function Base.maximum(d::LocationScale{T}) where {T <: TrackedReal}
+function Base.maximum(d::Distributions.AffineDistribution{T}) where {T <: TrackedReal}
     if isfinite(minimum(d.ρ))
         return d.μ + d.σ * maximum(d.ρ)
     else
