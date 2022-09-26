@@ -143,6 +143,7 @@
         DistSpec(Levy, (0.0,), 0.5),
         DistSpec(Levy, (0.0, 2.0), 0.5),
 
+        # Test AffineDistribution
         DistSpec((a, b) -> a + b * Beta(), (1.0, 2.0), 2.0),
 
         DistSpec(Logistic, (), 0.5),
