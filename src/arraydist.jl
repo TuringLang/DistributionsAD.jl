@@ -64,3 +64,45 @@ function Distributions.rand(rng::Random.AbstractRNG, dist::VectorOfMultivariate)
     init = reshape(rand(rng, dist.dists[1]), :, 1)
     return mapreduce(Base.Fix1(rand, rng), hcat, view(dist.dists, 2:length(dist)); init = init)
 end
+
+# Lazy array dist
+# HACK: Constructor which doesn't enforce the schema.
+"""
+    StructArrayNoSchema(::Type{T}, cols::C) where {T, C<:StructArrays.Tup}
+
+Construct a `StructArray` without enforcing the schema of `T`.
+
+This is useful in scenarios where there's a mismatch between the constructor of `T`
+and the `fieldnames(T)`.
+
+# Examples
+```jldoctest
+julia> using StructArrays, Distributions
+
+julia> # `Normal` has two fields `μ` and `σ`, but here we only provide `μ`.
+       StructArrayNoSchema(Normal, (zeros(2),))
+2-element StructArray(::Vector{Float64}) with eltype Normal:
+ Normal{Float64}(μ=0.0, σ=1.0)
+ Normal{Float64}(μ=0.0, σ=1.0)
+
+julia> # This is not allowed by `StructArray`:
+       StructArray{Normal}((zeros(2),))
+ERROR: NamedTuple names and field types must have matching lengths
+[...]
+```
+"""
+function StructArrayNoSchema(::Type{T}, cols::C) where {T, C<:StructArrays.Tup}
+    N = isempty(cols) ? 1 : ndims(cols[1])
+    StructArrays.StructArray{T, N, typeof(cols)}(cols)
+end
+
+
+arraydist(D::Type, args...) = arraydist(D, args)
+arraydist(D::Type, args::Tuple) = arraydist(StructArrayNoSchema(D, args))
+
+make_logpdf_closure(::Type{D}) where {D} = (x, args...) -> logpdf(D(args...), x)
+
+function Distributions.logpdf(dist::Product{<:Any,D,<:StructArrays.StructArray}, x::AbstractVector{<:Real}) where {D}
+    f = make_logpdf_closure(D)
+    return sum(f.(x, StructArrays.components(dist.v)...))
+end

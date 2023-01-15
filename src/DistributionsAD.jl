@@ -14,6 +14,7 @@ using PDMats,
       FillArrays,
       Adapt
 
+using StructArrays: StructArrays
 using SpecialFunctions: logabsgamma, digamma
 using LinearAlgebra: copytri!, AbstractTriangular
 using Distributions: AbstractMvLogNormal,
