@@ -1,5 +1,10 @@
 using .LazyArrays: BroadcastArray, BroadcastVector, LazyArray
 
+# Necessary to make `BroadcastArray` work nicely with Zygote.
+function ChainRulesCore.rrule(config::ChainRulesCore.RuleConfig{>:ChainRulesCores.HasReverseMode}, ::Type{BroadcastArray}, f, args...)
+    return ChainRulesCore.rrule_via_ad(config, Broadcast.broadcasted, f, args...)
+end
+
 const LazyVectorOfUnivariate{
     S<:ValueSupport,
     T<:UnivariateDistribution{S},
@@ -12,21 +17,30 @@ function Distributions._logpdf(
     dist::LazyVectorOfUnivariate,
     x::AbstractVector{<:Real},
 )
-    # TODO: Implement chain rule for `LazyArray` constructor to support Zygote.
-    f = make_closure(logpdf, _inner_constructor(typeof(dist.v)))
     # TODO: Make use of `sum(Broadcast.instantiate(Broadcast.broadcasted(f, x, args...)))` once
     # we've addressed performance issues in ReverseDiff.jl.
-    return sum(f.(x, dist.v.args...))
+    constructor = _inner_constructor(typeof(dist.v))
+    return if has_specalized_make_closure(logpdf, constructor)
+        f = make_closure(logpdf, constructor)
+        sum(f.(x, dist.v.args...))
+    else
+        sum(copy(logpdf.(dist, x)))
+    end
 end
 
 function Distributions.logpdf(
     dist::LazyVectorOfUnivariate,
     x::AbstractMatrix{<:Real},
-    )
+)
     size(x, 1) == length(dist) ||
         throw(DimensionMismatch("Inconsistent array dimensions."))
-    f = make_closure(logpdf, _inner_constructor(typeof(dist.v)))
-    return vec(sum(f.(x, dist.v.args...), dims = 1))
+    constructor = _inner_constructor(typeof(dist.v))
+    return if has_specialized_make_closure(logpdf, constructor)
+        f = make_closure(logpdf, constructor)
+        vec(sum(f.(x, dist.v.args...), dims = 1))
+    else
+        vec(sum(copy(logpdf.(dist, x)); dims = 1))
+    end
 end
 
 const LazyMatrixOfUnivariate{
@@ -39,15 +53,15 @@ function Distributions._logpdf(
     dist::LazyMatrixOfUnivariate,
     x::AbstractMatrix{<:Real},
 )
-    f = make_closure(logpdf, _inner_constructor(typeof(dist.v)))
-    
-    return sum(f.(x, dist.v.args))
+
+    constructor = _inner_constructor(typeof(dist.v))
+    return if has_specialized_make_closure(logpdf, constructor)
+        f = make_closure(logpdf, constructor)
+        sum(f.(x, dist.v.args))
+    else
+        sum(copy(logpdf.(dist.dists, x)))
+    end
 end
 
 lazyarray(f, x...) = BroadcastArray(f, x...)
 export lazyarray
-
-# Necessary to make `BroadcastArray` work nicely with Zygote.
-function ChainRulesCore.rrule(config::RuleConfig{>:HasReverseMode}, ::Type{LazyArrays.BroadcastArray}, f, args...)
-    return ChainRulesCore.rrule_via_ad(config, Broadcast.broadcasted, f, args...)
-end
