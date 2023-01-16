@@ -46,3 +46,8 @@ end
 
 lazyarray(f, x...) = BroadcastArray(f, x...)
 export lazyarray
+
+# Necessary to make `BroadcastArray` work nicely with Zygote.
+function ChainRulesCore.rrule(config::RuleConfig{>:HasReverseMode}, ::Type{LazyArrays.BroadcastArray}, f, args...)
+    return ChainRulesCore.rrule_via_ad(config, Broadcast.broadcasted, f, args...)
+end
