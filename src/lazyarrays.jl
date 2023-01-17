@@ -1,12 +1,8 @@
 using .LazyArrays: BroadcastArray, BroadcastVector, LazyArray
 
-# # Necessary to make `BroadcastArray` work nicely with Zygote.
-# function ChainRulesCore.rrule(config::ChainRulesCore.RuleConfig{>:ChainRulesCore.HasReverseMode}, ::Type{BroadcastArray}, f, args...)
-#     return ChainRulesCore.rrule_via_ad(config, Broadcast.broadcasted, f, args...)
-# end
-
-ZygoteRules.@adjoint function BroadcastArray(f, args...)
-    return ZygoteRules.pullback(Broadcast.broadcasted, f, args...)
+# Necessary to make `BroadcastArray` work nicely with Zygote.
+function ChainRulesCore.rrule(config::ChainRulesCore.RuleConfig{>:ChainRulesCore.HasReverseMode}, ::Type{BroadcastArray}, f, args...)
+    return ChainRulesCore.rrule_via_ad(config, Broadcast.broadcasted, f, args...)
 end
 
 const LazyVectorOfUnivariate{
