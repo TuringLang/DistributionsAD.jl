@@ -1,4 +1,5 @@
 using .LazyArrays: BroadcastArray, BroadcastVector, LazyArray
+using ChainRulesCore: ChainRulesCore
 
 # Necessary to make `BroadcastArray` work nicely with Zygote.
 function ChainRulesCore.rrule(config::ChainRulesCore.RuleConfig{>:ChainRulesCores.HasReverseMode}, ::Type{BroadcastArray}, f, args...)
