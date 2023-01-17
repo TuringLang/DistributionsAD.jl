@@ -20,7 +20,7 @@ function Distributions._logpdf(
     # TODO: Make use of `sum(Broadcast.instantiate(Broadcast.broadcasted(f, x, args...)))` once
     # we've addressed performance issues in ReverseDiff.jl.
     constructor = _inner_constructor(typeof(dist.v))
-    return if has_specalized_make_closure(logpdf, constructor)
+    return if has_specialized_make_closure(logpdf, constructor)
         f = make_closure(logpdf, constructor)
         sum(f.(x, dist.v.args...))
     else
