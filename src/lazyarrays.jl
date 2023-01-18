@@ -20,12 +20,7 @@ function Distributions._logpdf(
     # TODO: Make use of `sum(Broadcast.instantiate(Broadcast.broadcasted(f, x, args...)))` once
     # we've addressed performance issues in ReverseDiff.jl.
     constructor = _inner_constructor(typeof(dist.v))
-    return if has_specialized_make_closure(logpdf, constructor)
-        f = make_closure(logpdf, constructor)
-        sum(f.(x, dist.v.args...))
-    else
-        sum(copy(logpdf.(dist, x)))
-    end
+    return sum(Closure(logpdf, constructor).(x, dist.v.args...))
 end
 
 function Distributions.logpdf(
@@ -35,12 +30,7 @@ function Distributions.logpdf(
     size(x, 1) == length(dist) ||
         throw(DimensionMismatch("Inconsistent array dimensions."))
     constructor = _inner_constructor(typeof(dist.v))
-    return if has_specialized_make_closure(logpdf, constructor)
-        f = make_closure(logpdf, constructor)
-        vec(sum(f.(x, dist.v.args...), dims = 1))
-    else
-        vec(sum(copy(logpdf.(dist, x)); dims = 1))
-    end
+    return vec(sum(Closure(logpdf, constructor).(x, dist.v.args...), dims = 1))
 end
 
 const LazyMatrixOfUnivariate{
@@ -55,12 +45,7 @@ function Distributions._logpdf(
 )
 
     constructor = _inner_constructor(typeof(dist.v))
-    return if has_specialized_make_closure(logpdf, constructor)
-        f = make_closure(logpdf, constructor)
-        sum(f.(x, dist.v.args))
-    else
-        sum(copy(logpdf.(dist.dists, x)))
-    end
+    return sum(Closure(logpdf, constructor).(x, dist.v.args))
 end
 
 lazyarray(f, x...) = BroadcastArray(f, x...)

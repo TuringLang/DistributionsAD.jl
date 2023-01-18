@@ -49,10 +49,11 @@ parameterless_type(x::Type) = __parameterless_type(x)
 
 @non_differentiable adapt_randn(::Any...)
 
-"""
-    make_closure(f, g)
 
-Return a closure of the form `(x, args...) -> f(g(args...), x)`.
+"""
+    Closure{F,G}
+
+A callable of the form `(x, args...) -> F(G(args...), x)`.
 
 # Examples
 
@@ -74,9 +75,7 @@ julia> @btime ReverseDiff.gradient(\$f, \$x);
   848.759 μs (14605 allocations: 521.84 KiB)
 
 julia> # Much faster with ReverseDiff.jl.
-       g(x) = let g_inner = DistributionsAD.make_closure(logpdf, Normal)
-           sum(g_inner.(data, x))
-       end
+       g(x) = sum(DistributionsAD.Closure(logpd, Normal).(data, x))
 g (generic function with 1 method)
 
 julia> @btime ReverseDiff.gradient(\$g, \$x);
@@ -84,76 +83,18 @@ julia> @btime ReverseDiff.gradient(\$g, \$x);
 ```
 
 See https://github.com/TuringLang/Turing.jl/issues/1934 more further discussion.
-
-# Notes
-To really go "vrooom!\" one needs to specialize on the arguments, e.g. if one
-has a function `myfunc` then we need to define
-
-```julia
-make_closure(::typeof(myfunc), ::Type{D}) where {D} = myfunc(D(args...), x)
-```
-
-This can also be done using `DistributionsAD.@specialize_make_closure`:
-
-```julia
-julia> mylogpdf(d, x) = logpdf(d, x)
-mylogpdf (generic function with 1 method)
-
-julia> h(x) = let inner = DistributionsAD.make_closure(mylogpdf, Normal)
-           sum(inner.(data, x))
-       end
-h (generic function with 1 method)
-
-julia> @btime ReverseDiff.gradient(\$h, \$x);
-  1.220 ms (37011 allocations: 1.42 MiB)
-
-julia> DistributionsAD.@specialize_make_closure mylogpdf
-
-julia> @btime ReverseDiff.gradient(\$h, \$x);
-  17.038 μs (17 allocations: 71.52 KiB)
-```
 """
-make_closure(f, g) = (x, args...) -> f(g(args...), x)
-make_closure(f, ::Type{D}) where {D} = (x, args...) -> f(D(args...), x)
+struct Closure{F,G} end
 
+Closure(::F, ::G) where {F,G} = Closure{F,G}()
+Closure(::F, ::Type{G}) where {F,G} = Closure{F,G}()
+Closure(::Type{F}, ::G) where {F,G} = Closure{F,G}()
+Closure(::Type{F}, ::Type{G}) where {F,G} = Closure{F,G}()
 
-"""
-    has_specialized_make_closure(f, g)
-
-Return `true` if there exists a specialized `make_closure(f, g)` implementation.
-"""
-has_specialized_make_closure(f, g) = false
-
-# To go vroooom we need to specialize on the first argument, thus ensuring that
-# a different closure is constructed for each method.
-"""
-    @specialize_make_closure(f)
-
-Define `make_closure` and `has_specialized_make_closure` for first first argument being `f` 
-and second argument being a type.
-"""
-macro specialize_make_closure(f)
-    return quote
-        $(DistributionsAD).make_closure(::typeof($(esc(f))), ::Type{D}) where {D} = (x, args...) -> $(esc(f))(D(args...), x)
-        $(DistributionsAD).has_specialized_make_closure(::typeof($(esc(f))), ::Type{D}) where {D} = true
-    end
+@generated function (closure::Closure{F,G})(x, args...) where {F,G}
+    f = Base.issingletontype(F) ? F.instance : F
+    g = Base.issingletontype(G) ? G.instance : G
+    return :($f($g(args...), x))
 end
 
-"""
-    @specialize_make_closure(f, g)
 
-Define `make_closure` and `has_specialized_make_closure` for first first argument being `f` 
-and second argument being `g`.
-"""
-macro specialize_make_closure(f, g)
-    return quote
-        $(DistributionsAD).make_closure(::typeof($(esc(f))), ::typeof($(esc(g)))) = (x, args...) -> $(esc(f))($(esc(g))(args...), x)
-        $(DistributionsAD).has_specialized_make_closure(::typeof($(esc(f))), ::typeof{$(esc(g))}) = true
-    end
-end
-
-@specialize_make_closure Distributions.pdf
-@specialize_make_closure Distributions.logpdf
-@specialize_make_closure Distributions.loglikelihood
-@specialize_make_closure Distributions.cdf
-@specialize_make_closure Distributions.logcdf
