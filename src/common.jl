@@ -91,6 +91,46 @@ Closure(::F, ::Type{G}) where {F,G} = Closure{F,G}()
 Closure(::Type{F}, ::G) where {F,G} = Closure{F,G}()
 Closure(::Type{F}, ::Type{G}) where {F,G} = Closure{F,G}()
 
+"""
+    is_diff_safe(f)
+
+Return `true` if it's safe to ignore gradients wrt. `f` when computing `f`.
+
+Useful for checking it's okay to take faster paths in pullbacks for certain AD backends.
+
+# Examples
+
+```julia
+julia> using Distributions
+
+julia> using DistributionsAD: is_diff_safe, Closure
+
+julia> is_diff_safe(typeof(logpdf))
+true
+
+julia> is_diff_safe(typeof(x -> 2x))
+true
+
+julia> # But it fails if we make a closure over a variable, which we might want to compute
+       # the gradient with respect to.
+       makef(x) = y -> x + y
+makef (generic function with 1 method)
+
+julia> is_diff_safe(typeof(makef([1.0])))
+false
+
+julia> # Also works on `Closure`s from `DistributionsAD`.
+       is_diff_safe(typeof(Closure(logpdf, Normal)))
+true
+
+julia> is_diff_safe(typeof(Closure(logpdf, makef([1.0]))))
+false
+"""
+@inline is_diff_safe(_) = false
+@inline is_diff_safe(::Type) = true
+@inline is_diff_safe(::Type{F}) where {F<:Function} = Base.issingletontype(F)
+@inline is_diff_safe(::Type{Closure{F,G}}) where {F,G} = is_diff_safe(F) && is_diff_safe(G)
+
 @generated function (closure::Closure{F,G})(x, args...) where {F,G}
     f = Base.issingletontype(F) ? F.instance : F
     g = Base.issingletontype(G) ? G.instance : G

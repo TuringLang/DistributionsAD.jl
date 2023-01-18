@@ -65,7 +65,17 @@ function ChainRulesCore.rrule(
     dist::LazyVectorOfUnivariate,
     x::AbstractVector{<:Real}
 )
-    cl = DistributionsAD.Closure(logpdf, DistributionsAD._inner_constructor(typeof(dist.v)))
+    # Extract the constructor used in the `BroadcastArray`.
+    constructor = DistributionsAD._inner_constructor(typeof(dist.v))
+
+    # If it's not safe to ignore the `constructor` in the pullback, then we fall back
+    # to the default implementation.
+    is_diff_safe(constructor) || return ChainRulesCore.rrule_via_ad(config, (d,x) -> sum(logpdf.(d.v, x)), dist, x)
+
+    # Otherwise, we use `Closure`.
+    cl = DistributionsAD.Closure(logpdf, constructor)
+
+    # Construct pullbacks manually to avoid the constructor of `BroadcastArray`.
     y, dy = ChainRulesCore.rrule_via_ad(config, broadcast, cl, x, dist.v.args...)
     z, dz = ChainRulesCore.rrule_via_ad(config, sum, y)
 

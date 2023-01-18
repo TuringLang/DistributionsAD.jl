@@ -73,7 +73,8 @@ include("zygote.jl")
     @require Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f" begin
         using .Zygote: Zygote
         # HACK: Make Zygote (correctly) recognize that it should use `ForwardDiff` for broadcasting.
-        Zygote._dual_purefun(::Type{C}) where {C<:Closure} = Base.issingletontype(C)
+        # See `is_diff_safe` for more information.
+        Zygote._dual_purefun(::Type{C}) where {C<:Closure} = is_diff_safe(C)
     end
 
     @require Tracker="9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c" begin
