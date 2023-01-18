@@ -100,7 +100,7 @@ Useful for checking it's okay to take faster paths in pullbacks for certain AD b
 
 # Examples
 
-```julia
+```jldoctest
 julia> using Distributions
 
 julia> using DistributionsAD: is_diff_safe, Closure
