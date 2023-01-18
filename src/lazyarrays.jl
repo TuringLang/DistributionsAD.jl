@@ -1,10 +1,5 @@
 using .LazyArrays: BroadcastArray, BroadcastVector, LazyArray
 
-# Necessary to make `BroadcastArray` work nicely with Zygote.
-function ChainRulesCore.rrule(config::ChainRulesCore.RuleConfig{>:ChainRulesCore.HasReverseMode}, ::Type{BroadcastArray}, f, args...)
-    return ChainRulesCore.rrule_via_ad(config, Broadcast.broadcasted, f, args...)
-end
-
 const LazyVectorOfUnivariate{
     S<:ValueSupport,
     T<:UnivariateDistribution{S},
@@ -50,3 +45,45 @@ end
 
 lazyarray(f, x...) = BroadcastArray(f, x...)
 export lazyarray
+
+# HACK: All of the below probably shouldn't be here.
+function ChainRulesCore.rrule(::Type{BroadcastArray}, f, args...)
+    function BroadcastArray_pullback(Δ::ChainRulesCore.Tangent)
+        return (ChainRulesCore.NoTangent(), Δ.f, Δ.args...)
+    end
+    return BroadcastArray(f, args...), BroadcastArray_pullback
+end
+
+ChainRulesCore.ProjectTo(ba::BroadcastArray) = ProjectTo{typeof(ba)}((f=ba.f,))
+function (p::ChainRulesCore.ProjectTo{BA})(args...) where {BA<:BroadcastArray}
+    return ChainRulesCore.Tangent{BA}(f=p.f, args=args)
+end
+
+function ChainRulesCore.rrule(
+    config::ChainRulesCore.RuleConfig{>:ChainRulesCore.HasReverseMode},
+    ::typeof(Distributions.logpdf),
+    dist::LazyVectorOfUnivariate,
+    x::AbstractVector{<:Real}
+)
+    cl = DistributionsAD.Closure(logpdf, DistributionsAD._inner_constructor(typeof(dist.v)))
+    y, dy = ChainRulesCore.rrule_via_ad(config, broadcast, cl, x, dist.v.args...)
+    z, dz = ChainRulesCore.rrule_via_ad(config, sum, y)
+
+    project_broadcastarray = ChainRulesCore.ProjectTo(dist.v)
+    function logpdf_adjoint(Δ...)
+        # 1st argument is `sum` -> nothing.
+        (_, sum_Δ...) = dz(Δ...)
+        # 1st argument is `broadcast` -> nothing.
+        # 2nd argument is `cl` -> `nothing`.
+        # 3rd argument is `x` -> something.
+        # Rest is `dist` arguments -> something
+        (_, _, x_Δ, args_Δ...) = dy(sum_Δ...)
+        # Construct the structural tangents.
+        ba_tangent = project_broadcastarray(args_Δ...)
+        dist_tangent = ChainRulesCore.Tangent{typeof(dist)}(v=ba_tangent)
+
+        return (ChainRulesCore.NoTangent(), dist_tangent, x_Δ)
+    end
+
+    return z, logpdf_adjoint
+end
