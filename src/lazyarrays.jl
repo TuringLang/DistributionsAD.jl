@@ -61,7 +61,7 @@ end
 
 function ChainRulesCore.rrule(
     config::ChainRulesCore.RuleConfig{>:ChainRulesCore.HasReverseMode},
-    ::typeof(Distributions.logpdf),
+    ::typeof(logpdf),
     dist::LazyVectorOfUnivariate,
     x::AbstractVector{<:Real}
 )
