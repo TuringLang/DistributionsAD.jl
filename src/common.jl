@@ -75,7 +75,7 @@ julia> @btime ReverseDiff.gradient(\$f, \$x);
   848.759 μs (14605 allocations: 521.84 KiB)
 
 julia> # Much faster with ReverseDiff.jl.
-       g(x) = sum(DistributionsAD.Closure(logpd, Normal).(data, x))
+       g(x) = sum(DistributionsAD.Closure(logpdf, Normal).(data, x))
 g (generic function with 1 method)
 
 julia> @btime ReverseDiff.gradient(\$g, \$x);
