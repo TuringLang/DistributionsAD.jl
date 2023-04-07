@@ -12,7 +12,9 @@ using DistributionsAD: TuringMvNormal, TuringMvLogNormal,
 using StatsBase: entropy
 using StatsFuns: StatsFuns, logsumexp, logistic
 
-using InteractiveUtils, Pkg; Pkg.status(outdated=true) # show reasons why packages are held back
+@static if VERSION >= v"1.8"
+  using Pkg; Pkg.status(outdated=true) # show reasons why packages are held back
+end
 
 Random.seed!(1) # Set seed that all testsets should reset to.
 
