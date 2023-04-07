@@ -12,6 +12,8 @@ using DistributionsAD: TuringMvNormal, TuringMvLogNormal,
 using StatsBase: entropy
 using StatsFuns: StatsFuns, logsumexp, logistic
 
+using Pkg; Pkg.status(outdated=true) # show reasons why packages are held back
+
 Random.seed!(1) # Set seed that all testsets should reset to.
 
 const GROUP = get(ENV, "GROUP", "All")
