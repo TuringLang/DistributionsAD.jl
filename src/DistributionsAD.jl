@@ -70,6 +70,13 @@ include("zygote.jl")
         end
     end
 
+    @require Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f" begin
+        using .Zygote: Zygote
+        # HACK: Make Zygote (correctly) recognize that it should use `ForwardDiff` for broadcasting.
+        # See `is_diff_safe` for more information.
+        Zygote._dual_purefun(::Type{C}) where {C<:Closure} = is_diff_safe(C)
+    end
+
     @require Tracker="9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c" begin
         using DiffRules
         using SpecialFunctions
@@ -80,45 +87,7 @@ include("zygote.jl")
     end
 
     @require LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02" begin
-        using .LazyArrays: BroadcastArray, BroadcastVector, LazyArray
-
-        const LazyVectorOfUnivariate{
-            S<:ValueSupport,
-            T<:UnivariateDistribution{S},
-            Tdists<:BroadcastVector{T},
-        } = VectorOfUnivariate{S,T,Tdists}
-
-        function Distributions._logpdf(
-            dist::LazyVectorOfUnivariate,
-            x::AbstractVector{<:Real},
-        )
-            return sum(copy(logpdf.(dist.v, x)))
-        end
-
-        function Distributions.logpdf(
-            dist::LazyVectorOfUnivariate,
-            x::AbstractMatrix{<:Real},
-        )
-            size(x, 1) == length(dist) ||
-                throw(DimensionMismatch("Inconsistent array dimensions."))
-            return vec(sum(copy(logpdf.(dists, x)), dims = 1))
-        end
-
-        const LazyMatrixOfUnivariate{
-            S<:ValueSupport,
-            T<:UnivariateDistribution{S},
-            Tdists<:BroadcastArray{T,2},
-        } = MatrixOfUnivariate{S,T,Tdists}
-
-        function Distributions._logpdf(
-            dist::LazyMatrixOfUnivariate,
-            x::AbstractMatrix{<:Real},
-        )
-            return sum(copy(logpdf.(dist.dists, x)))
-        end
-
-        lazyarray(f, x...) = LazyArray(Base.broadcasted(f, x...))
-        export lazyarray
+        include("lazyarrays.jl")
     end
 end
 
