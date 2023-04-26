@@ -9,7 +9,7 @@ else
 end
 
 using DistributionsAD: Distributions, LinearAlgebra, Random, SpecialFunctions, StatsFuns
-using Tracker: Tracker, TrackedReal, TrackedVector, TrackedMatrix,
+using Tracker: TrackedReal, TrackedVector, TrackedMatrix,
                TrackedArray, TrackedVecOrMat, track, @grad, data
 using LinearAlgebra: AbstractTriangular, Adjoint
 
