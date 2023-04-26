@@ -99,7 +99,9 @@ end
     return nothing
 end
 
-DistributionsAD.adapt_randn(rng::Random.AbstractRNG, x::TrackedArray, dims...) = adapt_randn(rng, value(x), dims...)
+function DistributionsAD.adapt_randn(rng::Random.AbstractRNG, x::TrackedArray, dims...)
+    return DistributionsAD.adapt_randn(rng, value(x), dims...)
+end
 
 function Distributions.PoissonBinomial(p::TrackedArray{<:Real}; check_args=true)
     return TuringPoissonBinomial(p; check_args = check_args)

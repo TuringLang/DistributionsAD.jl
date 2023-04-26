@@ -219,7 +219,9 @@ end
 
 ## `adapt_randn`
 
-DistributionsAD.adapt_randn(rng::Random.AbstractRNG, x::TrackedArray, dims...) = adapt_randn(rng, data(x), dims...)
+function DistributionsAD.adapt_randn(rng::Random.AbstractRNG, x::TrackedArray, dims...)
+    return DistributionsAD.adapt_randn(rng, data(x), dims...)
+end
 
 ## Uniform ##
 

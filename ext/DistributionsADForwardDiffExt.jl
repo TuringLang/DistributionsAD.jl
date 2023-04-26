@@ -10,7 +10,7 @@ end
 using DistributionsAD: Distributions, Random, StatsFuns
 
 function DistributionsAD.adapt_randn(rng::Random.AbstractRNG, x::AbstractArray{<:ForwardDiff.Dual}, dims...)
-    return adapt_randn(rng, ForwardDiff.valtype(eltype(x)), x, dims...)
+    return DistributionsAD.adapt_randn(rng, ForwardDiff.valtype(eltype(x)), x, dims...)
 end
 
 ## Binomial ##
