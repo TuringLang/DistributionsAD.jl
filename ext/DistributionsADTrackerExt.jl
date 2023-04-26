@@ -11,7 +11,7 @@ end
 using DistributionsAD: Distributions, LinearAlgebra, Random, SpecialFunctions, StatsFuns
 using Tracker: TrackedReal, TrackedVector, TrackedMatrix,
                TrackedArray, TrackedVecOrMat, track, @grad, data
-using LinearAlgebra: AbstractTriangular, Adjoint, Cholesky
+using LinearAlgebra: AbstractTriangular, Adjoint, Cholesky, Symmetric
 
 
 ## Generic ##
@@ -93,7 +93,7 @@ end
 StatsFuns.logsumexp(x::TrackedArray; dims=:) = _logsumexp(x, dims)
 _logsumexp(x::TrackedArray, dims=:) = track(_logsumexp, x, dims)
 @grad function _logsumexp(x::TrackedArray, dims)
-    lse = logsumexp(data(x), dims = dims)
+    lse = StatsFuns.logsumexp(data(x), dims = dims)
     return lse, Δ -> (Δ .* exp.(x .- lse), nothing)
 end
 
@@ -127,14 +127,14 @@ upper(A::TrackedMatrix) = track(upper, A)
 @grad upper(A) = upper(Tracker.data(A)), ∇ -> (upper(∇),)
 
 function LinearAlgebra.cholesky(A::TrackedMatrix; check=true)
-    factors_info = turing_chol(A, check)
+    factors_info = DistributionsAD.turing_chol(A, check)
     factors = factors_info[1]
     info = data(factors_info[2])
     return Cholesky{eltype(factors), typeof(factors)}(factors, 'U', info)
 end
 function LinearAlgebra.cholesky(A::Symmetric{<:Any, <:TrackedMatrix}; check=true)
     uplo = A.uplo == 'U' ? (:U) : (:L)
-    factors_info = symm_turing_chol(parent(A), check, uplo)
+    factors_info = DistributionsAD.symm_turing_chol(parent(A), check, uplo)
     factors = factors_info[1]
     info = data(factors_info[2])
     return Cholesky{eltype(factors), typeof(factors)}(factors, 'U', info)
