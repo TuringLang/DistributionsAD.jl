@@ -72,7 +72,7 @@ function __init__()
         @require ForwardDiff="f6369f11-7733-5829-9624-2563aa707210" include("../ext/DistributionsADForwardDiffExt.jl")
         @require ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267" include("../ext/DistributionsADReverseDiffExt.jl")
         @require Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c" include("../ext/DistributionsADTrackerExt.jl")
-        @require LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02" include("../ext/DistributionsADLazyArrays.jl")
+        @require LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02" include("../ext/DistributionsADLazyArraysExt.jl")
     end
 end
 
