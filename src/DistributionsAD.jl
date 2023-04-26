@@ -7,7 +7,6 @@ using PDMats,
       SpecialFunctions,
       StatsFuns,
       Compat,
-      Requires,
       ZygoteRules,
       ChainRules,  # needed for `ChainRules.chol_blocked_rev`
       ChainRulesCore,
@@ -55,70 +54,25 @@ include("flatten.jl")
 
 include("zygote.jl")
 
-@init begin
-    @require ForwardDiff="f6369f11-7733-5829-9624-2563aa707210" begin
-        using .ForwardDiff
-        using .ForwardDiff: @define_binary_dual_op # Needed for `eval`ing diffrules here
-        include("forwarddiff.jl")
-    end
+# Empty definition, function requires the LazyArrays extension
+function lazyarray end
+export lazyarray
 
-    @require ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267" begin
-        # ensures that we can load ForwardDiff without depending on it
-        # (it is a dependency of ReverseDiff and therefore always available)
-        @require ForwardDiff="f6369f11-7733-5829-9624-2563aa707210" begin
-            include("reversediff.jl")
+if !isdefined(Base, :get_extension)
+    using Requires
+end
+function __init__()
+    # Better error message if users forget to load LazyArrays
+    Base.Experimental.register_error_hint(MethodError) do io, exc, arg_types, kwargs
+        if exc.f === lazyarray
+            print(io, "\\nDid you forget to load LazyArrays?")
         end
     end
-
-    @require Tracker="9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c" begin
-        using DiffRules
-        using SpecialFunctions
-        using LinearAlgebra: AbstractTriangular
-        using .Tracker: Tracker, TrackedReal, TrackedVector, TrackedMatrix,
-                        TrackedArray, TrackedVecOrMat, track, @grad, data
-        include("tracker.jl")
-    end
-
-    @require LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02" begin
-        using .LazyArrays: BroadcastArray, BroadcastVector, LazyArray
-
-        const LazyVectorOfUnivariate{
-            S<:ValueSupport,
-            T<:UnivariateDistribution{S},
-            Tdists<:BroadcastVector{T},
-        } = VectorOfUnivariate{S,T,Tdists}
-
-        function Distributions._logpdf(
-            dist::LazyVectorOfUnivariate,
-            x::AbstractVector{<:Real},
-        )
-            return sum(copy(logpdf.(dist.v, x)))
-        end
-
-        function Distributions.logpdf(
-            dist::LazyVectorOfUnivariate,
-            x::AbstractMatrix{<:Real},
-        )
-            size(x, 1) == length(dist) ||
-                throw(DimensionMismatch("Inconsistent array dimensions."))
-            return vec(sum(copy(logpdf.(dists, x)), dims = 1))
-        end
-
-        const LazyMatrixOfUnivariate{
-            S<:ValueSupport,
-            T<:UnivariateDistribution{S},
-            Tdists<:BroadcastArray{T,2},
-        } = MatrixOfUnivariate{S,T,Tdists}
-
-        function Distributions._logpdf(
-            dist::LazyMatrixOfUnivariate,
-            x::AbstractMatrix{<:Real},
-        )
-            return sum(copy(logpdf.(dist.dists, x)))
-        end
-
-        lazyarray(f, x...) = LazyArray(Base.broadcasted(f, x...))
-        export lazyarray
+    @static if !isdefined(Base, :get_extension)
+        @require ForwardDiff="f6369f11-7733-5829-9624-2563aa707210" include("../ext/DistributionsADForwardDiffExt.jl")
+        @require ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267" include("../ext/DistributionsADReverseDiffExt.jl")
+        @require Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c" include("../ext/DistributionsADTrackerExt.jl")
+        @require LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02" include("../ext/DistributionsADLazyArrays.jl")
     end
 end
 
