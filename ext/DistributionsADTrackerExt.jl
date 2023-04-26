@@ -11,7 +11,7 @@ end
 using DistributionsAD: Distributions, LinearAlgebra, Random, SpecialFunctions, StatsFuns
 using Tracker: TrackedReal, TrackedVector, TrackedMatrix,
                TrackedArray, TrackedVecOrMat, track, @grad, data
-using LinearAlgebra: AbstractTriangular, Adjoint
+using LinearAlgebra: AbstractTriangular, Adjoint, Cholesky
 
 
 ## Generic ##
