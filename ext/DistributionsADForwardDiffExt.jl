@@ -7,9 +7,9 @@ else
     using ..DistributionsAD
     using ..ForwardDiff
 end
-using DistributionsAD: Distributions, StatsFuns
+using DistributionsAD: Distributions, Random, StatsFuns
 
-function DistributionsAD.adapt_randn(rng::AbstractRNG, x::AbstractArray{<:ForwardDiff.Dual}, dims...)
+function DistributionsAD.adapt_randn(rng::Random.AbstractRNG, x::AbstractArray{<:ForwardDiff.Dual}, dims...)
     return adapt_randn(rng, ForwardDiff.valtype(eltype(x)), x, dims...)
 end
 

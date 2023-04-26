@@ -8,7 +8,7 @@ else
     using ..Tracker
 end
 
-using DistributionsAD: Distributions, LinearAlgebra, SpecialFunctions, StatsFuns
+using DistributionsAD: Distributions, LinearAlgebra, Random, SpecialFunctions, StatsFuns
 using Tracker: Tracker, TrackedReal, TrackedVector, TrackedMatrix,
                TrackedArray, TrackedVecOrMat, track, @grad, data
 using LinearAlgebra: AbstractTriangular
@@ -219,7 +219,7 @@ end
 
 ## `adapt_randn`
 
-DistributionsAD.adapt_randn(rng::AbstractRNG, x::TrackedArray, dims...) = adapt_randn(rng, data(x), dims...)
+DistributionsAD.adapt_randn(rng::Random.AbstractRNG, x::TrackedArray, dims...) = adapt_randn(rng, data(x), dims...)
 
 ## Uniform ##
 
