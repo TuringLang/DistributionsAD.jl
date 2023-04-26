@@ -4,11 +4,11 @@ if isdefined(Base, :get_extension)
     using DistributionsAD
     using LazyArrays
 else
-    using .DistributionsAD
-    using .LazyArrays
+    using ..DistributionsAD
+    using ..LazyArrays
 end
 using DistributionsAD: Distributions
-using .LazyArrays: BroadcastArray, BroadcastVector, LazyArray
+using LazyArrays: BroadcastArray, BroadcastVector, LazyArray
 
 const LazyVectorOfUnivariate{
     S<:ValueSupport,

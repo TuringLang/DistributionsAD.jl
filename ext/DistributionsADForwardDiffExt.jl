@@ -4,8 +4,8 @@ if isdefined(Base, :get_extension)
     using DistributionsAD
     using ForwardDiff
 else
-    using .DistributionsAD
-    using .ForwardDiff
+    using ..DistributionsAD
+    using ..ForwardDiff
 end
 using DistributionsAD: Distributions, StatsFuns
 

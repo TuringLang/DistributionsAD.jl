@@ -4,8 +4,8 @@ if isdefined(Base, :get_extension)
     using DistributionsAD
     using Tracker
 else
-    using .DistributionsAD
-    using .Tracker
+    using ..DistributionsAD
+    using ..Tracker
 end
 
 using DistributionsAD: Distributions, LinearAlgebra, SpecialFunctions, StatsFuns

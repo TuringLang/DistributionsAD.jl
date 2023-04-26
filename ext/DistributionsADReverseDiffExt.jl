@@ -5,8 +5,8 @@ if isdefined(Base, :get_extension)
     using DistributionsAD
     using ReverseDiff
 else
-    using .DistributionsAD
-    using .ReverseDiff
+    using ..DistributionsAD
+    using ..ReverseDiff
 end
 using DistributionsAD: Distributions, LinearAlgebra, Random, SpecialFunctions, StatsFuns
 using ReverseDiff: ForwardDiff, SpecialInstruction, value, value!, deriv, track, record!,
