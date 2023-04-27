@@ -5,7 +5,7 @@ if isdefined(Base, :get_extension)
     using DistributionsAD
     using DistributionsAD: Random
     using DistributionsAD.Distributions: Distributions, PDMats
-    using DistributionsAD.LinearAlgebra: LinearAlgebra, Cholesky
+    using DistributionsAD.LinearAlgebra: LinearAlgebra, Cholesky, Symmetric
     using DistributionsAD.StatsFuns: StatsFuns, logsumexp
 
     using ReverseDiff
@@ -17,7 +17,7 @@ else
     using ..DistributionsAD
     using ..DistributionsAD: Distributions, LinearAlgebra, Random
     using ..DistributionsAD.Distributions: Distributions, PDMats
-    using ..DistributionsAD.LinearAlgebra: LinearAlgebra, Cholesky
+    using ..DistributionsAD.LinearAlgebra: LinearAlgebra, Cholesky, Symmetric
     using ..DistributionsAD.StatsFuns: StatsFuns, logsumexp
 
     using ..ReverseDiff

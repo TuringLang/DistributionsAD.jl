@@ -148,13 +148,13 @@ function LinearAlgebra.cholesky(A::Symmetric{<:Any, <:TrackedMatrix}; check=true
     return Cholesky{eltype(factors), typeof(factors)}(factors, 'U', info)
 end
 
-DistributionsAD.turing_chol(A::TrackedMatrix, check) = track(turing_chol, A, check)
-@grad function turing_chol(A::AbstractMatrix, check)
+DistributionsAD.turing_chol(A::TrackedMatrix, check) = track(DistributionsAD.turing_chol, A, check)
+@grad function DistributionsAD.turing_chol(A::AbstractMatrix, check)
     Y, back = DistributionsAD.turing_chol_back(data(A),check)
     Y, Δ->back(data.(Δ))
 end
 
-DistributionsAD.symm_turing_chol(A::TrackedMatrix, check, uplo) = track(symm_turing_chol, A, check, uplo)
+DistributionsAD.symm_turing_chol(A::TrackedMatrix, check, uplo) = track(DistributionsAD.symm_turing_chol, A, check, uplo)
 @grad function DistributionsAD.symm_turing_chol(A::AbstractMatrix, check, uplo)
     Y, back = DistributionsAD.symm_turing_chol_back(data(A),check,uplo)
     Y, Δ->back(data.(Δ))
