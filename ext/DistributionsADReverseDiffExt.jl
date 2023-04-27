@@ -31,7 +31,7 @@ const RDBroadcasted{F, T} = Broadcasted{<:Any, <:Any, F, T}
 ###############
 
 StatsFuns.logsumexp(x::TrackedArray; dims=:) = track(logsumexp, x, dims = dims)
-@grad function logsumexp(x::AbstractArray; dims)
+@grad function StatsFuns.logsumexp(x::AbstractArray; dims)
     x_value = value(x)
     lse = logsumexp(x_value; dims=dims)
     return lse, Δ -> (Δ .* exp.(x_value .- lse),)
@@ -43,11 +43,11 @@ end
 
 function LinearAlgebra.cholesky(A::Symmetric{<:Any, <:TrackedMatrix}; check=true)
     uplo = A.uplo == 'U' ? (:U) : (:L)
-    factors, info = symm_turing_chol(parent(A), check, uplo)
+    factors, info = DistributionsAD.symm_turing_chol(parent(A), check, uplo)
     return Cholesky{eltype(factors), typeof(factors)}(factors, 'U', info)
 end
 function LinearAlgebra.cholesky(A::TrackedMatrix; check=true)
-    factors, info = turing_chol(A, check)
+    factors, info = DistributionsAD.turing_chol(A, check)
     return Cholesky{eltype(factors), typeof(factors)}(factors, 'U', info)
 end
 
@@ -57,7 +57,7 @@ function DistributionsAD.symm_turing_chol(x::TrackedArray{V,D}, check, uplo) whe
     (factors,info), back = DistributionsAD.symm_turing_chol_back(x_value, check, uplo)
     C = Cholesky{eltype(factors), typeof(factors)}(factors, 'U', info)
     out = track(C.factors, D, tp)
-    record!(tp, SpecialInstruction, symm_turing_chol, (x, check, uplo), out, (back, issuccess(C)))
+    record!(tp, SpecialInstruction, DistributionsAD.symm_turing_chol, (x, check, uplo), out, (back, issuccess(C)))
     return out, C.info
 end
 function DistributionsAD.turing_chol(x::TrackedArray{V,D}, check) where {V,D}
@@ -66,7 +66,7 @@ function DistributionsAD.turing_chol(x::TrackedArray{V,D}, check) where {V,D}
     (factors,info), back = DistributionsAD.turing_chol_back(x_value, check)
     C = Cholesky{eltype(factors), typeof(factors)}(factors, 'U', info)
     out = track(C.factors, D, tp)
-    record!(tp, SpecialInstruction, turing_chol, (x, check), out, (back, issuccess(C)))
+    record!(tp, SpecialInstruction, DistributionsAD.turing_chol, (x, check), out, (back, issuccess(C)))
     return out, C.info
 end
 
@@ -88,19 +88,19 @@ for f in (:turing_chol, :symm_turing_chol)
 end
 
 @noinline function ReverseDiff.special_forward_exec!(
-    instruction::SpecialInstruction{typeof(turing_chol)},
+    instruction::SpecialInstruction{typeof(DistributionsAD.turing_chol)},
 )
     output, input = instruction.output, instruction.input
-    factors = turing_chol(value.(input)...)[1]
+    factors = DistributionsAD.turing_chol(value.(input)...)[1]
     value!(output, factors)
     return nothing
 end
 
 @noinline function ReverseDiff.special_forward_exec!(
-    instruction::SpecialInstruction{typeof(symm_turing_chol)},
+    instruction::SpecialInstruction{typeof(DistributionsAD.symm_turing_chol)},
 )
     output, input = instruction.output, instruction.input
-    factors = symm_turing_chol(value.(input)...)[1]
+    factors = DistributionsAD.symm_turing_chol(value.(input)...)[1]
     value!(output, factors)
     return nothing
 end
