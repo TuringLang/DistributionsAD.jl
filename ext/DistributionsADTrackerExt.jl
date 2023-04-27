@@ -3,16 +3,18 @@ module DistributionsADTrackerExt
 if isdefined(Base, :get_extension)
     using DistributionsAD
     using Tracker
+    using DistributionsAD: Distributions, LinearAlgebra, Random, SpecialFunctions, StatsFuns
+    using DistributionsAD.LinearAlgebra: AbstractTriangular, Adjoint, Cholesky, Symmetric
+    using Tracker: TrackedReal, TrackedVector, TrackedMatrix,
+                   TrackedArray, TrackedVecOrMat, track, @grad, data
 else
     using ..DistributionsAD
     using ..Tracker
+    using ..DistributionsAD: Distributions, LinearAlgebra, Random, SpecialFunctions, StatsFuns
+    using ..DistributionsAD.LinearAlgebra: AbstractTriangular, Adjoint, Cholesky, Symmetric
+    using ..Tracker: TrackedReal, TrackedVector, TrackedMatrix,
+                     TrackedArray, TrackedVecOrMat, track, @grad, data
 end
-
-using DistributionsAD: Distributions, LinearAlgebra, Random, SpecialFunctions, StatsFuns
-using Tracker: TrackedReal, TrackedVector, TrackedMatrix,
-               TrackedArray, TrackedVecOrMat, track, @grad, data
-using LinearAlgebra: AbstractTriangular, Adjoint, Cholesky, Symmetric
-
 
 ## Generic ##
 Tracker.dual(x::Bool, p) = x
@@ -198,21 +200,18 @@ function Distributions.isprobvec(p::TrackedArray{<:Real})
 end
 
 # Some array functions - workaround https://github.com/FluxML/Tracker.jl/issues/4
-import Base: +, -, *, /, \
-import LinearAlgebra: dot
-
-for f in (:+, :-, :*, :/, :\, :dot), (T1, T2) in [
+for (M, f) in ((:Base, :+), (:Base, :-), (:Base, :*), (:Base, :/), (:Base, :\), (:LinearAlgebra, :dot)), (T1, T2) in [
     (:TrackedArray, :AbstractArray),
     (:TrackedMatrix, :AbstractMatrix),
     (:TrackedMatrix, :AbstractVector),
     (:TrackedVector, :AbstractMatrix),
 ]
     @eval begin
-        function $f(a::$T1{T}, b::$T2{<:TrackedReal}) where {T <: Real}
-            return $f(convert(AbstractArray{TrackedReal{T}}, a), b)
+        function $M.$f(a::$T1{T}, b::$T2{<:TrackedReal}) where {T <: Real}
+            return $M.$f(convert(AbstractArray{TrackedReal{T}}, a), b)
         end
-        function $f(a::$T2{<:TrackedReal}, b::$T1{T}) where {T <: Real}
-            return $f(a, convert(AbstractArray{TrackedReal{T}}, b))
+        function $M.$f(a::$T2{<:TrackedReal}, b::$T1{T}) where {T <: Real}
+            return $M.$f(a, convert(AbstractArray{TrackedReal{T}}, b))
         end
     end
 end

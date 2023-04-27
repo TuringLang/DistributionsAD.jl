@@ -3,11 +3,12 @@ module DistributionsADForwardDiffExt
 if isdefined(Base, :get_extension)
     using DistributionsAD
     using ForwardDiff
+    using DistributionsAD: Distributions, Random, StatsFuns
 else
     using ..DistributionsAD
     using ..ForwardDiff
+    using ..DistributionsAD: Distributions, Random, StatsFuns
 end
-using DistributionsAD: Distributions, Random, StatsFuns
 
 function DistributionsAD.adapt_randn(rng::Random.AbstractRNG, x::AbstractArray{<:ForwardDiff.Dual}, dims...)
     return DistributionsAD.adapt_randn(rng, ForwardDiff.valtype(eltype(x)), x, dims...)

@@ -4,16 +4,22 @@ module DistributionsADReverseDiffExt
 if isdefined(Base, :get_extension)
     using DistributionsAD
     using ReverseDiff
+    using DistributionsAD: Distributions, LinearAlgebra, Random, SpecialFunctions, StatsFuns
+    using DistributionsAD.Distributions: PDMats
+    using ReverseDiff: SpecialInstruction, value, value!, deriv, track, record!,
+                         tape, unseed!, @grad, TrackedReal, TrackedVector,
+                         TrackedMatrix, TrackedArray
+    using ReverseDiff.ForwardDiff: Dual
 else
     using ..DistributionsAD
     using ..ReverseDiff
+    using ..DistributionsAD: Distributions, LinearAlgebra, Random, SpecialFunctions, StatsFuns
+    using ..DistributionsAD.Distributions: PDMats
+    using ..ReverseDiff: SpecialInstruction, value, value!, deriv, track, record!,
+                         tape, unseed!, @grad, TrackedReal, TrackedVector,
+                         TrackedMatrix, TrackedArray
+    using ..ReverseDiff.ForwardDiff: Dual
 end
-using DistributionsAD: Distributions, LinearAlgebra, Random, SpecialFunctions, StatsFuns
-using ReverseDiff: ForwardDiff, SpecialInstruction, value, value!, deriv, track, record!,
-    tape, unseed!, @grad, TrackedReal, TrackedVector,
-    TrackedMatrix, TrackedArray
-using ForwardDiff: Dual
-using Distributions: PDMats
 
 using Base.Broadcast: BroadcastStyle, ArrayStyle, Broadcasted, broadcasted
 
