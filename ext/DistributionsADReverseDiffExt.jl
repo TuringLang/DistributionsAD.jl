@@ -3,18 +3,24 @@ module DistributionsADReverseDiffExt
 
 if isdefined(Base, :get_extension)
     using DistributionsAD
+    using DistributionsAD: Random
+    using DistributionsAD.Distributions: Distributions, PDMats
+    using DistributionsAD.LinearAlgebra: LinearAlgebra, Cholesky
+    using DistributionsAD.StatsFuns: StatsFuns, logsumexp
+
     using ReverseDiff
-    using DistributionsAD: Distributions, LinearAlgebra, Random, SpecialFunctions, StatsFuns
-    using DistributionsAD.Distributions: PDMats
     using ReverseDiff: SpecialInstruction, value, value!, deriv, track, record!,
-                         tape, unseed!, @grad, TrackedReal, TrackedVector,
-                         TrackedMatrix, TrackedArray
+                       tape, unseed!, @grad, TrackedReal, TrackedVector,
+                       TrackedMatrix, TrackedArray
     using ReverseDiff.ForwardDiff: Dual
 else
     using ..DistributionsAD
+    using ..DistributionsAD: Distributions, LinearAlgebra, Random
+    using ..DistributionsAD.Distributions: Distributions, PDMats
+    using ..DistributionsAD.LinearAlgebra: LinearAlgebra, Cholesky
+    using ..DistributionsAD.StatsFuns: StatsFuns, logsumexp
+
     using ..ReverseDiff
-    using ..DistributionsAD: Distributions, LinearAlgebra, Random, SpecialFunctions, StatsFuns
-    using ..DistributionsAD.Distributions: PDMats
     using ..ReverseDiff: SpecialInstruction, value, value!, deriv, track, record!,
                          tape, unseed!, @grad, TrackedReal, TrackedVector,
                          TrackedMatrix, TrackedArray
@@ -31,7 +37,7 @@ const RDBroadcasted{F, T} = Broadcasted{<:Any, <:Any, F, T}
 ###############
 
 StatsFuns.logsumexp(x::TrackedArray; dims=:) = track(logsumexp, x, dims = dims)
-@grad function StatsFuns.logsumexp(x::AbstractArray; dims)
+@grad function logsumexp(x::AbstractArray; dims)
     x_value = value(x)
     lse = logsumexp(x_value; dims=dims)
     return lse, Δ -> (Δ .* exp.(x_value .- lse),)

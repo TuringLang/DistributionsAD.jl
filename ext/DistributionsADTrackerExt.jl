@@ -2,16 +2,22 @@ module DistributionsADTrackerExt
 
 if isdefined(Base, :get_extension)
     using DistributionsAD
+    using DistributionsAD: Random, SpecialFunctions
+    using DistributionsAD.Distributions
+    using DistributionsAD.LinearAlgebra: LinearAlgebra, AbstractTriangular, Adjoint, Cholesky, Symmetric
+    using DistributionsAD.StatsFuns
+
     using Tracker
-    using DistributionsAD: Distributions, LinearAlgebra, Random, SpecialFunctions, StatsFuns
-    using DistributionsAD.LinearAlgebra: AbstractTriangular, Adjoint, Cholesky, Symmetric
     using Tracker: TrackedReal, TrackedVector, TrackedMatrix,
                    TrackedArray, TrackedVecOrMat, track, @grad, data
 else
     using ..DistributionsAD
+    using ..DistributionsAD: Random, SpecialFunctions
+    using ..DistributionsAD.Distributions
+    using ..DistributionsAD.LinearAlgebra: LinearAlgebra, AbstractTriangular, Adjoint, Cholesky, Symmetric
+    using ..DistributionsAD.StatsFuns
+
     using ..Tracker
-    using ..DistributionsAD: Distributions, LinearAlgebra, Random, SpecialFunctions, StatsFuns
-    using ..DistributionsAD.LinearAlgebra: AbstractTriangular, Adjoint, Cholesky, Symmetric
     using ..Tracker: TrackedReal, TrackedVector, TrackedMatrix,
                      TrackedArray, TrackedVecOrMat, track, @grad, data
 end
@@ -149,7 +155,7 @@ DistributionsAD.turing_chol(A::TrackedMatrix, check) = track(turing_chol, A, che
 end
 
 DistributionsAD.symm_turing_chol(A::TrackedMatrix, check, uplo) = track(symm_turing_chol, A, check, uplo)
-@grad function symm_turing_chol(A::AbstractMatrix, check, uplo)
+@grad function DistributionsAD.symm_turing_chol(A::AbstractMatrix, check, uplo)
     Y, back = DistributionsAD.symm_turing_chol_back(data(A),check,uplo)
     Y, Δ->back(data.(Δ))
 end
@@ -166,14 +172,14 @@ function LinearAlgebra.logdet(C::Cholesky{<:TrackedReal, <:TrackedMatrix})
     return logdet_chol_tri(C.U)
 end
 
-function zygote_ldiv(A::TrackedMatrix, B::TrackedVecOrMat)
-    return track(zygote_ldiv, A, B)
+function DistributionsAD.zygote_ldiv(A::TrackedMatrix, B::TrackedVecOrMat)
+    return track(DistributionsAD.zygote_ldiv, A, B)
 end
-function zygote_ldiv(A::TrackedMatrix, B::AbstractVecOrMat)
-    return track(zygote_ldiv, A, B)
+function DistributionsAD.zygote_ldiv(A::TrackedMatrix, B::AbstractVecOrMat)
+    return track(DistributionsAD.zygote_ldiv, A, B)
 end
-zygote_ldiv(A::AbstractMatrix, B::TrackedVecOrMat) =  track(zygote_ldiv, A, B)
-@grad function zygote_ldiv(A, B)
+DistributionsAD.zygote_ldiv(A::AbstractMatrix, B::TrackedVecOrMat) =  track(DistributionsAD.zygote_ldiv, A, B)
+@grad function DistributionsAD.zygote_ldiv(A, B)
     Y, dY_pullback = rrule(\, data(A), data(B))
     function back(Δ)
         _, dA, dB = dY_pullback(data(Δ))
@@ -190,7 +196,7 @@ end
 
 SpecialFunctions.logabsgamma(x::TrackedReal) = track(logabsgamma, x)
 @grad function SpecialFunctions.logabsgamma(x::Real)
-    return logabsgamma(data(x)), Δ -> (digamma(data(x)) * Δ[1],)
+    return SpecialFunctions.logabsgamma(data(x)), Δ -> (SpecialFunctions.digamma(data(x)) * Δ[1],)
 end
 
 # isprobvec
