@@ -293,7 +293,7 @@ semicirclelogpdf(r::TrackedReal, x::Real) = track(semicirclelogpdf, r, x)
 semicirclelogpdf(r::Real, x::TrackedReal) = track(semicirclelogpdf, r, x)
 
 @grad function semicirclelogpdf(r::TrackedReal, x::TrackedReal)
-    return semicriclelogpdf(data(r), data(x)), Δ -> (Δ * semicircle_dldr(r, x), Δ * semicircle_dldx(r, x))
+    return semicirclelogpdf(data(r), data(x)), Δ -> (Δ * semicircle_dldr(r, x), Δ * semicircle_dldx(r, x))
 end
 @grad function semicirclelogpdf(r::TrackedReal, x::Real)
     return semicirclelogpdf(data(r), x), Δ -> (Δ * semicircle_dldr(r, x), zero(x))
