@@ -287,20 +287,20 @@ logpdf(d::Semicircle{<:Real}, x::TrackedReal) = semicirclelogpdf(d.r, x)
 logpdf(d::Semicircle{<:TrackedReal}, x::Real) = semicirclelogpdf(d.r, x)
 logpdf(d::Semicircle{<:TrackedReal}, x::TrackedReal) = semicirclelogpdf(d.r, x)
 
-semicirclelogpdf(r, x) = logpdf(Semicircle(r), x)
-M, f, arity = DiffRules.@define_diffrule DistributionsAD.semicirclelogpdf(r, x) =
-    :(semicircle_dldr($r, $x)), :(semicircle_dldx($r, $x))
-da, db = DiffRules.diffrule(M, f, :a, :b)
-f = :($M.$f)
-@eval begin
-    @grad $f(a::TrackedReal, b::TrackedReal) = $f(data(a), data(b)), Δ -> (Δ * $da, Δ * $db)
-    @grad $f(a::TrackedReal, b::Real) = $f(data(a), b), Δ -> (Δ * $da, Tracker._zero(b))
-    @grad $f(a::Real, b::TrackedReal) = $f(a, data(b)), Δ -> (Tracker._zero(a), Δ * $db)
-    $f(a::TrackedReal, b::TrackedReal)  = track($f, a, b)
-    $f(a::TrackedReal, b::Real) = track($f, a, b)
-    $f(a::Real, b::TrackedReal) = track($f, a, b)
-end
+semicirclelogpdf(r::Real, x::Real) = logpdf(Semicircle(r), x)
+semicirclelogpdf(r::TrackedReal, x::TrackedReal) = track(semicirclelogpdf, r, x)
+semicirclelogpdf(r::TrackedReal, x::Real) = track(semicirclelogpdf, r, x)
+semicirclelogpdf(r::Real, x::TrackedReal) = track(semicirclelogpdf, r, x)
 
+@grad function semicirclelogpdf(r::TrackedReal, x::TrackedReal)
+    return semicriclelogpdf(data(r), data(x)), Δ -> (Δ * semicircle_dldr(r, x), Δ * semicircle_dldx(r, x))
+end
+@grad function semicirclelogpdf(r::TrackedReal, x::Real)
+    return semicirclelogpdf(data(r), x), Δ -> (Δ * semicircle_dldr(r, x), zero(x))
+end
+@grad function semicirclelogpdf(r::Real, x::TrackedReal)
+    return semicirclelogpdf(r, data(x)), Δ -> (zero(r), Δ * semicircle_dldx(r, x))
+end
 
 ## Negative binomial ##
 
@@ -319,11 +319,11 @@ nbinomlogpdf(n::TrackedReal, p::Real, x::Int) = track(nbinomlogpdf, n, p, x)
 end
 @grad function nbinomlogpdf(r::Real, p::TrackedReal, k::Int)
     return nbinomlogpdf(data(r), data(p), k),
-        Δ->(Tracker._zero(r), Δ * _nbinomlogpdf_grad_2(r, p, k), nothing)
+        Δ->(zero(r), Δ * _nbinomlogpdf_grad_2(r, p, k), nothing)
 end
 @grad function nbinomlogpdf(r::TrackedReal, p::Real, k::Int)
     return nbinomlogpdf(data(r), data(p), k),
-        Δ->(Δ * _nbinomlogpdf_grad_1(r, p, k), Tracker._zero(p), nothing)
+        Δ->(Δ * _nbinomlogpdf_grad_1(r, p, k), zero(p), nothing)
 end
 
 ## Multinomial
