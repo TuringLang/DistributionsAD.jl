@@ -2,20 +2,18 @@ module DistributionsADTrackerExt
 
 if isdefined(Base, :get_extension)
     using DistributionsAD
-    using DistributionsAD: Random, SpecialFunctions
+    using DistributionsAD: ChainRulesCore, LinearAlgebra, Random, SpecialFunctions, StatsFuns
     using DistributionsAD.Distributions
-    using DistributionsAD.LinearAlgebra: LinearAlgebra, AbstractTriangular, Adjoint, Cholesky, Symmetric
-    using DistributionsAD.StatsFuns
+    using DistributionsAD.Distributions: PDMats
 
     using Tracker
     using Tracker: TrackedReal, TrackedVector, TrackedMatrix,
                    TrackedArray, TrackedVecOrMat, track, @grad, data
 else
     using ..DistributionsAD
-    using ..DistributionsAD: Random, SpecialFunctions
+    using ..DistributionsAD: ChainRulesCore, LinearAlgebra, Random, SpecialFunctions, StatsFuns
     using ..DistributionsAD.Distributions
-    using ..DistributionsAD.LinearAlgebra: LinearAlgebra, AbstractTriangular, Adjoint, Cholesky, Symmetric
-    using ..DistributionsAD.StatsFuns
+    using ..DistributionsAD.Distributions: PDMats
 
     using ..Tracker
     using ..Tracker: TrackedReal, TrackedVector, TrackedMatrix,
@@ -66,21 +64,21 @@ for f = [:hcat, :vcat]
 end
 
 function Base.copy(
-    A::TrackedArray{T, 2, <:Adjoint{T, <:AbstractTriangular{T, <:AbstractMatrix{T}}}},
+    A::TrackedArray{T, 2, <:LinearAlgebra.Adjoint{T, <:LinearAlgebra.AbstractTriangular{T, <:AbstractMatrix{T}}}},
 ) where {T <: Real}
     return track(copy, A)
 end
 @grad function Base.copy(
-    A::TrackedArray{T, 2, <:Adjoint{T, <:AbstractTriangular{T, <:AbstractMatrix{T}}}},
+    A::TrackedArray{T, 2, <:LinearAlgebra.Adjoint{T, <:LinearAlgebra.AbstractTriangular{T, <:AbstractMatrix{T}}}},
 ) where {T <: Real}
     return copy(data(A)), ∇ -> (copy(∇),)
 end
 
-Base.:*(A::TrackedMatrix, B::AbstractTriangular) = track(*, A, B)
-Base.:*(A::AbstractTriangular{T}, B::TrackedVector) where {T} = track(*, A, B)
-Base.:*(A::AbstractTriangular{T}, B::TrackedMatrix) where {T} = track(*, A, B)
-Base.:*(A::Adjoint{T, <:AbstractTriangular{T}}, B::TrackedMatrix) where {T} = track(*, A, B)
-Base.:*(A::Adjoint{T, <:AbstractTriangular{T}}, B::TrackedVector) where {T} = track(*, A, B)
+Base.:*(A::TrackedMatrix, B::LinearAlgebra.AbstractTriangular) = track(*, A, B)
+Base.:*(A::LinearAlgebra.AbstractTriangular{T}, B::TrackedVector) where {T} = track(*, A, B)
+Base.:*(A::LinearAlgebra.AbstractTriangular{T}, B::TrackedMatrix) where {T} = track(*, A, B)
+Base.:*(A::LinearAlgebra.Adjoint{T, <:LinearAlgebra.AbstractTriangular{T}}, B::TrackedMatrix) where {T} = track(*, A, B)
+Base.:*(A::LinearAlgebra.Adjoint{T, <:LinearAlgebra.AbstractTriangular{T}}, B::TrackedVector) where {T} = track(*, A, B)
 
 function Base.fill(
     value::TrackedReal,
@@ -109,16 +107,16 @@ end
 ## Linear algebra ##
 
 # Work around https://github.com/FluxML/Tracker.jl/pull/9#issuecomment-480051767
-upper(A::AbstractMatrix) = UpperTriangular(A)
-lower(A::AbstractMatrix) = LowerTriangular(A)
-function upper(C::Cholesky)
+upper(A::AbstractMatrix) = LinearAlgebra.UpperTriangular(A)
+lower(A::AbstractMatrix) = LinearAlgebra.LowerTriangular(A)
+function upper(C::LinearAlgebra.Cholesky)
     if C.uplo == 'U'
         return upper(C.factors)
     else
         return copy(lower(C.factors)')
     end
 end
-function lower(C::Cholesky)
+function lower(C::LinearAlgebra.Cholesky)
     if C.uplo == 'U'
         return copy(upper(C.factors)')
     else
@@ -138,14 +136,14 @@ function LinearAlgebra.cholesky(A::TrackedMatrix; check=true)
     factors_info = DistributionsAD.turing_chol(A, check)
     factors = factors_info[1]
     info = data(factors_info[2])
-    return Cholesky{eltype(factors), typeof(factors)}(factors, 'U', info)
+    return LinearAlgebra.Cholesky{eltype(factors), typeof(factors)}(factors, 'U', info)
 end
-function LinearAlgebra.cholesky(A::Symmetric{<:Any, <:TrackedMatrix}; check=true)
+function LinearAlgebra.cholesky(A::LinearAlgebra.Symmetric{<:Any, <:TrackedMatrix}; check=true)
     uplo = A.uplo == 'U' ? (:U) : (:L)
     factors_info = DistributionsAD.symm_turing_chol(parent(A), check, uplo)
     factors = factors_info[1]
     info = data(factors_info[2])
-    return Cholesky{eltype(factors), typeof(factors)}(factors, 'U', info)
+    return LinearAlgebra.Cholesky{eltype(factors), typeof(factors)}(factors, 'U', info)
 end
 
 DistributionsAD.turing_chol(A::TrackedMatrix, check) = track(DistributionsAD.turing_chol, A, check)
@@ -161,14 +159,14 @@ DistributionsAD.symm_turing_chol(A::TrackedMatrix, check, uplo) = track(Distribu
 end
 
 # Specialised logdet for cholesky to target the triangle directly.
-logdet_chol_tri(U::AbstractMatrix) = 2 * sum(log, U[diagind(U)])
+logdet_chol_tri(U::AbstractMatrix) = 2 * sum(log, U[LinearAlgebra.diagind(U)])
 logdet_chol_tri(U::TrackedMatrix) = track(logdet_chol_tri, U)
 @grad function logdet_chol_tri(U::AbstractMatrix)
     U_data = data(U)
-    return logdet_chol_tri(U_data), Δ->(Matrix(Diagonal(2 .* Δ ./ diag(U_data))),)
+    return logdet_chol_tri(U_data), Δ->(Matrix(LinearAlgebra.Diagonal(2 .* Δ ./ LinearAlgebra.diag(U_data))),)
 end
 
-function LinearAlgebra.logdet(C::Cholesky{<:TrackedReal, <:TrackedMatrix})
+function LinearAlgebra.logdet(C::LinearAlgebra.Cholesky{<:TrackedReal, <:TrackedMatrix})
     return logdet_chol_tri(C.U)
 end
 
@@ -180,15 +178,15 @@ function DistributionsAD.zygote_ldiv(A::TrackedMatrix, B::AbstractVecOrMat)
 end
 DistributionsAD.zygote_ldiv(A::AbstractMatrix, B::TrackedVecOrMat) =  track(DistributionsAD.zygote_ldiv, A, B)
 @grad function DistributionsAD.zygote_ldiv(A, B)
-    Y, dY_pullback = rrule(\, data(A), data(B))
+    Y, dY_pullback = ChainRulesCore.rrule(\, data(A), data(B))
     function back(Δ)
         _, dA, dB = dY_pullback(data(Δ))
-        (unthunk(dA), unthunk(dB))
+        (ChainRulesCore.unthunk(dA), ChainRulesCore.unthunk(dB))
     end
     Y, back
 end
 
-function Base.:\(a::Cholesky{<:TrackedReal, <:TrackedArray}, b::AbstractVecOrMat)
+function Base.:\(a::LinearAlgebra.Cholesky{<:TrackedReal, <:TrackedArray}, b::AbstractVecOrMat)
     return (a.U \ (a.U' \ b))
 end
 
@@ -259,18 +257,18 @@ end
 
 ## Binomial ##
 
-StatsFuns.binomlogpdf(n::Int, p::TrackedReal, x::Int) = track(binomlogpdf, n, p, x)
-@grad function binomlogpdf(n::Int, p::TrackedReal, x::Int)
-    return binomlogpdf(n, data(p), x),
+StatsFuns.binomlogpdf(n::Int, p::TrackedReal, x::Int) = track(StatsFuns.binomlogpdf, n, p, x)
+@grad function StatsFuns.binomlogpdf(n::Int, p::TrackedReal, x::Int)
+    return StatsFuns.binomlogpdf(n, data(p), x),
         Δ->(nothing, Δ * (x / p - (n - x) / (1 - p)), nothing)
 end
 
 
 ## Poisson ##
 
-StatsFuns.poislogpdf(v::TrackedReal, x::Int) = track(poislogpdf, v, x)
-@grad function poislogpdf(v::TrackedReal, x::Int)
-      return poislogpdf(data(v), x),
+StatsFuns.poislogpdf(v::TrackedReal, x::Int) = track(StatsFuns.poislogpdf, v, x)
+@grad function StatsFuns.poislogpdf(v::TrackedReal, x::Int)
+      return StatsFuns.poislogpdf(data(v), x),
           Δ->(Δ * (x/v - 1), nothing)
 end
 
@@ -309,18 +307,19 @@ Distributions.logpdf(d::Semicircle{<:Real}, x::TrackedReal) = semicirclelogpdf(d
 Distributions.logpdf(d::Semicircle{<:TrackedReal}, x::Real) = semicirclelogpdf(d.r, x)
 Distributions.logpdf(d::Semicircle{<:TrackedReal}, x::TrackedReal) = semicirclelogpdf(d.r, x)
 
-semicirclelogpdf(r, x) = logpdf(Semicircle(r), x)
-semicirclelogpdf(a::TrackedReal, b::TrackedReal)  = track(semicirclelogpdf, a, b)
-semicirclelogpdf(a::TrackedReal, b::Real) = track(semicirclelogpdf, a, b)
-semicirclelogpdf(a::Real, b::TrackedReal) = track(semicirclelogpdf, a, b)
-@grad function semicirclelogpdf(a::TrackedReal, b::TrackedReal)
-    return semicirclelogpdf(data(a), data(b)), Δ -> (Δ * semicircle_dldr(a, b), Δ * semicircle_dldx(a, b))
+semicirclelogpdf(r::Real, x::Real) = logpdf(Semicircle(r), x)
+semicirclelogpdf(r::TrackedReal, x::TrackedReal) = track(semicirclelogpdf, r, x)
+semicirclelogpdf(r::TrackedReal, x::Real) = track(semicirclelogpdf, r, x)
+semicirclelogpdf(r::Real, x::TrackedReal) = track(semicirclelogpdf, r, x)
+
+@grad function semicirclelogpdf(r::TrackedReal, x::TrackedReal)
+    return semicirclelogpdf(data(r), data(x)), Δ -> (Δ * semicircle_dldr(r, x), Δ * semicircle_dldx(r, x))
 end
-@grad function semicirclelogpdf(a::TrackedReal, b::Real)
-    return semicirclelogpdf(data(a), b), Δ -> (Δ * semicircle_dldr(a, b), Tracker._zero(b))
+@grad function semicirclelogpdf(r::TrackedReal, x::Real)
+    return semicirclelogpdf(data(r), x), Δ -> (Δ * semicircle_dldr(r, x), zero(x))
 end
-@grad function semicirclelogpdf(a::Real, b::TrackedReal)
-    return semicirclelogpdf(a, data(b)), Δ -> (Tracker._zero(a), Δ * semicircle_dldx(a, b))
+@grad function semicirclelogpdf(r::Real, x::TrackedReal)
+    return semicirclelogpdf(r, data(x)), Δ -> (zero(r), Δ * semicircle_dldx(r, x))
 end
 
 ## Negative binomial ##
@@ -331,20 +330,20 @@ end
 _nbinomlogpdf_grad_1(r, p, k) = k == 0 ? log(p) : sum(1 / (k + r - i) for i in 1:k) + log(p)
 _nbinomlogpdf_grad_2(r, p, k) = -k / (1 - p) + r / p
 
-StatsFuns.nbinomlogpdf(n::TrackedReal, p::TrackedReal, x::Int) = track(nbinomlogpdf, n, p, x)
-StatsFuns.nbinomlogpdf(n::Real, p::TrackedReal, x::Int) = track(nbinomlogpdf, n, p, x)
-StatsFuns.nbinomlogpdf(n::TrackedReal, p::Real, x::Int) = track(nbinomlogpdf, n, p, x)
-@grad function nbinomlogpdf(r::TrackedReal, p::TrackedReal, k::Int)
-    return nbinomlogpdf(data(r), data(p), k),
+StatsFuns.nbinomlogpdf(n::TrackedReal, p::TrackedReal, x::Int) = track(StatsFuns.nbinomlogpdf, n, p, x)
+StatsFuns.nbinomlogpdf(n::Real, p::TrackedReal, x::Int) = track(StatsFuns.nbinomlogpdf, n, p, x)
+StatsFuns.nbinomlogpdf(n::TrackedReal, p::Real, x::Int) = track(StatsFuns.nbinomlogpdf, n, p, x)
+@grad function StatsFuns.nbinomlogpdf(r::TrackedReal, p::TrackedReal, k::Int)
+    return StatsFuns.nbinomlogpdf(data(r), data(p), k),
         Δ->(Δ * _nbinomlogpdf_grad_1(r, p, k), Δ * _nbinomlogpdf_grad_2(r, p, k), nothing)
 end
-@grad function nbinomlogpdf(r::Real, p::TrackedReal, k::Int)
-    return nbinomlogpdf(data(r), data(p), k),
-        Δ->(Tracker._zero(r), Δ * _nbinomlogpdf_grad_2(r, p, k), nothing)
+@grad function StatsFuns.nbinomlogpdf(r::Real, p::TrackedReal, k::Int)
+    return StatsFuns.nbinomlogpdf(data(r), data(p), k),
+        Δ->(zero(r), Δ * _nbinomlogpdf_grad_2(r, p, k), nothing)
 end
-@grad function nbinomlogpdf(r::TrackedReal, p::Real, k::Int)
-    return nbinomlogpdf(data(r), data(p), k),
-        Δ->(Δ * _nbinomlogpdf_grad_1(r, p, k), Tracker._zero(p), nothing)
+@grad function StatsFuns.nbinomlogpdf(r::TrackedReal, p::Real, k::Int)
+    return StatsFuns.nbinomlogpdf(data(r), data(p), k),
+        Δ->(Δ * _nbinomlogpdf_grad_1(r, p, k), zero(p), nothing)
 end
 
 ## Multinomial
@@ -377,10 +376,10 @@ function Distributions.loglikelihood(d::Dirichlet, x::TrackedMatrix{<:Real})
 end
 
 # Fix ambiguities
-function Distributions.logpdf(d::TuringDirichlet, x::TrackedMatrix{<:Real})
+function Distributions.logpdf(d::DistributionsAD.TuringDirichlet, x::TrackedMatrix{<:Real})
     size(x, 1) == length(d) ||
         throw(DimensionMismatch("Inconsistent array dimensions."))
-    return simplex_logpdf(d.alpha, d.lmnB, x)
+    return DistributionsAD.simplex_logpdf(d.alpha, d.lmnB, x)
 end
 
 ## Product
@@ -399,13 +398,13 @@ for (f, T) in (
 )
     @eval begin
         function Distributions.$f(d::MvNormal{<:Real, <:PDMats.ScalMat}, x::$T{<:Real})
-            return Distributions.$f(TuringScalMvNormal(d.μ, sqrt(d.Σ.value)), x)
+            return Distributions.$f(DistributionsAD.TuringScalMvNormal(d.μ, sqrt(d.Σ.value)), x)
         end
         function Distributions.$f(d::MvNormal{<:Real, <:PDMats.PDiagMat}, x::$T{<:Real})
-            return Distributions.$f(TuringDiagMvNormal(d.μ, sqrt.(d.Σ.diag)), x)
+            return Distributions.$f(DistributionsAD.TuringDiagMvNormal(d.μ, sqrt.(d.Σ.diag)), x)
         end
         function Distributions.$f(d::MvNormal{<:Real, <:PDMats.PDMat}, x::$T{<:Real})
-            return Distributions.$f(TuringDenseMvNormal(d.μ, d.Σ.chol), x)
+            return Distributions.$f(DistributionsAD.TuringDenseMvNormal(d.μ, d.Σ.chol), x)
         end
 
         function Distributions.$f(
@@ -413,7 +412,7 @@ for (f, T) in (
             x::$T{<:Real},
         )
             return Distributions.$f(
-                TuringMvLogNormal(TuringScalMvNormal(d.normal.μ, sqrt(d.normal.Σ.value))),
+                DistributionsAD.TuringMvLogNormal(DistributionsAD.TuringScalMvNormal(d.normal.μ, sqrt(d.normal.Σ.value))),
                 x,
             )
         end
@@ -422,7 +421,7 @@ for (f, T) in (
             x::$T{<:Real},
         )
             return Distributions.$f(
-                TuringMvLogNormal(TuringDiagMvNormal(d.normal.μ, sqrt.(d.normal.Σ.diag))),
+                DistributionsAD.TuringMvLogNormal(DistributionsAD.TuringDiagMvNormal(d.normal.μ, sqrt.(d.normal.Σ.diag))),
                 x,
             )
         end
@@ -431,7 +430,7 @@ for (f, T) in (
             x::$T{<:Real},
         )
             return Distributions.$f(
-                TuringMvLogNormal(TuringDenseMvNormal(d.normal.μ, d.normal.Σ.chol)),
+                DistributionsAD.TuringMvLogNormal(DistributionsAD.TuringDenseMvNormal(d.normal.μ, d.normal.Σ.chol)),
                 x,
             )
         end
@@ -439,71 +438,71 @@ for (f, T) in (
 end
 
 # zero mean, dense covariance
-Distributions.MvNormal(A::TrackedMatrix) = TuringMvNormal(A)
+Distributions.MvNormal(A::TrackedMatrix) = DistributionsAD.TuringMvNormal(A)
 
 # zero mean, diagonal covariance
-Distributions.MvNormal(σ::TrackedVector) = TuringMvNormal(σ)
+Distributions.MvNormal(σ::TrackedVector) = DistributionsAD.TuringMvNormal(σ)
 
 # dense mean, dense covariance
-Distributions.MvNormal(m::TrackedVector{<:Real}, A::TrackedMatrix{<:Real}) = TuringMvNormal(m, A)
-Distributions.MvNormal(m::TrackedVector{<:Real}, A::Matrix{<:Real}) = TuringMvNormal(m, A)
-Distributions.MvNormal(m::AbstractVector{<:Real}, A::TrackedMatrix{<:Real}) = TuringMvNormal(m, A)
+Distributions.MvNormal(m::TrackedVector{<:Real}, A::TrackedMatrix{<:Real}) = DistributionsAD.TuringMvNormal(m, A)
+Distributions.MvNormal(m::TrackedVector{<:Real}, A::Matrix{<:Real}) = DistributionsAD.TuringMvNormal(m, A)
+Distributions.MvNormal(m::AbstractVector{<:Real}, A::TrackedMatrix{<:Real}) = DistributionsAD.TuringMvNormal(m, A)
 
 # dense mean, diagonal covariance
 function Distributions.MvNormal(
     m::TrackedVector{<:Real},
-    D::Diagonal{T, <:TrackedVector{T}} where {T<:Real},
+    D::LinearAlgebra.Diagonal{T, <:TrackedVector{T}} where {T<:Real},
 )
-    return TuringMvNormal(m, D)
+    return DistributionsAD.TuringMvNormal(m, D)
 end
 function Distributions.MvNormal(
     m::AbstractVector{<:Real},
-    D::Diagonal{T, <:TrackedVector{T}} where {T<:Real},
+    D::LinearAlgebra.Diagonal{T, <:TrackedVector{T}} where {T<:Real},
 )
-    return TuringMvNormal(m, D)
+    return DistributionsAD.TuringMvNormal(m, D)
 end
 function Distributions.MvNormal(
     m::TrackedVector{<:Real},
-    D::Diagonal{T, <:AbstractVector{T}} where {T<:Real},
+    D::LinearAlgebra.Diagonal{T, <:AbstractVector{T}} where {T<:Real},
 )
-    return TuringMvNormal(m, D)
+    return DistributionsAD.TuringMvNormal(m, D)
 end
 
 # dense mean, diagonal covariance
-Distributions.MvNormal(m::TrackedVector{<:Real}, σ::TrackedVector{<:Real}) = TuringMvNormal(m, σ)
-Distributions.MvNormal(m::TrackedVector{<:Real}, σ::AbstractVector{<:Real}) = TuringMvNormal(m, σ)
-Distributions.MvNormal(m::TrackedVector{<:Real}, σ::Vector{<:Real}) = TuringMvNormal(m, σ)
-Distributions.MvNormal(m::AbstractVector{<:Real}, σ::TrackedVector{<:Real}) = TuringMvNormal(m, σ)
+Distributions.MvNormal(m::TrackedVector{<:Real}, σ::TrackedVector{<:Real}) = DistributionsAD.TuringMvNormal(m, σ)
+Distributions.MvNormal(m::TrackedVector{<:Real}, σ::AbstractVector{<:Real}) = DistributionsAD.TuringMvNormal(m, σ)
+Distributions.MvNormal(m::TrackedVector{<:Real}, σ::Vector{<:Real}) = DistributionsAD.TuringMvNormal(m, σ)
+Distributions.MvNormal(m::AbstractVector{<:Real}, σ::TrackedVector{<:Real}) = DistributionsAD.TuringMvNormal(m, σ)
 
 # dense mean, constant variance
-Distributions.MvNormal(m::TrackedVector{<:Real}, σ::TrackedReal) = TuringMvNormal(m, σ)
-Distributions.MvNormal(m::TrackedVector{<:Real}, σ::Real) = TuringMvNormal(m, σ)
-Distributions.MvNormal(m::AbstractVector{<:Real}, σ::TrackedReal) = TuringMvNormal(m, σ)
+Distributions.MvNormal(m::TrackedVector{<:Real}, σ::TrackedReal) = DistributionsAD.TuringMvNormal(m, σ)
+Distributions.MvNormal(m::TrackedVector{<:Real}, σ::Real) = DistributionsAD.TuringMvNormal(m, σ)
+Distributions.MvNormal(m::AbstractVector{<:Real}, σ::TrackedReal) = DistributionsAD.TuringMvNormal(m, σ)
 
 # dense mean, constant variance
-function Distributions.MvNormal(m::TrackedVector{<:Real}, A::UniformScaling{<:TrackedReal})
-    return TuringMvNormal(m, A)
+function Distributions.MvNormal(m::TrackedVector{<:Real}, A::LinearAlgebra.UniformScaling{<:TrackedReal})
+    return DistributionsAD.TuringMvNormal(m, A)
 end
-function Distributions.MvNormal(m::AbstractVector{<:Real}, A::UniformScaling{<:TrackedReal})
-    return TuringMvNormal(m, A)
+function Distributions.MvNormal(m::AbstractVector{<:Real}, A::LinearAlgebra.UniformScaling{<:TrackedReal})
+    return DistributionsAD.TuringMvNormal(m, A)
 end
-function Distributions.MvNormal(m::TrackedVector{<:Real}, A::UniformScaling{<:Real})
-    return TuringMvNormal(m, A)
+function Distributions.MvNormal(m::TrackedVector{<:Real}, A::LinearAlgebra.UniformScaling{<:Real})
+    return DistributionsAD.TuringMvNormal(m, A)
 end
 
 # zero mean,, constant variance
-Distributions.MvNormal(d::Int, σ::TrackedReal{<:Real}) = TuringMvNormal(d, σ)
+Distributions.MvNormal(d::Int, σ::TrackedReal{<:Real}) = DistributionsAD.TuringMvNormal(d, σ)
 
 # zero mean, dense covariance
-Distributions.MvLogNormal(A::TrackedMatrix) = TuringMvLogNormal(TuringMvNormal(A))
+Distributions.MvLogNormal(A::TrackedMatrix) = DistributionsAD.TuringMvLogNormal(DistributionsAD.TuringMvNormal(A))
 
 # zero mean, diagonal covariance
-Distributions.MvLogNormal(σ::TrackedVector) = TuringMvLogNormal(TuringMvNormal(σ))
+Distributions.MvLogNormal(σ::TrackedVector) = DistributionsAD.TuringMvLogNormal(DistributionsAD.TuringMvNormal(σ))
 
 # dense mean, dense covariance
-Distributions.MvLogNormal(m::TrackedVector{<:Real}, A::TrackedMatrix{<:Real}) = TuringMvLogNormal(TuringMvNormal(m, A))
-Distributions.MvLogNormal(m::TrackedVector{<:Real}, A::Matrix{<:Real}) = TuringMvLogNormal(TuringMvNormal(m, A))
-Distributions.MvLogNormal(m::AbstractVector{<:Real}, A::TrackedMatrix{<:Real}) = TuringMvLogNormal(TuringMvNormal(m, A))
+Distributions.MvLogNormal(m::TrackedVector{<:Real}, A::TrackedMatrix{<:Real}) = DistributionsAD.TuringMvLogNormal(DistributionsAD.TuringMvNormal(m, A))
+Distributions.MvLogNormal(m::TrackedVector{<:Real}, A::Matrix{<:Real}) = DistributionsAD.TuringMvLogNormal(DistributionsAD.TuringMvNormal(m, A))
+Distributions.MvLogNormal(m::AbstractVector{<:Real}, A::TrackedMatrix{<:Real}) = DistributionsAD.TuringMvLogNormal(DistributionsAD.TuringMvNormal(m, A))
 
 
 ## MvLogNormal ##
@@ -511,53 +510,53 @@ Distributions.MvLogNormal(m::AbstractVector{<:Real}, A::TrackedMatrix{<:Real}) =
 # dense mean, diagonal covariance
 function Distributions.MvLogNormal(
     m::TrackedVector{<:Real},
-    D::Diagonal{T, <:TrackedVector{T}} where {T<:Real},
+    D::LinearAlgebra.Diagonal{T, <:TrackedVector{T}} where {T<:Real},
 )
-    return TuringMvLogNormal(TuringMvNormal(m, D))
+    return DistributionsAD.TuringMvLogNormal(DistributionsAD.TuringMvNormal(m, D))
 end
 function Distributions.MvLogNormal(
     m::AbstractVector{<:Real},
-    D::Diagonal{T, <:TrackedVector{T}} where {T<:Real},
+    D::LinearAlgebra.Diagonal{T, <:TrackedVector{T}} where {T<:Real},
 )
-    return TuringMvLogNormal(TuringMvNormal(m, D))
+    return DistributionsAD.TuringMvLogNormal(DistributionsAD.TuringMvNormal(m, D))
 end
 function Distributions.MvLogNormal(
     m::TrackedVector{<:Real},
-    D::Diagonal{T, <:AbstractVector{T}} where {T<:Real},
+    D::LinearAlgebra.Diagonal{T, <:AbstractVector{T}} where {T<:Real},
 )
-    return TuringMvLogNormal(TuringMvNormal(m, D))
+    return DistributionsAD.TuringMvLogNormal(DistributionsAD.TuringMvNormal(m, D))
 end
 
 # dense mean, diagonal covariance
-Distributions.MvLogNormal(m::TrackedVector{<:Real}, σ::TrackedVector{<:Real}) = TuringMvLogNormal(TuringMvNormal(m, σ))
-Distributions.MvLogNormal(m::TrackedVector{<:Real}, σ::AbstractVector{<:Real}) = TuringMvLogNormal(TuringMvNormal(m, σ))
-Distributions.MvLogNormal(m::TrackedVector{<:Real}, σ::Vector{<:Real}) = TuringMvLogNormal(TuringMvNormal(m, σ))
-Distributions.MvLogNormal(m::AbstractVector{<:Real}, σ::TrackedVector{<:Real}) = TuringMvLogNormal(TuringMvNormal(m, σ))
+Distributions.MvLogNormal(m::TrackedVector{<:Real}, σ::TrackedVector{<:Real}) = DistributionsAD.TuringMvLogNormal(DistributionsAD.TuringMvNormal(m, σ))
+Distributions.MvLogNormal(m::TrackedVector{<:Real}, σ::AbstractVector{<:Real}) = DistributionsAD.TuringMvLogNormal(DistributionsAD.TuringMvNormal(m, σ))
+Distributions.MvLogNormal(m::TrackedVector{<:Real}, σ::Vector{<:Real}) = DistributionsAD.TuringMvLogNormal(DistributionsAD.TuringMvNormal(m, σ))
+Distributions.MvLogNormal(m::AbstractVector{<:Real}, σ::TrackedVector{<:Real}) = DistributionsAD.TuringMvLogNormal(DistributionsAD.TuringMvNormal(m, σ))
 
 # dense mean, constant variance
 function Distributions.MvLogNormal(m::TrackedVector{<:Real}, σ::TrackedReal)
-    return TuringMvLogNormal(TuringMvNormal(m, σ))
+    return DistributionsAD.TuringMvLogNormal(DistributionsAD.TuringMvNormal(m, σ))
 end
 function Distributions.MvLogNormal(m::TrackedVector{<:Real}, σ::Real)
-    return TuringMvLogNormal(TuringMvNormal(m, σ))
+    return DistributionsAD.TuringMvLogNormal(DistributionsAD.TuringMvNormal(m, σ))
 end
 function Distributions.MvLogNormal(m::AbstractVector{<:Real}, σ::TrackedReal)
-    return TuringMvLogNormal(TuringMvNormal(m, σ))
+    return DistributionsAD.TuringMvLogNormal(DistributionsAD.TuringMvNormal(m, σ))
 end
 
 # dense mean, constant variance
-function Distributions.MvLogNormal(m::TrackedVector{<:Real}, A::UniformScaling{<:TrackedReal})
-    return TuringMvLogNormal(TuringMvNormal(m, A))
+function Distributions.MvLogNormal(m::TrackedVector{<:Real}, A::LinearAlgebra.UniformScaling{<:TrackedReal})
+    return DistributionsAD.TuringMvLogNormal(DistributionsAD.TuringMvNormal(m, A))
 end
-function Distributions.MvLogNormal(m::AbstractVector{<:Real}, A::UniformScaling{<:TrackedReal})
-    return TuringMvLogNormal(TuringMvNormal(m, A))
+function Distributions.MvLogNormal(m::AbstractVector{<:Real}, A::LinearAlgebra.UniformScaling{<:TrackedReal})
+    return DistributionsAD.TuringMvLogNormal(DistributionsAD.TuringMvNormal(m, A))
 end
-function Distributions.MvLogNormal(m::TrackedVector{<:Real}, A::UniformScaling{<:Real})
-    return TuringMvLogNormal(TuringMvNormal(m, A))
+function Distributions.MvLogNormal(m::TrackedVector{<:Real}, A::LinearAlgebra.UniformScaling{<:Real})
+    return DistributionsAD.TuringMvLogNormal(DistributionsAD.TuringMvNormal(m, A))
 end
 
 # zero mean,, constant variance
-Distributions.MvLogNormal(d::Int, σ::TrackedReal{<:Real}) = TuringMvLogNormal(TuringMvNormal(d, σ))
+Distributions.MvLogNormal(d::Int, σ::TrackedReal{<:Real}) = DistributionsAD.TuringMvLogNormal(DistributionsAD.TuringMvNormal(d, σ))
 
 ## Wishart ##
 
@@ -575,7 +574,7 @@ Distributions.Wishart(df::TrackedReal, S::Matrix{<:Real}) = TuringWishart(df, S)
 Distributions.Wishart(df::TrackedReal, S::AbstractMatrix{<:Real}) = TuringWishart(df, S)
 Distributions.Wishart(df::Real, S::TrackedMatrix) = TuringWishart(df, S)
 Distributions.Wishart(df::TrackedReal, S::TrackedMatrix) = TuringWishart(df, S)
-Distributions.Wishart(df::TrackedReal, S::AbstractPDMat{<:TrackedReal}) = TuringWishart(df, S)
+Distributions.Wishart(df::TrackedReal, S::PDMats.AbstractPDMat{<:TrackedReal}) = TuringWishart(df, S)
 
 
 ## Inverse Wishart ##
@@ -594,6 +593,6 @@ Distributions.InverseWishart(df::TrackedReal, S::Matrix{<:Real}) = TuringInverse
 Distributions.InverseWishart(df::TrackedReal, S::AbstractMatrix{<:Real}) = TuringInverseWishart(df, S)
 Distributions.InverseWishart(df::Real, S::TrackedMatrix) = TuringInverseWishart(df, S)
 Distributions.InverseWishart(df::TrackedReal, S::TrackedMatrix) = TuringInverseWishart(df, S)
-Distributions.InverseWishart(df::TrackedReal, S::AbstractPDMat{<:TrackedReal}) = TuringInverseWishart(df, S)
+Distributions.InverseWishart(df::TrackedReal, S::PDMats.AbstractPDMat{<:TrackedReal}) = TuringInverseWishart(df, S)
 
 end # module
