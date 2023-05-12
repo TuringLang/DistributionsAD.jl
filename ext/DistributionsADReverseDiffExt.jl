@@ -115,7 +115,7 @@ function DistributionsAD.adapt_randn(rng::Random.AbstractRNG, x::TrackedArray, d
 end
 
 function Distributions.PoissonBinomial(p::TrackedArray{<:Real}; check_args=true)
-    return TuringPoissonBinomial(p; check_args = check_args)
+    return DistributionsAD.TuringPoissonBinomial(p; check_args = check_args)
 end
 
 Distributions.Gamma(α::TrackedReal, θ::Real; check_args=true) = pgamma(α, θ, check_args = check_args)
@@ -303,17 +303,17 @@ Distributions.MvLogNormal(d::Int, σ::TrackedReal) = DistributionsAD.TuringMvLog
 
 # Dirichlet
 
-Distributions.Dirichlet(alpha::AbstractVector{<:TrackedReal}) = TuringDirichlet(alpha)
-Distributions.Dirichlet(d::Integer, alpha::TrackedReal) = TuringDirichlet(d, alpha)
+Distributions.Dirichlet(alpha::AbstractVector{<:TrackedReal}) = DistributionsAD.TuringDirichlet(alpha)
+Distributions.Dirichlet(d::Integer, alpha::TrackedReal) = DistributionsAD.TuringDirichlet(d, alpha)
 
 function Distributions._logpdf(d::Dirichlet, x::AbstractVector{<:TrackedReal})
-    return Distributions._logpdf(TuringDirichlet(d), x)
+    return Distributions._logpdf(DistributionsAD.TuringDirichlet(d), x)
 end
 function Distributions.logpdf(d::Dirichlet, x::AbstractMatrix{<:TrackedReal})
-    return logpdf(TuringDirichlet(d), x)
+    return logpdf(DistributionsAD.TuringDirichlet(d), x)
 end
 function Distributions.loglikelihood(d::Dirichlet, x::AbstractMatrix{<:TrackedReal})
-    return loglikelihood(TuringDirichlet(d), x)
+    return loglikelihood(DistributionsAD.TuringDirichlet(d), x)
 end
 
 for func_header in [

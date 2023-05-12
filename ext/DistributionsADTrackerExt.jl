@@ -192,7 +192,7 @@ end
 
 ## SpecialFunctions ##
 
-SpecialFunctions.logabsgamma(x::TrackedReal) = track(logabsgamma, x)
+SpecialFunctions.logabsgamma(x::TrackedReal) = track(SpecialFunctions.logabsgamma, x)
 @grad function SpecialFunctions.logabsgamma(x::Real)
     return SpecialFunctions.logabsgamma(data(x)), Δ -> (SpecialFunctions.digamma(data(x)) * Δ[1],)
 end
@@ -276,7 +276,7 @@ end
 ## PoissonBinomial ##
 
 Distributions.PoissonBinomial(p::TrackedArray{<:Real}; check_args=true) =
-    TuringPoissonBinomial(p; check_args = check_args)
+    DistributionsAD.TuringPoissonBinomial(p; check_args = check_args)
 
 for f in (:poissonbinomial_pdf, :poissonbinomial_pdf_fft)
     pullback = Symbol(f, :_pullback)
@@ -362,17 +362,17 @@ end
 
 ## Dirichlet ##
 
-Distributions.Dirichlet(alpha::TrackedVector) = TuringDirichlet(alpha)
-Distributions.Dirichlet(d::Integer, alpha::TrackedReal) = TuringDirichlet(d, alpha)
+Distributions.Dirichlet(alpha::TrackedVector) = DistributionsAD.TuringDirichlet(alpha)
+Distributions.Dirichlet(d::Integer, alpha::TrackedReal) = DistributionsAD.TuringDirichlet(d, alpha)
 
 function Distributions._logpdf(d::Dirichlet, x::TrackedVector{<:Real})
-    return Distributions._logpdf(TuringDirichlet(d), x)
+    return Distributions._logpdf(DistributionsAD.TuringDirichlet(d), x)
 end
 function Distributions.logpdf(d::Dirichlet, x::TrackedMatrix{<:Real})
-    return logpdf(TuringDirichlet(d), x)
+    return logpdf(DistributionsAD.TuringDirichlet(d), x)
 end
 function Distributions.loglikelihood(d::Dirichlet, x::TrackedMatrix{<:Real})
-    return loglikelihood(TuringDirichlet(d), x)
+    return loglikelihood(DistributionsAD.TuringDirichlet(d), x)
 end
 
 # Fix ambiguities
