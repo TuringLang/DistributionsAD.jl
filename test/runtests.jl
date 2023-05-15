@@ -9,7 +9,6 @@ using Random, LinearAlgebra, Test
 using Distributions: meanlogdet
 using DistributionsAD: TuringMvNormal, TuringMvLogNormal,
                        TuringPoissonBinomial, TuringDirichlet
-using StatsBase: entropy
 using StatsFuns: StatsFuns, logsumexp, logistic
 
 @static if VERSION >= v"1.8"

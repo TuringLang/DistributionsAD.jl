@@ -2,7 +2,7 @@ module DistributionsADTrackerExt
 
 if isdefined(Base, :get_extension)
     using DistributionsAD
-    using DistributionsAD: ChainRulesCore, LinearAlgebra, Random, SpecialFunctions, StatsFuns
+    using DistributionsAD: ChainRulesCore, LinearAlgebra, Random, StatsFuns
     using DistributionsAD.Distributions
     using DistributionsAD.Distributions: PDMats
 
@@ -11,7 +11,7 @@ if isdefined(Base, :get_extension)
                    TrackedArray, TrackedVecOrMat, track, @grad, data
 else
     using ..DistributionsAD
-    using ..DistributionsAD: ChainRulesCore, LinearAlgebra, Random, SpecialFunctions, StatsFuns
+    using ..DistributionsAD: ChainRulesCore, LinearAlgebra, Random, StatsFuns
     using ..DistributionsAD.Distributions
     using ..DistributionsAD.Distributions: PDMats
 
@@ -188,13 +188,6 @@ end
 
 function Base.:\(a::LinearAlgebra.Cholesky{<:TrackedReal, <:TrackedArray}, b::AbstractVecOrMat)
     return (a.U \ (a.U' \ b))
-end
-
-## SpecialFunctions ##
-
-SpecialFunctions.logabsgamma(x::TrackedReal) = track(SpecialFunctions.logabsgamma, x)
-@grad function SpecialFunctions.logabsgamma(x::Real)
-    return SpecialFunctions.logabsgamma(data(x)), Δ -> (SpecialFunctions.digamma(data(x)) * Δ[1],)
 end
 
 # isprobvec

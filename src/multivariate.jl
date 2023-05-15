@@ -1,6 +1,6 @@
 ## Dirichlet ##
 
-struct TuringDirichlet{T<:Real,TV<:AbstractVector,S<:Real} <: ContinuousMultivariateDistribution
+struct TuringDirichlet{T<:Real,TV<:AbstractVector,S<:Real} <: Distributions.ContinuousMultivariateDistribution
     alpha::TV
     alpha0::T
     lmnB::S
@@ -104,11 +104,11 @@ end
 ## MvNormal ##
 
 """
-    TuringDenseMvNormal{Tm<:AbstractVector, TC<:Cholesky} <: ContinuousMultivariateDistribution
+    TuringDenseMvNormal{Tm<:AbstractVector, TC<:Cholesky} <: Distributions.ContinuousMultivariateDistribution
 
 A multivariate Normal distribution whose covariance is dense. Compatible with Tracker.
 """
-struct TuringDenseMvNormal{Tm<:AbstractVector, TC<:Cholesky} <: ContinuousMultivariateDistribution
+struct TuringDenseMvNormal{Tm<:AbstractVector, TC<:Cholesky} <: Distributions.ContinuousMultivariateDistribution
     m::Tm
     C::TC
 end
@@ -122,11 +122,11 @@ function Distributions.rand(rng::Random.AbstractRNG, d::TuringDenseMvNormal, n::
 end
 
 """
-    TuringDiagMvNormal{Tm<:AbstractVector, Tσ<:AbstractVector} <: ContinuousMultivariateDistribution
+    TuringDiagMvNormal{Tm<:AbstractVector, Tσ<:AbstractVector} <: Distributions.ContinuousMultivariateDistribution
 
 A multivariate normal distribution whose covariance is diagonal. Compatible with Tracker.
 """
-struct TuringDiagMvNormal{Tm<:AbstractVector, Tσ<:AbstractVector} <: ContinuousMultivariateDistribution
+struct TuringDiagMvNormal{Tm<:AbstractVector, Tσ<:AbstractVector} <: Distributions.ContinuousMultivariateDistribution
     m::Tm
     σ::Tσ
 end
@@ -139,7 +139,7 @@ function Distributions.rand(rng::Random.AbstractRNG, d::TuringDiagMvNormal, n::I
     return d.m .+ d.σ .* adapt_randn(rng, d.m, length(d), n...)
 end
 
-struct TuringScalMvNormal{Tm<:AbstractVector, Tσ<:Real} <: ContinuousMultivariateDistribution
+struct TuringScalMvNormal{Tm<:AbstractVector, Tσ<:Real} <: Distributions.ContinuousMultivariateDistribution
     m::Tm
     σ::Tσ
 end
@@ -190,15 +190,15 @@ function Distributions.loglikelihood(d::TuringDenseMvNormal, x::AbstractMatrix{<
     return -(length(x) * log(2π) + size(x, 2) * logdet(d.C) + sum(abs2.(zygote_ldiv(d.C.U', x .- d.m)))) / 2
 end
 
-function StatsBase.entropy(d::TuringScalMvNormal)
+function Distributions.entropy(d::TuringScalMvNormal)
     s = log(d.σ)
     return length(d) * ((1 + oftype(s, log2π)) / 2 + s)
 end
-function StatsBase.entropy(d::TuringDiagMvNormal)
+function Distributions.entropy(d::TuringDiagMvNormal)
     s = sum(log, d.σ)
     return length(d) * (1 + oftype(s, log2π)) / 2 + s
 end
-function StatsBase.entropy(d::TuringDenseMvNormal)
+function Distributions.entropy(d::TuringDenseMvNormal)
     s = logdet(d.C)
     return (length(d) * (1 + oftype(s, log2π)) + s) / 2
 end
@@ -238,13 +238,13 @@ Distributions.cov(d::TuringDenseMvNormal) = Matrix(d.C) # turns cholesky to matr
 
 ## MvLogNormal ##
 
-struct TuringMvLogNormal{TD} <: AbstractMvLogNormal
+struct TuringMvLogNormal{TD} <: Distributions.AbstractMvLogNormal
     normal::TD
 end
-MvLogNormal(d::TuringDenseMvNormal) = TuringMvLogNormal(d)
-MvLogNormal(d::TuringDiagMvNormal) = TuringMvLogNormal(d)
-MvLogNormal(d::TuringScalMvNormal) = TuringMvLogNormal(d)
-Distributions.length(d::TuringMvLogNormal) = length(d.normal)
+Distributions.MvLogNormal(d::TuringDenseMvNormal) = TuringMvLogNormal(d)
+Distributions.MvLogNormal(d::TuringDiagMvNormal) = TuringMvLogNormal(d)
+Distributions.MvLogNormal(d::TuringScalMvNormal) = TuringMvLogNormal(d)
+Base.length(d::TuringMvLogNormal) = length(d.normal)
 function Distributions.rand(rng::Random.AbstractRNG, d::TuringMvLogNormal)
     x = rand(rng, d.normal)
     map!(exp, x, x)
@@ -284,7 +284,7 @@ function Distributions.loglikelihood(d::TuringMvLogNormal, x::AbstractMatrix{<:R
     end
 end
 
-function MvLogNormal(
+function Distributions.MvLogNormal(
     m::AbstractVector{<:Real},
     D::Diagonal{T, <:AbstractVector{T}} where {T<:Real},
 )

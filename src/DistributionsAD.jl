@@ -13,27 +13,6 @@ using PDMats,
       FillArrays,
       Adapt
 
-using SpecialFunctions: logabsgamma, digamma
-using LinearAlgebra: copytri!, AbstractTriangular
-using Distributions: AbstractMvLogNormal,
-                     ContinuousMultivariateDistribution
-using Base.Iterators: drop
-
-import StatsBase
-import StatsFuns: logsumexp,
-                  binomlogpdf,
-                  nbinomlogpdf,
-                  poislogpdf,
-                  nbetalogpdf
-import Distributions: MvNormal,
-                      MvLogNormal,
-                      logpdf,
-                      quantile,
-                      PoissonBinomial,
-                      Binomial,
-                      BetaBinomial,
-                      Erlang
-
 export TuringScalMvNormal,
        TuringDiagMvNormal,
        TuringDenseMvNormal,
