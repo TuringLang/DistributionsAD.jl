@@ -13,9 +13,9 @@ function TuringPoissonBinomial(p::AbstractArray{<:Real}; check_args = true)
     return TuringPoissonBinomial(p, pb)
 end
 
-function logpdf(d::TuringPoissonBinomial{T}, k::Int) where T<:Real
+function Distributions.logpdf(d::TuringPoissonBinomial{T}, k::Int) where T<:Real
     insupport(d, k) ? log(d.pmf[k + 1]) : -T(Inf)
 end
-quantile(d::TuringPoissonBinomial, x::Float64) = quantile(Categorical(d.pmf), x) - 1
+Distributions.quantile(d::TuringPoissonBinomial, x::Float64) = quantile(Categorical(d.pmf), x) - 1
 Base.minimum(d::TuringPoissonBinomial) = 0
 Base.maximum(d::TuringPoissonBinomial) = length(d.p)
