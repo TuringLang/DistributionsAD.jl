@@ -62,7 +62,7 @@ function DistributionsAD.symm_turing_chol(x::TrackedArray{V,D}, check, uplo) whe
     (factors,info), back = DistributionsAD.symm_turing_chol_back(x_value, check, uplo)
     C = LinearAlgebra.Cholesky{eltype(factors), typeof(factors)}(factors, 'U', info)
     out = track(C.factors, D, tp)
-    record!(tp, SpecialInstruction, DistributionsAD.symm_turing_chol, (x, check, uplo), out, (back, issuccess(C)))
+    record!(tp, SpecialInstruction, DistributionsAD.symm_turing_chol, (x, check, uplo), out, (back, LinearAlgebra.issuccess(C)))
     return out, C.info
 end
 function DistributionsAD.turing_chol(x::TrackedArray{V,D}, check) where {V,D}
@@ -71,7 +71,7 @@ function DistributionsAD.turing_chol(x::TrackedArray{V,D}, check) where {V,D}
     (factors,info), back = DistributionsAD.turing_chol_back(x_value, check)
     C = LinearAlgebra.Cholesky{eltype(factors), typeof(factors)}(factors, 'U', info)
     out = track(C.factors, D, tp)
-    record!(tp, SpecialInstruction, DistributionsAD.turing_chol, (x, check), out, (back, issuccess(C)))
+    record!(tp, SpecialInstruction, DistributionsAD.turing_chol, (x, check), out, (back, LinearAlgebra.issuccess(C)))
     return out, C.info
 end
 
