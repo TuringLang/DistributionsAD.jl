@@ -3,6 +3,7 @@ using DistributionsAD
 using Combinatorics
 using Distributions
 using PDMats
+import LazyArrays
 
 using Random, LinearAlgebra, Test
 
