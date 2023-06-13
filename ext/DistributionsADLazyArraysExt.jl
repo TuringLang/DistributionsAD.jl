@@ -3,12 +3,12 @@ module DistributionsADLazyArraysExt
 if isdefined(Base, :get_extension)
     using DistributionsAD
     using LazyArrays
-    using DistributionsAD: Distributions, ValueSupport
+    using DistributionsAD: Distributions, ValueSupport, UnivariateDistribution, VectorOfUnivariate, MatrixOfUnivariate
     using LazyArrays: BroadcastArray, BroadcastVector, LazyArray
 else
     using ..DistributionsAD
     using ..LazyArrays
-    using ..DistributionsAD: Distributions, ValueSupport
+    using ..DistributionsAD: Distributions, ValueSupport, UnivariateDistribution, VectorOfUnivariate, MatrixOfUnivariate
     using ..LazyArrays: BroadcastArray, BroadcastVector, LazyArray
 end
 
