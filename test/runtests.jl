@@ -1,5 +1,5 @@
 using Pkg
-Pkg.add([Pkg.PackageSpec(; url="https://github.com/devmotion/FillArrays.jl.git", rev="patch-1"), Pkg.PackageSpec(; url="https://github.com/devmotion/ArrayLayouts.jl.git", rev="dw/_copy_oftype")])
+Pkg.add(Pkg.PackageSpec(; url="https://github.com/devmotion/FillArrays.jl.git", rev="dw/fix_broadcast_try2"))
 
 using DistributionsAD
 
