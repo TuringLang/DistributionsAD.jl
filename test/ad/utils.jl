@@ -5,6 +5,9 @@ using FiniteDifferences
 const FDM = FiniteDifferences
 
 # Load AD backends
+if GROUP == "All" || GROUP == "Enzyme"
+    @eval using Enzyme
+end
 if GROUP == "All" || GROUP == "ForwardDiff"
     @eval using ForwardDiff
 end
@@ -24,6 +27,40 @@ function test_reverse_mode_ad(f, ȳ, x...; rtol=1e-6, atol=1e-6)
 
     # Use finite differencing to compute reverse-mode sensitivities.
     x̄s_fdm = FDM.j′vp(central_fdm(5, 1), f, ȳ, x...)
+
+    if GROUP == "All" || GROUP == "Enzyme"
+        # Use Enzyme to compute reverse-mode sensitivities.
+        x̄s_enzyme_init = map(x) do xi
+            xi isa Real ? nothing : zero(xi)
+        end
+        enzyme_autodiff_args = map(x, x̄s_enzyme_init) do xi, x̄si
+            return if x̄si === nothing
+                @assert xi isa Real
+                Active(xi)
+            else
+                @assert typeof(xi) === typeof(x̄si)
+                Duplicated(xi, x̄si)
+            end
+        end
+        x̄s_enzyme_autodiff, y_enzyme = Enzyme.autodiff(ReverseWithPrimal, f, Active, enzyme_autodiff_args...)
+        x̄s_enzyme = map(x̄s_enzyme_init, x̄s_enzyme_autodiff) do x̄s_init_i, x̄s_autodiff_i
+            return if x̄s_init_i === nothing
+                @assert x̄s_autodiff_i isa Real
+                x̄s_autodiff_i
+            else
+                @assert x̄s_autodiff_i === nothing
+                x̄s_init_i
+            end
+        end
+
+        # Check that Enzyme primal is correct.
+        @test y ≈ y_enzyme atol=atol rtol=rtol
+
+        # Check that Enzyme reverse-mode sensitivities are correct.
+        @test all(zip(x̄s_enzyme, x̄s_fdm)) do (x̄_enzyme, x̄_fdm)
+            return isapprox(x̄_enzyme, x̄_fdm; atol=atol, rtol=rtol)
+        end
+    end
 
     if GROUP == "All" || GROUP == "Zygote"
         # Use Zygote to compute reverse-mode sensitivities.
@@ -350,6 +387,19 @@ end
 function test_ad(f, x, broken = (); rtol = 1e-6, atol = 1e-6)
     finitediff = FDM.grad(central_fdm(5, 1), f, x)[1]
 
+    if GROUP == "All" || GROUP == "Enzyme"
+        if (:Enzyme in broken) || (:EnzymeForward in broken)
+            @test_broken collect(Enzyme.gradient(Enzyme.Forward, f, x)) ≈ finitediff rtol=rtol atol=atol
+        else
+            @test collect(Enzyme.gradient(Enzyme.Forward, f, x)) ≈ finitediff rtol=rtol atol=atol
+        end
+        if (:Enzyme in broken) || (:EnzymeReverse in broken)
+            @test_broken Enzyme.gradient(Enzyme.Reverse, f, x) ≈ finitediff rtol=rtol atol=atol
+        else
+            @test Enzyme.gradient(Enzyme.Reverse, f, x) ≈ finitediff rtol=rtol atol=atol
+        end
+    end
+
     if GROUP == "All" || GROUP == "Tracker"
         if :Tracker in broken
             @test_broken Tracker.data(Tracker.gradient(f, x)[1]) ≈ finitediff rtol=rtol atol=atol
@@ -398,7 +448,7 @@ end
 
 function testset_zygote_broken(distspec, args...; kwargs...)
     # don't show test errors - tests are known to be broken :)
-    testset = suppress_stdout() do
+    testset = redirect_stdout(devnull) do
         testset_zygote(distspec, args...; kwargs...)
     end
 
@@ -415,17 +465,6 @@ function testset_zygote_broken(distspec, args...; kwargs...)
     end
 
     return testset
-end
-
-# `redirect_stdout(f, devnull)` is only available in Julia >= 1.6
-function suppress_stdout(f)
-    @static if VERSION < v"1.6"
-        open((@static Sys.iswindows() ? "NUL" : "/dev/null"), "w") do devnull
-            redirect_stdout(f, devnull)
-        end
-    else
-        redirect_stdout(f, devnull)
-    end
 end
 
 # change test errors and failures to broken results
