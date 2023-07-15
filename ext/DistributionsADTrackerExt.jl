@@ -64,12 +64,12 @@ for f = [:hcat, :vcat]
 end
 
 function Base.copy(
-    A::TrackedArray{T, 2, <:LinearAlgebra.Adjoint{T, <:LinearAlgebra.AbstractTriangular{T, <:AbstractMatrix{T}}}},
+    A::TrackedArray{T, 2, <:LinearAlgebra.Adjoint{T, <:LinearAlgebra.AbstractTriangular{T}}},
 ) where {T <: Real}
     return track(copy, A)
 end
 @grad function Base.copy(
-    A::TrackedArray{T, 2, <:LinearAlgebra.Adjoint{T, <:LinearAlgebra.AbstractTriangular{T, <:AbstractMatrix{T}}}},
+    A::TrackedArray{T, 2, <:LinearAlgebra.Adjoint{T, <:LinearAlgebra.AbstractTriangular{T}}},
 ) where {T <: Real}
     return copy(data(A)), ∇ -> (copy(∇),)
 end
