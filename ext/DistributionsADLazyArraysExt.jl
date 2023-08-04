@@ -22,7 +22,7 @@ function Distributions._logpdf(
     dist::LazyVectorOfUnivariate,
     x::AbstractVector{<:Real},
 )
-    return sum(copy(logpdf.(dist.v, x)))
+    return sum(copy(Distributions.logpdf.(dist.v, x)))
 end
 
 function Distributions.logpdf(
@@ -31,7 +31,7 @@ function Distributions.logpdf(
 )
     size(x, 1) == length(dist) ||
         throw(DimensionMismatch("Inconsistent array dimensions."))
-    return vec(sum(copy(logpdf.(dists, x)), dims = 1))
+    return vec(sum(copy(Distributions.logpdf.(dists, x)), dims = 1))
 end
 
 const LazyMatrixOfUnivariate{
@@ -44,7 +44,7 @@ function Distributions._logpdf(
     dist::LazyMatrixOfUnivariate,
     x::AbstractMatrix{<:Real},
 )
-    return sum(copy(logpdf.(dist.dists, x)))
+    return sum(copy(Distributions.logpdf.(dist.dists, x)))
 end
 
 DistributionsAD.lazyarray(f, x...) = LazyArray(Base.broadcasted(f, x...))
