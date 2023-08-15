@@ -7,7 +7,7 @@
 
     @testset "logsumexp" begin
         x = rand(3)
-        test_reverse_mode_ad(logsumexp, randn(), x; rtol=1e-8, atol=1e-6, broken = (:Enzyme,))
+        test_reverse_mode_ad(logsumexp, randn(), x; rtol=1e-8, atol=1e-6)
     end
 
     @testset "zygote_ldiv" begin
