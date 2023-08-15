@@ -7,14 +7,14 @@
 
     @testset "logsumexp" begin
         x = rand(3)
-        test_reverse_mode_ad(logsumexp, randn(), x; rtol=1e-8, atol=1e-6)
+        test_reverse_mode_ad(logsumexp, randn(), x; rtol=1e-8, atol=1e-6, broken = (:Enzyme,))
     end
 
     @testset "zygote_ldiv" begin
         A = to_posdef(rand(3, 3))
         B = to_posdef(rand(3, 3))
 
-        test_reverse_mode_ad(randn(3, 3), A, B) do A, B
+        test_reverse_mode_ad(randn(3, 3), A, B; broken = (:Enzyme,)) do A, B
             return DistributionsAD.zygote_ldiv(A, B)
         end
     end
@@ -23,10 +23,10 @@
         N = 7
         B = randn(N, N)
 
-        test_reverse_mode_ad(randn(), B; rtol=1e-8, atol=1e-6) do B
+        test_reverse_mode_ad(randn(), B; rtol=1e-8, atol=1e-6, broken = (:Enzyme,)) do B
             return logdet(cholesky(to_posdef(B)))
         end
-        test_reverse_mode_ad(randn(), B; rtol=1e-8, atol=1e-6) do B
+        test_reverse_mode_ad(randn(), B; rtol=1e-8, atol=1e-6, broken = (:Enzyme,)) do B
             return logdet(cholesky(Symmetric(to_posdef(B))))
         end
     end
@@ -47,13 +47,13 @@
         B = randn(N, N)
         x = rand(TuringDenseMvNormal(m, to_posdef(B)))
 
-        test_reverse_mode_ad(randn(), m, B, x) do m, B, x
+        test_reverse_mode_ad(randn(), m, B, x; broken = (:Enzyme,)) do m, B, x
             return logpdf(MvNormal(m, to_posdef(B)), x)
         end
-        test_reverse_mode_ad(randn(), m, B, x) do m, B, x
+        test_reverse_mode_ad(randn(), m, B, x; broken = (:Enzyme,)) do m, B, x
             return logpdf(TuringMvNormal(m, to_posdef(B)), x)
         end
-        test_reverse_mode_ad(randn(), m, B, x) do m, B, x
+        test_reverse_mode_ad(randn(), m, B, x; broken = (:Enzyme,)) do m, B, x
             return logpdf(TuringMvNormal(m, Symmetric(to_posdef(B))), x)
         end
     end

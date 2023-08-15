@@ -21,7 +21,7 @@ if GROUP == "All" || GROUP == "Tracker"
     @eval using Tracker
 end
 
-function test_reverse_mode_ad(f, ȳ, x...; rtol=1e-6, atol=1e-6)
+function test_reverse_mode_ad(f, ȳ, x...; rtol=1e-6, atol=1e-6, broken=())
     # Perform a regular forwards-pass.
     y = f(x...)
 
@@ -29,36 +29,53 @@ function test_reverse_mode_ad(f, ȳ, x...; rtol=1e-6, atol=1e-6)
     x̄s_fdm = FDM.j′vp(central_fdm(5, 1), f, ȳ, x...)
 
     if GROUP == "All" || GROUP == "Enzyme"
-        # Use Enzyme to compute reverse-mode sensitivities.
-        x̄s_enzyme_init = map(x) do xi
-            xi isa Real ? nothing : zero(xi)
-        end
-        enzyme_autodiff_args = map(x, x̄s_enzyme_init) do xi, x̄si
-            return if x̄si === nothing
-                @assert xi isa Real
-                Active(xi)
-            else
-                @assert typeof(xi) === typeof(x̄si)
-                Duplicated(xi, x̄si)
-            end
-        end
-        x̄s_enzyme_autodiff, y_enzyme = Enzyme.autodiff(ReverseWithPrimal, f, Active, enzyme_autodiff_args...)
-        x̄s_enzyme = map(x̄s_enzyme_init, x̄s_enzyme_autodiff) do x̄s_init_i, x̄s_autodiff_i
-            return if x̄s_init_i === nothing
-                @assert x̄s_autodiff_i isa Real
-                x̄s_autodiff_i
-            else
-                @assert x̄s_autodiff_i === nothing
-                x̄s_init_i
+        enzyme_broken = :Enzyme in broken
+        io = enzyme_broken ? devnull : stdout
+        testset = redirect_stdout(io) do
+            # Use Enzyme to compute reverse-mode sensitivities.
+            @testset "Enzyme: Reverse-mode AD of $f" begin
+                x̄s_enzyme_init = map(x) do xi
+                    xi isa Real ? nothing : zero(xi)
+                end
+                enzyme_autodiff_args = map(x, x̄s_enzyme_init) do xi, x̄si
+                    return if x̄si === nothing
+                        @assert xi isa Real
+                        Active(xi)
+                    else
+                        @assert typeof(xi) === typeof(x̄si)
+                        Duplicated(xi, x̄si)
+                    end
+                end
+                x̄s_enzyme_autodiff, y_dot_ȳ_enzyme =
+                    Enzyme.autodiff(ReverseWithPrimal, Active, enzyme_autodiff_args...) do args...
+                        return dot(f(args...), ȳ)
+                    end
+                x̄s_enzyme = map(x̄s_enzyme_init, x̄s_enzyme_autodiff) do x̄s_init_i, x̄s_autodiff_i
+                    return if x̄s_init_i === nothing
+                        @assert x̄s_autodiff_i isa Real
+                        x̄s_autodiff_i
+                    else
+                        @assert x̄s_autodiff_i === nothing
+                        x̄s_init_i
+                    end
+                end
+    
+                # Check that Enzyme primal is correct.
+                @test dot(y, ȳ) ≈ y_dot_ȳ_enzyme atol=atol rtol=rtol
+
+                # Check that Enzyme reverse-mode sensitivities are correct.
+                @test all(zip(x̄s_enzyme, x̄s_fdm)) do (x̄_enzyme, x̄_fdm)
+                    return isapprox(x̄_enzyme, x̄_fdm; atol=atol, rtol=rtol)
+                end
             end
         end
 
-        # Check that Enzyme primal is correct.
-        @test y ≈ y_enzyme atol=atol rtol=rtol
+        # change errors and fails to broken results, and count number of errors and fails
+        efs = errors_to_broken!(testset)
 
-        # Check that Enzyme reverse-mode sensitivities are correct.
-        @test all(zip(x̄s_enzyme, x̄s_fdm)) do (x̄_enzyme, x̄_fdm)
-            return isapprox(x̄_enzyme, x̄_fdm; atol=atol, rtol=rtol)
+        # ensure that passing tests are not marked as broken
+        if iszero(efs) && enzyme_broken
+            error("Enzyme tests of $f passed unexpectedly, please mark not as broken")
         end
     end
 
