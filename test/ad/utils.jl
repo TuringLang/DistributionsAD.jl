@@ -6,7 +6,13 @@ const FDM = FiniteDifferences
 
 # Load AD backends
 if GROUP == "All" || GROUP == "Enzyme"
-    @eval using Enzyme
+    @eval begin
+        using Enzyme
+        # Disable Enzyme warnings
+        Enzyme.API.typeWarning!(false)
+        # Enable runtime activity (workaround)
+        Enzyme.API.runtimeActivity!(true)
+    end
 end
 if GROUP == "All" || GROUP == "ForwardDiff"
     @eval using ForwardDiff
