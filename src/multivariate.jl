@@ -167,17 +167,17 @@ function Distributions.loglikelihood(d::TuringScalMvNormal, x::AbstractMatrix{<:
 end
 
 function Distributions._logpdf(d::TuringDiagMvNormal, x::AbstractVector)
-    s = sum(log.(d.σ))
+    s = sum(log, d.σ)
     return -(length(x) * log(oftype(s, twoπ)) + 2 * s + sum(abs2.((x .- d.m) ./ d.σ))) / 2
 end
 function Distributions.logpdf(d::TuringDiagMvNormal, x::AbstractMatrix{<:Real})
     size(x, 1) == length(d) ||
         throw(DimensionMismatch("Inconsistent array dimensions."))
-    s = sum(log.(d.σ))
+    s = sum(log, d.σ)
     return -((size(x, 1) * log(oftype(s, twoπ)) + 2 * s) .+ vec(sum(abs2.((x .- d.m) ./ d.σ), dims=1))) ./ 2
 end
 function Distributions.loglikelihood(d::TuringDiagMvNormal, x::AbstractMatrix{<:Real})
-    s = sum(log.(d.σ))
+    s = sum(log, d.σ)
     return -(length(x) * log(oftype(s, twoπ)) + 2 * size(x, 2) * s + sum(abs2.((x .- d.m) ./ d.σ))) / 2
 end
 
