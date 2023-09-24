@@ -36,19 +36,19 @@
     end
 
     @testset "TuringMvNormal" begin
-        @testset "$TD" for TD in [TuringDenseMvNormal, TuringDiagMvNormal, TuringScalMvNormal]
-            m = rand(3)
+        @testset for TD in (TuringDenseMvNormal, TuringDiagMvNormal, TuringScalMvNormal), T in (Float64, Float32)
+            m = rand(T, 3)
             if TD <: TuringDenseMvNormal
-                A = rand(3, 3)
+                A = rand(T, 3, 3)
                 C = A' * A + I
                 d1 = TuringMvNormal(m, C)
                 d2 = MvNormal(m, C)
             elseif TD <: TuringDiagMvNormal
-                C = rand(3)
+                C = rand(T, 3)
                 d1 = TuringMvNormal(m, C)
                 d2 = MvNormal(m, Diagonal(C .^ 2))
             else
-                C = rand()
+                C = rand(T)
                 d1 = TuringMvNormal(m, C)
                 d2 = MvNormal(m, C^2 * I)
             end
@@ -56,13 +56,28 @@
             @testset "$F" for F in (length, size, mean)
                 @test F(d1) == F(d2)
             end
-            @test cov(d1) ≈ cov(d2)
-            @test var(d1) ≈ var(d2)
+            C1 = @inferred(cov(d1))
+            @test C1 isa AbstractMatrix{T}
+            @test C1 ≈ cov(d2)
+            V1 = @inferred(var(d1))
+            @test V1 isa AbstractVector{T}
+            @test V1 ≈ var(d2)
 
             x1 = rand(d1)
             x2 = rand(d1, 3)
-            @test isapprox(logpdf(d1, x1), logpdf(d2, x1), rtol = 1e-6)
-            @test isapprox(logpdf(d1, x2), logpdf(d2, x2), rtol = 1e-6)
+            for S in (Float64, Float32)
+                ST = promote_type(S, T)
+
+                z = S(x1)
+                logp = @inferred(logpdf(d1, z))
+                @test logp isa ST
+                @test logp ≈ logpdf(d2, z) rtol = 1e-6
+
+                zs = map(S, x2)
+                logps = @inferred(logpdf(d1, zs))
+                @test eltype(logps) === ST
+                @test logps ≈ logpdf(d2, zs) rtol = 1e-6
+            end
         end
     end
 
