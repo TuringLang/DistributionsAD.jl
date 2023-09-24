@@ -154,53 +154,53 @@ end
 
 function Distributions._logpdf(d::TuringScalMvNormal, x::AbstractVector)
     σ2 = abs2(d.σ)
-    return -(length(x) * log(2π * σ2) + sum(abs2.(x .- d.m)) / σ2) / 2
+    return -(length(x) * log(τ * σ2) + sum(abs2.(x .- d.m)) / σ2) / 2
 end
 function Distributions.logpdf(d::TuringScalMvNormal, x::AbstractMatrix{<:Real})
     size(x, 1) == length(d) ||
         throw(DimensionMismatch("Inconsistent array dimensions."))
-    return -(size(x, 1) * log(2π * abs2(d.σ)) .+ vec(sum(abs2.((x .- d.m) ./ d.σ), dims=1))) ./ 2
+    return -(size(x, 1) * log(τ * abs2(d.σ)) .+ vec(sum(abs2.((x .- d.m) ./ d.σ), dims=1))) ./ 2
 end
 function Distributions.loglikelihood(d::TuringScalMvNormal, x::AbstractMatrix{<:Real})
     σ2 = abs2(d.σ)
-    return -(length(x) * log(2π * σ2) + sum(abs2.(x .- d.m)) / σ2) / 2
+    return -(length(x) * log(τ * σ2) + sum(abs2.(x .- d.m)) / σ2) / 2
 end
 
 function Distributions._logpdf(d::TuringDiagMvNormal, x::AbstractVector)
-    return -(length(x) * log(2π) + 2 * sum(log.(d.σ)) + sum(abs2.((x .- d.m) ./ d.σ))) / 2
+    return -(length(x) * log(τ) + 2 * sum(log.(d.σ)) + sum(abs2.((x .- d.m) ./ d.σ))) / 2
 end
 function Distributions.logpdf(d::TuringDiagMvNormal, x::AbstractMatrix{<:Real})
     size(x, 1) == length(d) ||
         throw(DimensionMismatch("Inconsistent array dimensions."))
-    return -((size(x, 1) * log(2π) + 2 * sum(log.(d.σ))) .+ vec(sum(abs2.((x .- d.m) ./ d.σ), dims=1))) ./ 2
+    return -((size(x, 1) * log(τ) + 2 * sum(log.(d.σ))) .+ vec(sum(abs2.((x .- d.m) ./ d.σ), dims=1))) ./ 2
 end
 function Distributions.loglikelihood(d::TuringDiagMvNormal, x::AbstractMatrix{<:Real})
-    return -(length(x) * log(2π) + 2 * size(x, 2) * sum(log.(d.σ)) + sum(abs2.((x .- d.m) ./ d.σ))) / 2
+    return -(length(x) * log(τ) + 2 * size(x, 2) * sum(log.(d.σ)) + sum(abs2.((x .- d.m) ./ d.σ))) / 2
 end
 
 function Distributions._logpdf(d::TuringDenseMvNormal, x::AbstractVector)
-    return -(length(x) * log(2π) + logdet(d.C) + sum(abs2.(zygote_ldiv(d.C.U', x .- d.m)))) / 2
+    return -(length(x) * log(τ) + logdet(d.C) + sum(abs2.(zygote_ldiv(d.C.U', x .- d.m)))) / 2
 end
 function Distributions.logpdf(d::TuringDenseMvNormal, x::AbstractMatrix{<:Real})
     size(x, 1) == length(d) ||
         throw(DimensionMismatch("Inconsistent array dimensions."))
-    return -((size(x, 1) * log(2π) + logdet(d.C)) .+ vec(sum(abs2.(zygote_ldiv(d.C.U', x .- d.m)), dims=1))) ./ 2
+    return -((size(x, 1) * log(τ) + logdet(d.C)) .+ vec(sum(abs2.(zygote_ldiv(d.C.U', x .- d.m)), dims=1))) ./ 2
 end
 function Distributions.loglikelihood(d::TuringDenseMvNormal, x::AbstractMatrix{<:Real})
-    return -(length(x) * log(2π) + size(x, 2) * logdet(d.C) + sum(abs2.(zygote_ldiv(d.C.U', x .- d.m)))) / 2
+    return -(length(x) * log(τ) + size(x, 2) * logdet(d.C) + sum(abs2.(zygote_ldiv(d.C.U', x .- d.m)))) / 2
 end
 
 function Distributions.entropy(d::TuringScalMvNormal)
     s = log(d.σ)
-    return length(d) * ((1 + oftype(s, log2π)) / 2 + s)
+    return length(d) * ((1 + oftype(s, log(τ))) / 2 + s)
 end
 function Distributions.entropy(d::TuringDiagMvNormal)
     s = sum(log, d.σ)
-    return length(d) * (1 + oftype(s, log2π)) / 2 + s
+    return length(d) * (1 + oftype(s, log(τ))) / 2 + s
 end
 function Distributions.entropy(d::TuringDenseMvNormal)
     s = logdet(d.C)
-    return (length(d) * (1 + oftype(s, log2π)) + s) / 2
+    return (length(d) * (1 + oftype(s, log(τ))) + s) / 2
 end
 
 TuringMvNormal(d::Int, σ::Real) = TuringMvNormal(zeros(d), σ)

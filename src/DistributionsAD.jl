@@ -11,7 +11,8 @@ using PDMats,
       ChainRules,  # needed for `ChainRules.chol_blocked_rev`
       ChainRulesCore,
       FillArrays,
-      Adapt
+      Adapt,
+      Tau
 
 export TuringScalMvNormal,
        TuringDiagMvNormal,

@@ -104,7 +104,7 @@
     end
 
     @testset "Inverse of pi" begin
-        @test 1/pi == inv(pi)
+        @test 1/π == inv(π)
     end
 
     @testset "Cholesky" begin
