@@ -12,7 +12,7 @@ using PDMats,
       ChainRulesCore,
       FillArrays,
       Adapt,
-      Tau
+      IrrationalConstants
 
 export TuringScalMvNormal,
        TuringDiagMvNormal,
