@@ -68,7 +68,7 @@
             for S in (Float64, Float32)
                 ST = promote_type(S, T)
 
-                z = S(x1)
+                z = map(S, x1)
                 logp = @inferred(logpdf(d1, z))
                 @test logp isa ST
                 @test logp ≈ logpdf(d2, z) rtol = 1e-6
