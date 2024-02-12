@@ -31,7 +31,7 @@ DistributionsADReverseDiffExt = "ReverseDiff"
 DistributionsADTrackerExt = "Tracker"
 
 [compat]
-Adapt = "2, 3"
+Adapt = "2, 3, 4"
 ChainRules = "1.35.3"
 ChainRulesCore = "1"
 Compat = "3.6, 4"
