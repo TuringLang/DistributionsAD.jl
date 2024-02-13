@@ -1,6 +1,6 @@
 name = "DistributionsAD"
 uuid = "ced4e74d-a319-5a8a-b0ac-84af2272839c"
-version = "0.6.53"
+version = "0.6.54"
 
 [deps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
@@ -39,7 +39,9 @@ Distributions = "0.25.41"
 FillArrays = "1.4.1"
 ForwardDiff = "0.10.12"
 LazyArrays = "1"
+LinearAlgebra = "<0.0.1, 1"
 PDMats = "0.9, 0.10, 0.11"
+Random = "<0.0.1, 1"
 Requires = "1"
 ReverseDiff = "1.4.4"
 SpecialFunctions = "0.8, 0.9, 0.10, 1, 2"
