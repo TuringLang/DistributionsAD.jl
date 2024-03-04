@@ -1,3 +1,6 @@
+using Pkg
+Pkg.add(Pkg.PackageSpec(; url="https://github.com/EnzymeAD/Enzyme.jl.git", rev="main"))
+
 using DistributionsAD
 
 using Combinatorics
@@ -26,7 +29,7 @@ if GROUP == "All" || GROUP == "Others"
     include("others.jl")
 end
 
-if GROUP == "All" || GROUP in ("ForwardDiff", "Zygote", "ReverseDiff", "Tracker")
+if GROUP == "All" || GROUP in ("Enzyme", "ForwardDiff", "Zygote", "ReverseDiff", "Tracker")
     include("ad/utils.jl")
     include("ad/others.jl")
     include("ad/distributions.jl")
