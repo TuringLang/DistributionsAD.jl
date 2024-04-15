@@ -68,7 +68,7 @@ const FillMatrixOfUnivariate{
     Tdists <: Fill{T, 2},
 } = MatrixOfUnivariate{S, T, Tdists}
 
-function filldist(dist::UnivariateDistribution, N1::Integer, N2::Integer)
+function filldist(dist::UnivariateDistribution, N1::Int, N2::Int)
     return MatrixOfUnivariate(Fill(dist, N1, N2))
 end
 function Distributions._logpdf(dist::FillMatrixOfUnivariate, x::AbstractMatrix{<:Real})
