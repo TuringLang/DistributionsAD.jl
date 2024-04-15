@@ -3,7 +3,7 @@
 
 Create a distribution from an array of distributions.
 """
-arraydist(dists::AbstractArray) = product_distribution(dists)
+arraydist(dists::AbstractArray{<:Distribution}) = product_distribution(dists)
 
 # Univariate
 

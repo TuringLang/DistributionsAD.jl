@@ -4,7 +4,7 @@
 
 Create a product distribution using `FillArrays.Fill` as the array type.
 """
-filldist(d::Distribution, ns...) = product_distribution(Fill(d, ns...))
+filldist(d::Distribution, n1::Int, ns::Int...) = product_distribution(Fill(d, n1, ns...))
 
 # Univariate
 
