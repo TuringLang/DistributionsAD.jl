@@ -1,5 +1,14 @@
+# Default implementation just defers to Distributions.jl.
+"""
+    filldist(d::Distribution, ns...)
+
+Create a product distribution using `FillArrays.Fill` as the array type.
+"""
+filldist(d::Distribution, ns...) = product_distribution(Fill(d, ns...))
+
 # Univariate
 
+# TODO: Do we even need these? Probably should benchmark to be sure.
 const FillVectorOfUnivariate{
     S <: ValueSupport,
     T <: UnivariateDistribution{S},
