@@ -1,3 +1,10 @@
+"""
+    arraydist(dists)
+
+Create a distribution from an array of distributions.
+"""
+arraydist(dists::AbstractArray{<:Distribution}) = product_distribution(dists)
+
 # Univariate
 
 const VectorOfUnivariate = Distributions.Product

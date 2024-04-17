@@ -1,5 +1,14 @@
+# Default implementation just defers to Distributions.jl.
+"""
+    filldist(d::Distribution, ns...)
+
+Create a product distribution using `FillArrays.Fill` as the array type.
+"""
+filldist(d::Distribution, n1::Int, ns::Int...) = product_distribution(Fill(d, n1, ns...))
+
 # Univariate
 
+# TODO: Do we even need these? Probably should benchmark to be sure.
 const FillVectorOfUnivariate{
     S <: ValueSupport,
     T <: UnivariateDistribution{S},
@@ -59,7 +68,7 @@ const FillMatrixOfUnivariate{
     Tdists <: Fill{T, 2},
 } = MatrixOfUnivariate{S, T, Tdists}
 
-function filldist(dist::UnivariateDistribution, N1::Integer, N2::Integer)
+function filldist(dist::UnivariateDistribution, N1::Int, N2::Int)
     return MatrixOfUnivariate(Fill(dist, N1, N2))
 end
 function Distributions._logpdf(dist::FillMatrixOfUnivariate, x::AbstractMatrix{<:Real})
