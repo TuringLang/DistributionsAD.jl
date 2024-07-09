@@ -23,10 +23,10 @@
         N = 7
         B = randn(N, N)
 
-        test_reverse_mode_ad(randn(), B; rtol=1e-8, atol=1e-6, broken = (:Enzyme,)) do B
+        test_reverse_mode_ad(randn(), B; rtol=1e-8, atol=1e-6) do B
             return logdet(cholesky(to_posdef(B)))
         end
-        test_reverse_mode_ad(randn(), B; rtol=1e-8, atol=1e-6, broken = (:Enzyme,)) do B
+        test_reverse_mode_ad(randn(), B; rtol=1e-8, atol=1e-6) do B
             return logdet(cholesky(Symmetric(to_posdef(B))))
         end
     end
@@ -47,13 +47,13 @@
         B = randn(N, N)
         x = rand(TuringDenseMvNormal(m, to_posdef(B)))
 
-        test_reverse_mode_ad(randn(), m, B, x; broken = (:Enzyme,)) do m, B, x
+        test_reverse_mode_ad(randn(), m, B, x) do m, B, x
             return logpdf(MvNormal(m, to_posdef(B)), x)
         end
-        test_reverse_mode_ad(randn(), m, B, x; broken = (:Enzyme,)) do m, B, x
+        test_reverse_mode_ad(randn(), m, B, x) do m, B, x
             return logpdf(TuringMvNormal(m, to_posdef(B)), x)
         end
-        test_reverse_mode_ad(randn(), m, B, x; broken = (:Enzyme,)) do m, B, x
+        test_reverse_mode_ad(randn(), m, B, x) do m, B, x
             return logpdf(TuringMvNormal(m, Symmetric(to_posdef(B))), x)
         end
     end
