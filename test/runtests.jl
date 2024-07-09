@@ -13,6 +13,7 @@ using DistributionsAD: TuringMvNormal, TuringMvLogNormal,
 using StatsFuns: StatsFuns, logsumexp, logistic
 
 import Enzyme 
+Enzyme.API.typeWarning!(false)
 # Enable runtime activity (workaround)
 Enzyme.API.runtimeActivity!(true)
 
