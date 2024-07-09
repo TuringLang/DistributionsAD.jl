@@ -1,6 +1,3 @@
-using Pkg
-Pkg.add(Pkg.PackageSpec(; url="https://github.com/EnzymeAD/Enzyme.jl.git", rev="main"))
-
 using DistributionsAD
 
 using Combinatorics
@@ -14,6 +11,10 @@ using Distributions: meanlogdet
 using DistributionsAD: TuringMvNormal, TuringMvLogNormal,
                        TuringPoissonBinomial, TuringDirichlet
 using StatsFuns: StatsFuns, logsumexp, logistic
+
+import Enzyme 
+# Enable runtime activity (workaround)
+Enzyme.API.runtimeActivity!(true)
 
 @static if VERSION >= v"1.8"
   using Pkg; Pkg.status(outdated=true) # show reasons why packages are held back
