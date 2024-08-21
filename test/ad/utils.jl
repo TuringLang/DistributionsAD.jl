@@ -407,14 +407,14 @@ function test_ad(f, x, broken = (); rtol = 1e-6, atol = 1e-6)
 
     if GROUP == "All" || GROUP == "Enzyme"
         if (:Enzyme in broken) || (:EnzymeForward in broken)
-            @test_broken collect(Enzyme.gradient(Enzyme.Forward, f, x)) ≈ finitediff rtol=rtol atol=atol
+            @test_broken collect(Enzyme.gradient(Enzyme.Forward, Const(f), x)) ≈ finitediff rtol=rtol atol=atol
         else
-            @test collect(Enzyme.gradient(Enzyme.Forward, f, x)) ≈ finitediff rtol=rtol atol=atol
+            @test collect(Enzyme.gradient(Enzyme.Forward, Const(f), x)) ≈ finitediff rtol=rtol atol=atol
         end
         if (:Enzyme in broken) || (:EnzymeReverse in broken)
-            @test_broken Enzyme.gradient(Enzyme.Reverse, f, x) ≈ finitediff rtol=rtol atol=atol
+            @test_broken Enzyme.gradient(Enzyme.Reverse, Const(f), x) ≈ finitediff rtol=rtol atol=atol
         else
-            @test Enzyme.gradient(Enzyme.Reverse, f, x) ≈ finitediff rtol=rtol atol=atol
+            @test Enzyme.gradient(Enzyme.Reverse, Const(f), x) ≈ finitediff rtol=rtol atol=atol
         end
     end
 
