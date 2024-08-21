@@ -62,8 +62,8 @@
         DistSpec(Poisson, (0.5,), [1, 1]),
 
         # Enzyme: no forward rule for ccall 
-        DistSpec(Skellam, (1.0, 2.0), -2, broken=(:Zygote,)),
-        DistSpec(Skellam, (1.0, 2.0), [-2, -2], broken=(:Zygote,)),
+        DistSpec(Skellam, (1.0, 2.0), -2, broken=(:Enzyme,)),
+        DistSpec(Skellam, (1.0, 2.0), [-2, -2], broken=(:Enzyme,)),
 
         DistSpec(PoissonBinomial, ([0.5, 0.5],), 0),
 
