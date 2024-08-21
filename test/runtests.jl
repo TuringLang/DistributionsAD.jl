@@ -16,7 +16,9 @@ import Enzyme
 Enzyme.API.typeWarning!(false)
 # Enable runtime activity (workaround)
 Enzyme.API.runtimeActivity!(true)
-
+# Supress excessive type deduce failures may result in incorrect gradients. 
+# https://enzyme.mit.edu/julia/stable/api/#Enzyme.API.looseTypeAnalysis!-Tuple{Any}
+Enzyme.API.looseTypeAnalysis!(true)
 @static if VERSION >= v"1.8"
   using Pkg; Pkg.status(outdated=true) # show reasons why packages are held back
 end
