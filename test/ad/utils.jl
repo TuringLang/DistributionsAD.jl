@@ -50,7 +50,7 @@ function test_reverse_mode_ad(f, ȳ, x...; rtol=1e-6, atol=1e-6, broken=())
                 end
                 dot_f_ȳ(args...) = dot(f(args...), ȳ)
                 x̄s_enzyme_autodiff, y_dot_ȳ_enzyme =
-                    Enzyme.autodiff(ReverseWithPrimal, dot_f_ȳ, Active, enzyme_autodiff_args...)
+                    Enzyme.autodiff(ReverseWithPrimal, Const(dot_f_ȳ), Active, enzyme_autodiff_args...)
                 x̄s_enzyme = map(x̄s_enzyme_init, x̄s_enzyme_autodiff) do x̄s_init_i, x̄s_autodiff_i
                     return if x̄s_init_i === nothing
                         @assert x̄s_autodiff_i isa Real
