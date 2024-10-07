@@ -33,13 +33,15 @@ if GROUP == "All" || GROUP in ("ForwardDiff", "Zygote", "ReverseDiff", "Tracker"
     include("ad/distributions.jl")
 end
 
-# Run doctests
-@testset "doctests" begin
-    DocMeta.setdocmeta!(
-        DistributionsAD,
-        :DocTestSetup,
-        :(using DistributionsAD);
-        recursive=true,
-    )
-    doctest(DistributionsAD; manual=false)
+# Run doctests (but not on older versions as rng seed behaves differently)
+@static if VERSION >= v"1.10"
+    @testset "doctests" begin
+        DocMeta.setdocmeta!(
+            DistributionsAD,
+            :DocTestSetup,
+            :(using DistributionsAD);
+            recursive=true,
+        )
+        doctest(DistributionsAD; manual=false)
+    end
 end
