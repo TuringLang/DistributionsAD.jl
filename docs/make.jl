@@ -3,7 +3,6 @@ using DistributionsAD
 
 makedocs(;
     sitename="DistributionsAD",
-    modules=[DistributionsAD],
     pages=[
         "Home" => "index.md",
         "API" => "api.md",
