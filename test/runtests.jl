@@ -2,6 +2,7 @@ using DistributionsAD
 
 using Combinatorics
 using Distributions
+using Documenter
 using PDMats
 import LazyArrays
 
@@ -30,4 +31,17 @@ if GROUP == "All" || GROUP in ("ForwardDiff", "Zygote", "ReverseDiff", "Tracker"
     include("ad/utils.jl")
     include("ad/others.jl")
     include("ad/distributions.jl")
+end
+
+# Run doctests (but not on older versions as rng seed behaves differently)
+@static if VERSION >= v"1.10"
+    @testset "doctests" begin
+        DocMeta.setdocmeta!(
+            DistributionsAD,
+            :DocTestSetup,
+            :(using DistributionsAD);
+            recursive=true,
+        )
+        doctest(DistributionsAD; manual=false)
+    end
 end

@@ -1,8 +1,36 @@
-# Default implementation just defers to Distributions.jl.
 """
     filldist(d::Distribution, ns...)
 
-Create a product distribution using `FillArrays.Fill` as the array type.
+Create a product distribution from a single distribution and a list of
+dimension sizes. If `size(d)` is `(d1, d2, ...)` and `ns` is `(n1, n2, ...)`,
+then the resulting distribution will have size `(d1, d2, ..., n1, n2, ...)`.
+
+The default behaviour is to use
+[`Distributions.product_distribution`](https://juliastats.org/Distributions.jl/stable/multivariate/#Distributions.product_distribution),
+with `FillArrays.Fill` supplied as the array argument. However, this behaviour
+is specialised in some instances, such as the one shown below.
+
+When sampling from the resulting distribution, the output will be an array where
+each element is sampled from the original distribution `d`.
+
+# Examples
+
+```jldoctest; setup=:(using Distributions, Random)
+julia> d = filldist(Normal(0, 1), 4, 5)  # size(Normal(0, 1)) == ()
+DistributionsAD.MatrixOfUnivariate{Continuous, Normal{Float64}, FillArrays.Fill{Normal{Float64}, 2, Tuple{Base.OneTo{Int64}, Base.OneTo{Int64}}}}(
+dists: Fill(Normal{Float64}(μ=0.0, σ=1.0), 4, 5)
+)
+
+julia> size(d)
+(4, 5)
+
+julia> Random.seed!(42); rand(d)
+4×5 Matrix{Float64}:
+ -0.363357   0.816307  -2.11433     0.433886  -0.206613
+  0.251737   0.476738   0.0437817  -0.39544   -0.310744
+ -0.314988  -0.859555  -0.825335    0.517131  -0.0404734
+ -0.311252  -1.46929    0.840289    1.44722    0.104771
+```
 """
 filldist(d::Distribution, n1::Int, ns::Int...) = product_distribution(Fill(d, n1, ns...))
 
