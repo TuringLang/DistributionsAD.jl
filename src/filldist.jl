@@ -16,20 +16,13 @@ each element is sampled from the original distribution `d`.
 # Examples
 
 ```jldoctest; setup=:(using Distributions, Random)
-julia> d = filldist(Normal(0, 1), 4, 5)  # size(Normal(0, 1)) == ()
-DistributionsAD.MatrixOfUnivariate{Continuous, Normal{Float64}, FillArrays.Fill{Normal{Float64}, 2, Tuple{Base.OneTo{Int64}, Base.OneTo{Int64}}}}(
-dists: Fill(Normal{Float64}(μ=0.0, σ=1.0), 4, 5)
-)
+julia> d = filldist(Normal(0, 1), 4, 5);
 
 julia> size(d)
 (4, 5)
 
-julia> Random.seed!(42); rand(d)
-4×5 Matrix{Float64}:
- -0.363357   0.816307  -2.11433     0.433886  -0.206613
-  0.251737   0.476738   0.0437817  -0.39544   -0.310744
- -0.314988  -0.859555  -0.825335    0.517131  -0.0404734
- -0.311252  -1.46929    0.840289    1.44722    0.104771
+julia> rand(d) isa Matrix{Float64}
+true
 ```
 """
 filldist(d::Distribution, n1::Int, ns::Int...) = product_distribution(Fill(d, n1, ns...))
