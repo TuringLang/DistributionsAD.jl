@@ -9,5 +9,3 @@ makedocs(;
     ],
     doctest=false,
 )
-
-deploydocs(; repo="github.com/TuringLang/DistributionsAD.jl.git", push_preview=true)
