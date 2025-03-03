@@ -1,6 +1,6 @@
 # DistributionsAD.jl
 
-[![CI](https://github.com/TuringLang/DistributionsAD.jl/actions/workflows/CI.yml/badge.svg?branch=master)](https://github.com/TuringLang/DistributionsAD.jl/actions/workflows/CI.yml?query=branch%3Amaster)
+[![CI](https://github.com/TuringLang/DistributionsAD.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/TuringLang/DistributionsAD.jl/actions/workflows/CI.yml?query=branch%3Amain)
 
 This package defines the necessary functions to enable automatic differentiation (AD) of the `logpdf` function from [Distributions.jl](https://github.com/JuliaStats/Distributions.jl) using the packages [Tracker.jl](https://github.com/FluxML/Tracker.jl), [Zygote.jl](https://github.com/FluxML/Zygote.jl), [ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl) and [ReverseDiff.jl](https://github.com/JuliaDiff/ReverseDiff.jl). The goal of this package is to make the output of `logpdf` differentiable wrt all continuous parameters of a distribution as well as the random variable in the case of continuous distributions.
 
