@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
 
 concurrency:
@@ -14,63 +14,31 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.runner.os }}
     strategy:
       fail-fast: false
       matrix:
-        version:
-          - '1.6'
-          - '1'
-        os:
-          - ubuntu-latest
-        arch:
-          - x64
+        runner:
+          - version: '1'
+            os: ubuntu-latest
+          - version: 'min'
+            os: ubuntu-latest
+          - version: '1'
+            os: macOS-latest
         group:
           - Others
           - ForwardDiff
           - Tracker
           - ReverseDiff
           - Zygote
-        include:
-          - version: '1'
-            os: macOS-latest
-            arch: x64
-            group: Others
-          - version: '1'
-            os: macOS-latest
-            arch: x64
-            group: ForwardDiff
-          - version: '1'
-            os: macOS-latest
-            arch: x64
-            group: Tracker
-          - version: '1'
-            os: macOS-latest
-            arch: x64
-            group: ReverseDiff
-          - version: '1'
-            os: macOS-latest
-            arch: x64
-            group: Zygote
+
     steps:
-      - uses: actions/checkout@v2
-      - uses: julia-actions/setup-julia@v1
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
         with:
-          version: ${{ matrix.version }}
-          arch: ${{ matrix.arch }}
-      - uses: actions/cache@v1
-        env:
-          cache-name: cache-artifacts
-        with:
-          path: ~/.julia/artifacts
-          key: ${{ runner.os }}-test-${{ env.cache-name }}-${{ hashFiles('**/Project.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-test-${{ env.cache-name }}-
-            ${{ runner.os }}-test-
-            ${{ runner.os }}-
-      - uses: julia-actions/julia-buildpkg@latest
-      - uses: julia-actions/julia-runtest@latest
-        with:
-          coverage: false
+          version: ${{ matrix.runner.version }}
+      - uses: julia-actions/cache@v2
+      - uses: julia-actions/julia-buildpkg@v1
+      - uses: julia-actions/julia-runtest@v1
         env:
           GROUP: ${{ matrix.group }}
