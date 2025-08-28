@@ -52,10 +52,7 @@ const VectorOfUnivariate = Distributions.Product
 
 function arraydist(dists::AbstractVector{<:UnivariateDistribution})
     Base.depwarn("arraydist is deprecated. Use `Distributions.product_distribution(dists)` instead.", :arraydist)
-    V = typeof(dists)
-    T = eltype(dists)
-    S = Distributions.value_support(T)
-    return Product{S,T,V}(dists)
+    return product_distribution(dists)
 end
 
 struct MatrixOfUnivariate{
@@ -68,7 +65,7 @@ end
 Base.size(dist::MatrixOfUnivariate) = size(dist.dists)
 function arraydist(dists::AbstractMatrix{<:UnivariateDistribution})
     Base.depwarn("arraydist is deprecated. Use `Distributions.product_distribution(dists)` instead.", :arraydist)
-    return MatrixOfUnivariate(dists)
+    return product_distribution(dists)
 end
 function Distributions._logpdf(dist::MatrixOfUnivariate, x::AbstractMatrix{<:Real})
     # Lazy broadcast to avoid allocations and use pairwise summation
@@ -98,7 +95,7 @@ Base.size(dist::VectorOfMultivariate) = (length(dist.dists[1]), length(dist))
 Base.length(dist::VectorOfMultivariate) = length(dist.dists)
 function arraydist(dists::AbstractVector{<:MultivariateDistribution})
     Base.depwarn("arraydist is deprecated. Use `Distributions.product_distribution(dists)` instead.", :arraydist)
-    return VectorOfMultivariate(dists)
+    return product_distribution(dists)
 end
 
 function Distributions._logpdf(dist::VectorOfMultivariate, x::AbstractMatrix{<:Real})
