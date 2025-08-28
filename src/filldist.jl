@@ -1,6 +1,10 @@
 """
     filldist(d::Distribution, ns...)
 
+!!! warning "Deprecated"
+    `filldist` is deprecated. Use `Distributions.product_distribution(Fill(d, ns...))` instead, 
+    where `Fill` is from the `FillArrays` package.
+
 Create a product distribution from a single distribution and a list of
 dimension sizes. If `size(d)` is `(d1, d2, ...)` and `ns` is `(n1, n2, ...)`,
 then the resulting distribution will have size `(d1, d2, ..., n1, n2, ...)`.
@@ -25,7 +29,10 @@ julia> rand(d) isa Matrix{Float64}
 true
 ```
 """
-filldist(d::Distribution, n1::Int, ns::Int...) = product_distribution(Fill(d, n1, ns...))
+function filldist(d::Distribution, n1::Int, ns::Int...)
+    Base.depwarn("filldist is deprecated. Use `Distributions.product_distribution(Fill(d, n1, ns...))` instead, where `Fill` is from the `FillArrays` package.", :filldist)
+    return product_distribution(Fill(d, n1, ns...))
+end
 
 # Univariate
 
@@ -37,9 +44,13 @@ const FillVectorOfUnivariate{
 } = VectorOfUnivariate{S, T, Tdists}
 
 function filldist(dist::UnivariateDistribution, N::Int)
+    Base.depwarn("filldist is deprecated. Use `Distributions.product_distribution(Fill(dist, N))` instead, where `Fill` is from the `FillArrays` package.", :filldist)
     return product_distribution(Fill(dist, N))
 end
-filldist(d::Normal, N::Int) = TuringMvNormal(fill(d.μ, N), d.σ)
+function filldist(d::Normal, N::Int)
+    Base.depwarn("filldist is deprecated. Use `Distributions.product_distribution(Fill(d, N))` instead, where `Fill` is from the `FillArrays` package.", :filldist)
+    return TuringMvNormal(fill(d.μ, N), d.σ)
+end
 
 function Distributions._logpdf(
     dist::FillVectorOfUnivariate,
@@ -90,6 +101,7 @@ const FillMatrixOfUnivariate{
 } = MatrixOfUnivariate{S, T, Tdists}
 
 function filldist(dist::UnivariateDistribution, N1::Int, N2::Int)
+    Base.depwarn("filldist is deprecated. Use `Distributions.product_distribution(Fill(dist, N1, N2))` instead, where `Fill` is from the `FillArrays` package.", :filldist)
     return MatrixOfUnivariate(Fill(dist, N1, N2))
 end
 function Distributions._logpdf(dist::FillMatrixOfUnivariate, x::AbstractMatrix{<:Real})
@@ -109,6 +121,7 @@ const FillVectorOfMultivariate{
 } = VectorOfMultivariate{S, T, Tdists}
 
 function filldist(dist::MultivariateDistribution, N::Int)
+    Base.depwarn("filldist is deprecated. Use `Distributions.product_distribution(Fill(dist, N))` instead, where `Fill` is from the `FillArrays` package.", :filldist)
     return VectorOfMultivariate(Fill(dist, N))
 end
 function Distributions._logpdf(

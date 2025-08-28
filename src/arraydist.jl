@@ -1,6 +1,9 @@
 """
     arraydist(dists::AbstractArray{<:Distribution})
 
+!!! warning "Deprecated"
+    `arraydist` is deprecated. Use `Distributions.product_distribution(dists)` instead.
+
 Create a product distribution from an array of sub-distributions. Each element
 of `dists` should have the same size. If the size of each element is `(d1, d2,
 ...)`, and `size(dists)` is `(n1, n2, ...)`, then the resulting distribution
@@ -38,13 +41,17 @@ julia> Random.seed!(42); rand(d2)
  9.12014   14.2667
 ```
 """
-arraydist(dists::AbstractArray{<:Distribution}) = product_distribution(dists)
+function arraydist(dists::AbstractArray{<:Distribution})
+    Base.depwarn("arraydist is deprecated. Use `Distributions.product_distribution(dists)` instead.", :arraydist)
+    return product_distribution(dists)
+end
 
 # Univariate
 
 const VectorOfUnivariate = Distributions.Product
 
 function arraydist(dists::AbstractVector{<:UnivariateDistribution})
+    Base.depwarn("arraydist is deprecated. Use `Distributions.product_distribution(dists)` instead.", :arraydist)
     V = typeof(dists)
     T = eltype(dists)
     S = Distributions.value_support(T)
@@ -60,6 +67,7 @@ struct MatrixOfUnivariate{
 end
 Base.size(dist::MatrixOfUnivariate) = size(dist.dists)
 function arraydist(dists::AbstractMatrix{<:UnivariateDistribution})
+    Base.depwarn("arraydist is deprecated. Use `Distributions.product_distribution(dists)` instead.", :arraydist)
     return MatrixOfUnivariate(dists)
 end
 function Distributions._logpdf(dist::MatrixOfUnivariate, x::AbstractMatrix{<:Real})
@@ -89,6 +97,7 @@ end
 Base.size(dist::VectorOfMultivariate) = (length(dist.dists[1]), length(dist))
 Base.length(dist::VectorOfMultivariate) = length(dist.dists)
 function arraydist(dists::AbstractVector{<:MultivariateDistribution})
+    Base.depwarn("arraydist is deprecated. Use `Distributions.product_distribution(dists)` instead.", :arraydist)
     return VectorOfMultivariate(dists)
 end
 
