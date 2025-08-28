@@ -19,9 +19,7 @@ export TuringScalMvNormal,
        TuringMvLogNormal,
        TuringPoissonBinomial,
        TuringWishart,
-       TuringInverseWishart,
-       arraydist,
-       filldist
+       TuringInverseWishart
 
 include("common.jl")
 include("arraydist.jl")

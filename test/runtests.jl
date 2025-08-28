@@ -3,6 +3,7 @@ using DistributionsAD
 using Combinatorics
 using Distributions
 using Documenter
+using FillArrays
 using PDMats
 import LazyArrays
 
