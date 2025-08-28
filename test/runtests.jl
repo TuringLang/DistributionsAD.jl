@@ -4,7 +4,6 @@ using Combinatorics
 using Distributions
 using Documenter
 using PDMats
-import LazyArrays
 
 using Random, LinearAlgebra, Test
 

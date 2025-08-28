@@ -6,14 +6,6 @@ ZygoteRules.@adjoint function Distributions._logpdf(d::Product, x::AbstractVecto
         sum(map(logpdf, d.v, x))
     end
 end
-ZygoteRules.@adjoint function Distributions._logpdf(
-    d::FillVectorOfUnivariate,
-    x::AbstractVector{<:Real},
-)
-    return ZygoteRules.pullback(d, x) do d, x
-        _flat_logpdf(d.v.value, x)
-    end
-end
 
 # Loglikelihood of multi- and matrixvariate distributions: multiple samples
 # workaround for Zygote issues discussed in
