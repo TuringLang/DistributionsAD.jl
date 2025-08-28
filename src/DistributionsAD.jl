@@ -22,8 +22,7 @@ export TuringScalMvNormal,
        TuringInverseWishart
 
 include("common.jl")
-include("arraydist.jl")
-include("filldist.jl")
+include("product_distribution_compat.jl")
 include("univariate.jl")
 include("multivariate.jl")
 include("matrixvariate.jl")
